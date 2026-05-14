@@ -1,0 +1,21 @@
+{
+  "name": "Idol Rhythm · 星動時刻",
+  "short_name": "星動時刻",
+  "description": "追蹤你的偶像行程，不錯過每一個星動瞬間。",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#08080f",
+  "theme_color": "#08080f",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
