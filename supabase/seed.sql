@@ -496,7 +496,7 @@ INSERT INTO event_sources (
 
 -- ev-019
 ('30000000-0000-4000-8000-000000000019', '20000000-0000-4000-8000-000000000019',
-  'official', 'VOGUE KOREA', 'media_outlet', NULL),
+  'media', 'VOGUE KOREA', 'media_outlet', NULL),
 
 -- ev-024
 ('30000000-0000-4000-8000-000000000024', '20000000-0000-4000-8000-000000000024',
@@ -548,7 +548,7 @@ INSERT INTO event_candidates (
   'concert',
   '2026-06-04',
   'lsf_hk_fans', 'community',
-  0.35, 'pending', '社群消息，官方未公告，需等待 SM / SOURCE MUSIC 確認後再 approve'
+  0.35, 'pending', '社群消息，官方未公告，需等待 SOURCE MUSIC / HYBE 或主辦單位確認後再 approve'
 ),
 
 -- ev-013: BLACKPINK Jennie 個人直播（粉絲帳號消息）
