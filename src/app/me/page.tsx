@@ -1,3 +1,5 @@
+'use client'
+
 import {
   User,
   Bell,
@@ -8,17 +10,20 @@ import {
   Heart,
   Settings,
 } from 'lucide-react'
-import { getFollowingIdols } from '@/lib/mockIdols'
-import { getFavoritedEvents, MOCK_EVENTS } from '@/lib/mockEvents'
+import { MOCK_IDOLS } from '@/lib/mockIdols'
+import { MOCK_EVENTS, VISIBLE_TRUST_LEVELS } from '@/lib/mockEvents'
+import { useAppState } from '@/lib/appState'
 import Link from 'next/link'
 
 export default function MePage() {
-  const followingIdols = getFollowingIdols()
-  const favoritedEvents = getFavoritedEvents()
+  const { following, favorites, reminders } = useAppState()
+
+  const followingIdols = MOCK_IDOLS.filter((i) => following.has(i.id))
   const now = new Date()
   const upcomingCount = MOCK_EVENTS.filter(
     (e) =>
-      followingIdols.some((i) => i.id === e.idolId) &&
+      following.has(e.idolId) &&
+      VISIBLE_TRUST_LEVELS.includes(e.source.level) &&
       new Date(e.date) >= now,
   ).length
 
@@ -42,10 +47,27 @@ export default function MePage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
-        <StatCard icon={<Star className="h-5 w-5 text-primary" />} label="追蹤偶像" value={followingIdols.length} />
-        <StatCard icon={<Calendar className="h-5 w-5 text-violet" />} label="近期行程" value={upcomingCount} />
-        <StatCard icon={<Heart className="h-5 w-5 text-rose-400" />} label="已收藏" value={favoritedEvents.length} />
+      <div className="grid grid-cols-2 gap-3">
+        <StatCard
+          icon={<Star className="h-5 w-5 text-primary" />}
+          label="追蹤偶像"
+          value={following.ids.length}
+        />
+        <StatCard
+          icon={<Calendar className="h-5 w-5 text-violet" />}
+          label="近期行程"
+          value={upcomingCount}
+        />
+        <StatCard
+          icon={<Heart className="h-5 w-5 text-rose-400" />}
+          label="已收藏"
+          value={favorites.ids.length}
+        />
+        <StatCard
+          icon={<Bell className="h-5 w-5 text-violet-400" />}
+          label="已設提醒"
+          value={reminders.ids.length}
+        />
       </div>
 
       {/* Following idols */}
@@ -129,9 +151,7 @@ function MenuRow({
   return (
     <div
       className={`flex items-center gap-3 rounded-xl border px-4 py-3.5 ${
-        highlight
-          ? 'border-primary/40 bg-primary-dim'
-          : 'border-card-border bg-card'
+        highlight ? 'border-primary/40 bg-primary-dim' : 'border-card-border bg-card'
       }`}
     >
       <span className={highlight ? 'text-primary' : 'text-muted'}>{icon}</span>

@@ -3,41 +3,31 @@
 import { useState } from 'react'
 import { Search, Check, Users } from 'lucide-react'
 import { MOCK_IDOLS, type Idol } from '@/lib/mockIdols'
+import { useAppState } from '@/lib/appState'
 import clsx from 'clsx'
 
 export default function IdolsPage() {
-  const [idols, setIdols] = useState(MOCK_IDOLS)
+  const { following } = useAppState()
   const [query, setQuery] = useState('')
   const [activeFilter, setActiveFilter] = useState<string>('全部')
 
   const genres = ['全部', 'K-Pop', '嘻哈', '電子流行', '青春']
 
-  const filtered = idols.filter((idol) => {
+  const filtered = MOCK_IDOLS.filter((idol) => {
     const matchQuery =
       !query ||
       idol.name.toLowerCase().includes(query.toLowerCase()) ||
       idol.koreanName.includes(query)
-    const matchGenre =
-      activeFilter === '全部' || idol.genres.includes(activeFilter)
+    const matchGenre = activeFilter === '全部' || idol.genres.includes(activeFilter)
     return matchQuery && matchGenre
   })
-
-  function toggleFollow(id: string) {
-    setIdols((prev) =>
-      prev.map((idol) =>
-        idol.id === id ? { ...idol, following: !idol.following } : idol,
-      ),
-    )
-  }
-
-  const followingCount = idols.filter((i) => i.following).length
 
   return (
     <div className="flex flex-col pt-12 pb-6">
       {/* Header */}
       <div className="px-4 mb-4">
         <h1 className="text-xl font-bold text-text-base">偶像選擇</h1>
-        <p className="text-xs text-muted mt-1">已追蹤 {followingCount} 組</p>
+        <p className="text-xs text-muted mt-1">已追蹤 {following.ids.length} 組</p>
       </div>
 
       {/* Search */}
@@ -77,14 +67,17 @@ export default function IdolsPage() {
       {/* Idol grid */}
       <div className="px-4 grid grid-cols-2 gap-3">
         {filtered.map((idol) => (
-          <IdolCard key={idol.id} idol={idol} onToggle={toggleFollow} />
+          <IdolCard
+            key={idol.id}
+            idol={idol}
+            isFollowing={following.has(idol.id)}
+            onToggle={following.toggle}
+          />
         ))}
       </div>
 
       {filtered.length === 0 && (
-        <div className="px-4 py-12 text-center text-sm text-muted">
-          找不到符合的偶像
-        </div>
+        <div className="px-4 py-12 text-center text-sm text-muted">找不到符合的偶像</div>
       )}
     </div>
   )
@@ -92,18 +85,18 @@ export default function IdolsPage() {
 
 function IdolCard({
   idol,
+  isFollowing,
   onToggle,
 }: {
   idol: Idol
+  isFollowing: boolean
   onToggle: (id: string) => void
 }) {
   return (
     <div
       className={clsx(
         'relative rounded-2xl border p-4 transition-all',
-        idol.following
-          ? 'border-primary/50 bg-primary-dim'
-          : 'border-card-border bg-card',
+        isFollowing ? 'border-primary/50 bg-primary-dim' : 'border-card-border bg-card',
       )}
     >
       {/* Gradient avatar */}
@@ -143,12 +136,12 @@ function IdolCard({
         onClick={() => onToggle(idol.id)}
         className={clsx(
           'w-full rounded-xl py-2 text-xs font-semibold transition-all flex items-center justify-center gap-1.5',
-          idol.following
+          isFollowing
             ? 'bg-primary text-white'
             : 'border border-card-border bg-transparent text-muted',
         )}
       >
-        {idol.following ? (
+        {isFollowing ? (
           <>
             <Check className="h-3.5 w-3.5" />
             已追蹤

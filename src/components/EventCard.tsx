@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { MapPin, Clock, Heart, Bell, Share2, ExternalLink } from 'lucide-react'
 import { type Event, formatEventDate } from '@/lib/mockEvents'
+import { useAppState } from '@/lib/appState'
 import SourceBadge from './SourceBadge'
 import EventTypeBadge from './EventTypeBadge'
 import clsx from 'clsx'
@@ -13,6 +14,9 @@ interface EventCardProps {
 }
 
 export default function EventCard({ event, compact = false }: EventCardProps) {
+  const { favorites, reminders } = useAppState()
+  const isFavorited = favorites.has(event.id)
+  const hasReminder = reminders.has(event.id)
   const dateLabel = formatEventDate(event.date)
   const isToday = dateLabel.startsWith('今天')
 
@@ -69,13 +73,16 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
 
             <button
               className="flex-shrink-0 p-1.5 -mr-1"
-              onClick={(e) => e.preventDefault()}
-              aria-label="收藏"
+              onClick={(e) => {
+                e.preventDefault()
+                favorites.toggle(event.id)
+              }}
+              aria-label={isFavorited ? '取消收藏' : '收藏'}
             >
               <Heart
                 className={clsx(
                   'h-4 w-4 transition-colors',
-                  event.isFavorited ? 'fill-primary text-primary' : 'text-muted/50',
+                  isFavorited ? 'fill-primary text-primary' : 'text-muted/50',
                 )}
               />
             </button>
@@ -119,13 +126,16 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
 
           <button
             className="flex-shrink-0 p-1 -mt-0.5 -mr-0.5"
-            onClick={(e) => e.preventDefault()}
-            aria-label="收藏"
+            onClick={(e) => {
+              e.preventDefault()
+              favorites.toggle(event.id)
+            }}
+            aria-label={isFavorited ? '取消收藏' : '收藏'}
           >
             <Heart
               className={clsx(
                 'h-4 w-4 transition-colors',
-                event.isFavorited ? 'fill-primary text-primary' : 'text-muted/50',
+                isFavorited ? 'fill-primary text-primary' : 'text-muted/50',
               )}
             />
           </button>
@@ -159,21 +169,25 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
         <div className="mt-3 pt-3 border-t border-card-border flex items-center gap-0.5">
           <ActionBtn
             icon={
-              <Heart
-                className={clsx(
-                  'h-3.5 w-3.5',
-                  event.isFavorited && 'fill-primary text-primary',
-                )}
-              />
+              <Heart className={clsx('h-3.5 w-3.5', isFavorited && 'fill-primary text-primary')} />
             }
             label="收藏"
-            active={event.isFavorited}
-            onClick={(e) => e.preventDefault()}
+            active={isFavorited}
+            onClick={(e) => {
+              e.preventDefault()
+              favorites.toggle(event.id)
+            }}
           />
           <ActionBtn
-            icon={<Bell className="h-3.5 w-3.5" />}
+            icon={
+              <Bell className={clsx('h-3.5 w-3.5', hasReminder && 'text-primary')} />
+            }
             label="提醒"
-            onClick={(e) => e.preventDefault()}
+            active={hasReminder}
+            onClick={(e) => {
+              e.preventDefault()
+              reminders.toggle(event.id)
+            }}
           />
           {(event.source.url || event.ticketUrl || event.streamUrl) && (
             <ActionBtn

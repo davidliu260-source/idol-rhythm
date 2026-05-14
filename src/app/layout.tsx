@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import BottomNav from '@/components/BottomNav'
+import { AppStateProvider } from '@/lib/appState'
 
 export const metadata: Metadata = {
   title: 'Idol Rhythm · 星動時刻',
@@ -23,8 +24,10 @@ export default function RootLayout({
   return (
     <html lang="zh-TW">
       <body className="bg-bg text-text-base min-h-screen">
-        <main className="mx-auto max-w-md min-h-screen pb-28">{children}</main>
-        <BottomNav />
+        <AppStateProvider>
+          <main className="mx-auto max-w-md min-h-screen pb-28">{children}</main>
+          <BottomNav />
+        </AppStateProvider>
       </body>
     </html>
   )

@@ -6,8 +6,6 @@ import {
   Clock,
   Globe,
   ExternalLink,
-  Heart,
-  Share2,
   CheckCircle2,
   Sparkles,
   Tv,
@@ -17,6 +15,11 @@ import { getEventById, formatEventDate } from '@/lib/mockEvents'
 import { getIdolById } from '@/lib/mockIdols'
 import SourceBadge from '@/components/SourceBadge'
 import EventTypeBadge from '@/components/EventTypeBadge'
+import {
+  EventDetailFavoriteBtn,
+  EventDetailReminderBtn,
+  EventDetailShareBtn,
+} from '@/components/EventDetailActions'
 
 export default function EventDetailPage({
   params,
@@ -50,14 +53,9 @@ export default function EventDetailPage({
         </Link>
 
         <div className="absolute top-12 right-4 flex items-center gap-2">
-          <button className="rounded-full bg-white/10 backdrop-blur-sm p-2">
-            <Share2 className="h-4 w-4 text-white" />
-          </button>
-          <button className="rounded-full bg-white/10 backdrop-blur-sm p-2">
-            <Heart
-              className={`h-4 w-4 ${event.isFavorited ? 'fill-primary text-primary' : 'text-white'}`}
-            />
-          </button>
+          <EventDetailShareBtn />
+          <EventDetailReminderBtn eventId={event.id} />
+          <EventDetailFavoriteBtn eventId={event.id} />
         </div>
 
         <div className="flex items-end gap-3">
