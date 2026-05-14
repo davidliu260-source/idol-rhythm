@@ -1,11 +1,17 @@
+export const dynamic = 'force-dynamic'
+
 import { Calendar } from 'lucide-react'
 import { getVisibleEvents, formatEventDate, type Event } from '@/lib/mockEvents'
 import { MOCK_IDOLS } from '@/lib/mockIdols'
 import EventCard from '@/components/EventCard'
+import { getPublishedEvents } from '@/lib/supabase/events'
 
-export default function SchedulePage() {
+export default async function SchedulePage() {
+  // Prefer Supabase; fall back to mock data if env is missing, query fails, or returns empty.
+  const supabaseEvents = await getPublishedEvents()
+  const visibleEvents: Event[] = supabaseEvents.length > 0 ? supabaseEvents : getVisibleEvents()
+
   const now = new Date()
-  const visibleEvents = getVisibleEvents()
 
   const sorted = [...visibleEvents].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
