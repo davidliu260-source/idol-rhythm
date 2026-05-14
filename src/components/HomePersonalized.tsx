@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Timer, ChevronRight } from 'lucide-react'
 import { MOCK_EVENTS, VISIBLE_TRUST_LEVELS, type Event } from '@/lib/mockEvents'
@@ -8,25 +9,32 @@ import { useAppState } from '@/lib/appState'
 
 export default function HomePersonalized() {
   const { following } = useAppState()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const followingIdols = MOCK_IDOLS.filter((idol) => following.has(idol.id))
 
-  const now = new Date()
-  const myCountdown = followingIdols
-    .map((idol) => {
-      const next = MOCK_EVENTS.filter(
-        (e) =>
-          e.idolId === idol.id &&
-          VISIBLE_TRUST_LEVELS.includes(e.source.level) &&
-          new Date(e.date) >= now,
-      ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0]
-      if (!next) return null
-      const daysUntil = Math.ceil(
-        (new Date(next.date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
-      )
-      return { event: next, daysUntil }
-    })
-    .filter((x): x is { event: Event; daysUntil: number } => x !== null)
+  const myCountdown = !mounted
+    ? []
+    : followingIdols
+        .map((idol) => {
+          const now = new Date()
+          const next = MOCK_EVENTS.filter(
+            (e) =>
+              e.idolId === idol.id &&
+              VISIBLE_TRUST_LEVELS.includes(e.source.level) &&
+              new Date(e.date) >= now,
+          ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0]
+          if (!next) return null
+          const daysUntil = Math.ceil(
+            (new Date(next.date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+          )
+          return { event: next, daysUntil }
+        })
+        .filter((x): x is { event: Event; daysUntil: number } => x !== null)
 
   return (
     <>
