@@ -1,5 +1,5 @@
 import { Calendar } from 'lucide-react'
-import { getVisibleEvents, formatEventDate } from '@/lib/mockEvents'
+import { getVisibleEvents, formatEventDate, type Event } from '@/lib/mockEvents'
 import { MOCK_IDOLS } from '@/lib/mockIdols'
 import EventCard from '@/components/EventCard'
 
@@ -96,7 +96,7 @@ function DateGroup({
   isPast = false,
 }: {
   label: string
-  events: ReturnType<typeof getVisibleEvents>
+  events: Event[]
   isToday?: boolean
   isPast?: boolean
 }) {

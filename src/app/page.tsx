@@ -2,10 +2,10 @@ import Link from 'next/link'
 import { Bell, ChevronRight, Zap, Star, Play, Newspaper, Timer } from 'lucide-react'
 import {
   MOCK_EVENTS,
-  VISIBLE_SOURCES,
+  VISIBLE_TRUST_LEVELS,
   getTodayEvents,
   getEventsByTypes,
-  type IdolEvent,
+  type Event,
 } from '@/lib/mockEvents'
 import { getFollowingIdols, getIdolById } from '@/lib/mockIdols'
 import EventCard from '@/components/EventCard'
@@ -16,9 +16,9 @@ export default function HomePage() {
   const dateStr = `${today.getMonth() + 1}月${today.getDate()}日 週${weekdays[today.getDay()]}`
 
   const todayEvents = getTodayEvents()
-  const weekHighlights = getEventsByTypes(['concert', 'fanmeet', 'fansign', 'award'], 7)
+  const weekHighlights = getEventsByTypes(['concert', 'brand'], 7)
   const streamableEvents = getEventsByTypes(['livestream', 'streaming'], 14)
-  const newsEvents = getEventsByTypes(['announcement', 'magazine', 'brand', 'release'], 14)
+  const newsEvents = getEventsByTypes(['official', 'media'], 14)
 
   const followingIdols = getFollowingIdols()
 
@@ -27,7 +27,7 @@ export default function HomePage() {
       const next = MOCK_EVENTS.filter(
         (e) =>
           e.idolId === idol.id &&
-          VISIBLE_SOURCES.includes(e.source) &&
+          VISIBLE_TRUST_LEVELS.includes(e.source.level) &&
           new Date(e.date) >= today,
       ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0]
       if (!next) return null
@@ -36,7 +36,7 @@ export default function HomePage() {
       )
       return { event: next, daysUntil }
     })
-    .filter((x): x is { event: IdolEvent; daysUntil: number } => x !== null)
+    .filter((x): x is { event: Event; daysUntil: number } => x !== null)
 
   return (
     <div className="flex flex-col gap-6 px-4 pt-12 pb-6">
@@ -213,10 +213,7 @@ function SectionHeader({
       {count !== undefined && count > 0 && (
         <span className="text-xs text-primary font-medium">{count} 場</span>
       )}
-      <Link
-        href={href}
-        className="ml-auto flex items-center gap-0.5 text-xs text-muted"
-      >
+      <Link href={href} className="ml-auto flex items-center gap-0.5 text-xs text-muted">
         全部 <ChevronRight className="h-3 w-3" />
       </Link>
     </div>
@@ -227,7 +224,7 @@ function CountdownCard({
   event,
   daysUntil,
 }: {
-  event: IdolEvent
+  event: Event
   daysUntil: number
 }) {
   const idol = getIdolById(event.idolId)

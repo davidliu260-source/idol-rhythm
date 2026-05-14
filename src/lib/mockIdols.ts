@@ -1,19 +1,7 @@
-export type IdolType = 'group' | 'solo'
+import type { Idol } from './types'
 
-export interface Idol {
-  id: string
-  name: string
-  koreanName: string
-  type: IdolType
-  agency: string
-  debut: string
-  color: string
-  gradient: string
-  genres: string[]
-  memberCount?: number
-  following: boolean
-  description: string
-}
+// Re-export for consumers that import Idol from this module
+export type { Idol } from './types'
 
 export const MOCK_IDOLS: Idol[] = [
   {
@@ -21,6 +9,8 @@ export const MOCK_IDOLS: Idol[] = [
     name: 'BTS',
     koreanName: '방탄소년단',
     type: 'group',
+    gender: 'male',
+    category: 'kpop',
     agency: 'HYBE / BigHit Music',
     debut: '2013',
     color: '#7c3aed',
@@ -35,6 +25,8 @@ export const MOCK_IDOLS: Idol[] = [
     name: 'BLACKPINK',
     koreanName: '블랙핑크',
     type: 'group',
+    gender: 'female',
+    category: 'kpop',
     agency: 'YG Entertainment',
     debut: '2016',
     color: '#ec4899',
@@ -49,6 +41,8 @@ export const MOCK_IDOLS: Idol[] = [
     name: 'aespa',
     koreanName: '에스파',
     type: 'group',
+    gender: 'female',
+    category: 'kpop',
     agency: 'SM Entertainment',
     debut: '2020',
     color: '#06b6d4',
@@ -63,6 +57,8 @@ export const MOCK_IDOLS: Idol[] = [
     name: 'NewJeans',
     koreanName: '뉴진스',
     type: 'group',
+    gender: 'female',
+    category: 'kpop',
     agency: 'ADOR / HYBE',
     debut: '2022',
     color: '#3b82f6',
@@ -77,6 +73,8 @@ export const MOCK_IDOLS: Idol[] = [
     name: 'Stray Kids',
     koreanName: '스트레이 키즈',
     type: 'group',
+    gender: 'male',
+    category: 'kpop',
     agency: 'JYP Entertainment',
     debut: '2018',
     color: '#f59e0b',
@@ -91,6 +89,8 @@ export const MOCK_IDOLS: Idol[] = [
     name: 'IVE',
     koreanName: '아이브',
     type: 'group',
+    gender: 'female',
+    category: 'kpop',
     agency: 'Starship Entertainment',
     debut: '2021',
     color: '#10b981',
@@ -105,6 +105,8 @@ export const MOCK_IDOLS: Idol[] = [
     name: 'TWICE',
     koreanName: '트와이스',
     type: 'group',
+    gender: 'female',
+    category: 'kpop',
     agency: 'JYP Entertainment',
     debut: '2015',
     color: '#f97316',
@@ -119,6 +121,8 @@ export const MOCK_IDOLS: Idol[] = [
     name: 'LE SSERAFIM',
     koreanName: '르세라핌',
     type: 'group',
+    gender: 'female',
+    category: 'kpop',
     agency: 'SOURCE MUSIC / HYBE',
     debut: '2022',
     color: '#eab308',
@@ -133,6 +137,8 @@ export const MOCK_IDOLS: Idol[] = [
     name: 'TXT',
     koreanName: '투모로우바이투게더',
     type: 'group',
+    gender: 'male',
+    category: 'kpop',
     agency: 'HYBE / BigHit Music',
     debut: '2019',
     color: '#a855f7',
@@ -147,6 +153,8 @@ export const MOCK_IDOLS: Idol[] = [
     name: 'EXO',
     koreanName: '엑소',
     type: 'group',
+    gender: 'male',
+    category: 'kpop',
     agency: 'SM Entertainment',
     debut: '2012',
     color: '#ef4444',

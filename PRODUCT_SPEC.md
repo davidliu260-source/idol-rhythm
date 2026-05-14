@@ -125,3 +125,50 @@
 - 付款 / 訂閱
 - AI 搜尋 / 爬蟲
 - 多語言（英文版）
+
+---
+
+## 資料流程（Future Architecture）
+
+```
+官方 SNS / 媒體網站 / 粉絲帳號
+        │
+        ▼
+  event_candidates（候選資料池）
+  ┌─────────────────────────────────┐
+  │  rawTitle / rawContent          │
+  │  sourceUrl / sourceType         │
+  │  AI 偵測：idolId / type / date   │
+  │  aiConfidence                   │
+  │  reviewStatus: pending          │
+  └─────────────────────────────────┘
+        │
+        ▼
+  人工審核 / 規則審核（Admin 後台）
+  ┌─────────────────────────────────┐
+  │  可信度判斷（official / media）   │
+  │  內容補全 / 修正                  │
+  │  reviewStatus: approved         │
+  └─────────────────────────────────┘
+        │
+        ▼
+  events（已發布活動）
+  ┌─────────────────────────────────┐
+  │  type（7 大類）                  │
+  │  subType（細分）                 │
+  │  source.level: official / media │
+  │  status: confirmed              │
+  └─────────────────────────────────┘
+        │
+        ▼
+  前台顯示（首頁 / 行程頁 / 詳情頁）
+  只顯示 TrustLevel = official / media 的活動
+```
+
+### 可信度規則
+
+| TrustLevel | 說明 | 前台可見 |
+|-----------|------|---------|
+| official | 官方 SNS 或官網直接公告 | ✅ |
+| media | 知名媒體 / 粉絲帳號確認 | ✅ |
+| pending | 社群整理 / 未驗證 | ❌ 僅存於候選池 |

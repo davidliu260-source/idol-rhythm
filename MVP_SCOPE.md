@@ -73,3 +73,63 @@
 - AI 功能
 - 多語言
 - 爬蟲 / 自動抓取
+
+---
+
+## 📐 資料模型草稿（Phase 3 整理）
+
+### `events` 表（已上線活動）
+
+| 欄位 | 型別 | 說明 |
+|------|------|------|
+| id | string | 唯一識別碼 |
+| idolId | string | 關聯偶像 ID |
+| idolName | string | 顯示用偶像名稱 |
+| title | string | 活動標題 |
+| type | EventType | 7 大類：concert / ticketing / livestream / streaming / media / brand / official |
+| subType | EventSubType? | 細分類型（fanmeet / fansign / musicshow 等） |
+| status | EventStatus | confirmed / tentative / cancelled / postponed |
+| date | ISO string | 活動日期時間 |
+| time | string? | 顯示用時間 |
+| location | string? | 場地名稱 |
+| country | string | 國家 / 地區 |
+| countryFlag | string | 旗幟 emoji |
+| source.level | TrustLevel | official / media / pending |
+| source.label | string | 來源名稱 |
+| source.url | string? | 來源連結 |
+| source.type | SourceType? | official_sns / media_outlet / fan_account 等 |
+| description | string | 活動說明 |
+| isFavorited | boolean | 前端收藏狀態（未來改為 user_favorites 表） |
+| ticketUrl | string? | 購票連結 |
+| streamUrl | string? | 串流 / 直播連結 |
+| tags | string[] | 標籤 |
+
+### `event_candidates` 表（候選資料池，未審核）
+
+原始資料進入審核流程前的暫存區，對應未來 Admin 後台或 AI pipeline。
+
+| 欄位 | 型別 | 說明 |
+|------|------|------|
+| id | string | 唯一識別碼 |
+| rawTitle | string | 原始來源標題（未處理） |
+| rawContent | string | 原始內容文字 |
+| detectedIdolId | string? | AI 或規則偵測到的偶像 ID |
+| detectedEventType | EventType? | AI 或規則偵測到的活動大類 |
+| detectedDatetime | ISO string? | AI 或規則偵測到的日期時間 |
+| sourceUrl | string? | 原始來源 URL |
+| sourceName | string? | 來源名稱（帳號 / 媒體） |
+| sourceType | SourceType? | 來源分類 |
+| aiConfidence | number? | AI 分類信心分數（0.0–1.0） |
+| reviewStatus | 'pending' \| 'approved' \| 'rejected' | 審核狀態 |
+| reviewerNote | string? | 審核員備注 |
+| approvedEventId | string? | 審核通過後關聯的 Event.id |
+| createdAt | ISO string | 建立時間 |
+| updatedAt | ISO string | 最後更新時間 |
+
+### TrustLevel 定義
+
+| 值 | 顯示 | 說明 | 前台可見 |
+|----|------|------|---------|
+| official | 官方確認 | 官方 SNS / 官網直接公告 | ✅ |
+| media | 媒體確認 | 知名媒體 / 粉絲帳號確認 | ✅ |
+| pending | 待確認 | 社群整理 / 未驗證消息 | ❌ |

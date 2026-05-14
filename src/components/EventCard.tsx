@@ -2,13 +2,13 @@
 
 import Link from 'next/link'
 import { MapPin, Clock, Heart, Bell, Share2, ExternalLink } from 'lucide-react'
-import { type IdolEvent, formatEventDate } from '@/lib/mockEvents'
+import { type Event, formatEventDate } from '@/lib/mockEvents'
 import SourceBadge from './SourceBadge'
 import EventTypeBadge from './EventTypeBadge'
 import clsx from 'clsx'
 
 interface EventCardProps {
-  event: IdolEvent
+  event: Event
   compact?: boolean
 }
 
@@ -41,13 +41,18 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                 <span className="text-xs font-semibold text-primary truncate max-w-[72px]">
                   {event.idolName}
                 </span>
-                <EventTypeBadge type={event.type} />
+                <EventTypeBadge type={event.type} subType={event.subType} />
               </div>
               <p className="text-sm font-semibold text-text-base leading-snug line-clamp-1">
                 {event.title}
               </p>
               <div className="mt-1 flex items-center gap-2 flex-wrap">
-                <span className={clsx('text-xs font-medium', isToday ? 'text-primary' : 'text-muted')}>
+                <span
+                  className={clsx(
+                    'text-xs font-medium',
+                    isToday ? 'text-primary' : 'text-muted',
+                  )}
+                >
                   {event.countryFlag} {dateLabel}
                 </span>
                 {event.time && (
@@ -57,7 +62,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                   </span>
                 )}
                 <span className="ml-auto">
-                  <SourceBadge source={event.source} size="sm" />
+                  <SourceBadge source={event.source.level} size="sm" />
                 </span>
               </div>
             </div>
@@ -105,7 +110,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-1.5 mb-1">
               <span className="text-xs font-semibold text-primary">{event.idolName}</span>
-              <EventTypeBadge type={event.type} />
+              <EventTypeBadge type={event.type} subType={event.subType} />
             </div>
             <h3 className="text-base font-semibold text-text-base leading-snug line-clamp-2">
               {event.title}
@@ -119,7 +124,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
           >
             <Heart
               className={clsx(
-                'h-4.5 w-4.5 transition-colors',
+                'h-4 w-4 transition-colors',
                 event.isFavorited ? 'fill-primary text-primary' : 'text-muted/50',
               )}
             />
@@ -147,13 +152,20 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
 
         {/* Source */}
         <div className="mt-2">
-          <SourceBadge source={event.source} label={event.sourceLabel} />
+          <SourceBadge source={event.source.level} label={event.source.label} />
         </div>
 
         {/* Action bar */}
         <div className="mt-3 pt-3 border-t border-card-border flex items-center gap-0.5">
           <ActionBtn
-            icon={<Heart className={clsx('h-3.5 w-3.5', event.isFavorited && 'fill-primary text-primary')} />}
+            icon={
+              <Heart
+                className={clsx(
+                  'h-3.5 w-3.5',
+                  event.isFavorited && 'fill-primary text-primary',
+                )}
+              />
+            }
             label="收藏"
             active={event.isFavorited}
             onClick={(e) => e.preventDefault()}
@@ -163,7 +175,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
             label="提醒"
             onClick={(e) => e.preventDefault()}
           />
-          {(event.sourceUrl || event.ticketUrl || event.streamUrl) && (
+          {(event.source.url || event.ticketUrl || event.streamUrl) && (
             <ActionBtn
               icon={<ExternalLink className="h-3.5 w-3.5" />}
               label="來源"

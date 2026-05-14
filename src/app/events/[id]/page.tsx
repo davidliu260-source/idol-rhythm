@@ -28,6 +28,7 @@ export default function EventDetailPage({
 
   const idol = getIdolById(event.idolId)
   const dateLabel = formatEventDate(event.date)
+  const isConfirmed = event.status === 'confirmed'
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -73,7 +74,7 @@ export default function EventDetailPage({
           <div>
             <p className="text-xs text-white/60 font-medium">{event.idolName}</p>
             <div className="flex items-center gap-2 mt-1">
-              <EventTypeBadge type={event.type} size="md" />
+              <EventTypeBadge type={event.type} subType={event.subType} size="md" />
             </div>
           </div>
         </div>
@@ -91,11 +92,11 @@ export default function EventDetailPage({
           </p>
         </div>
 
-        {/* Title & confirmed status */}
+        {/* Title & status */}
         <div>
           <h1 className="text-lg font-bold text-text-base leading-snug">{event.title}</h1>
           <div className="flex items-center gap-2 mt-2">
-            {event.confirmed ? (
+            {isConfirmed ? (
               <span className="flex items-center gap-1 text-xs text-emerald-400">
                 <CheckCircle2 className="h-3.5 w-3.5" />
                 已確認
@@ -156,7 +157,12 @@ export default function EventDetailPage({
         {/* Source */}
         <div className="rounded-2xl border border-card-border bg-card p-4">
           <h2 className="text-xs font-semibold text-muted mb-2.5">資訊來源</h2>
-          <SourceBadge source={event.source} label={event.sourceLabel} showDesc size="md" />
+          <SourceBadge
+            source={event.source.level}
+            label={event.source.label}
+            showDesc
+            size="md"
+          />
         </div>
 
         {/* Ticket info */}
