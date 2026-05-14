@@ -1,17 +1,16 @@
 import { Calendar } from 'lucide-react'
-import { MOCK_EVENTS, formatEventDate, EVENT_TYPE_LABELS } from '@/lib/mockEvents'
+import { getVisibleEvents, formatEventDate } from '@/lib/mockEvents'
 import { MOCK_IDOLS } from '@/lib/mockIdols'
 import EventCard from '@/components/EventCard'
 
 export default function SchedulePage() {
   const now = new Date()
+  const visibleEvents = getVisibleEvents()
 
-  // Sort all events by date
-  const sorted = [...MOCK_EVENTS].sort(
+  const sorted = [...visibleEvents].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
   )
 
-  // Group by date label
   const groups: Record<string, typeof sorted> = {}
   for (const event of sorted) {
     const key = formatEventDate(event.date)
@@ -34,10 +33,23 @@ export default function SchedulePage() {
           <Calendar className="h-5 w-5 text-primary" />
           <h1 className="text-xl font-bold text-text-base">行程時間軸</h1>
         </div>
-        <p className="text-xs text-muted mt-1">共 {MOCK_EVENTS.length} 筆活動資料</p>
+        <p className="text-xs text-muted mt-1">
+          共 {visibleEvents.length} 筆已確認活動
+        </p>
       </div>
 
-      {/* Idol filter (mock - not functional) */}
+      {/* Demo banner */}
+      <div className="px-4 mb-4">
+        <div className="flex items-start gap-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 px-3 py-2.5">
+          <span className="text-amber-400 text-sm leading-none mt-0.5">⚠️</span>
+          <p className="text-xs text-amber-300 leading-snug">
+            <span className="font-semibold">Demo 展示資料</span>
+            ｜僅顯示官方確認與媒體確認的活動，非真實官方行程
+          </p>
+        </div>
+      </div>
+
+      {/* Idol filter (mock — not functional) */}
       <div className="px-4 mb-4 overflow-x-auto scrollbar-none">
         <div className="flex gap-2 pb-1">
           <button className="flex-shrink-0 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-white">
@@ -56,12 +68,10 @@ export default function SchedulePage() {
 
       {/* Timeline */}
       <div className="px-4 flex flex-col gap-6">
-        {/* Upcoming */}
         {upcomingGroups.map(([label, events]) => (
           <DateGroup key={label} label={label} events={events} isToday={label.startsWith('今天')} />
         ))}
 
-        {/* Past */}
         {pastGroups.length > 0 && (
           <>
             <div className="flex items-center gap-3">
@@ -86,13 +96,12 @@ function DateGroup({
   isPast = false,
 }: {
   label: string
-  events: ReturnType<typeof MOCK_EVENTS.filter>
+  events: ReturnType<typeof getVisibleEvents>
   isToday?: boolean
   isPast?: boolean
 }) {
   return (
     <div className="flex gap-3">
-      {/* Timeline rail */}
       <div className="flex flex-col items-center pt-1">
         <div
           className={`h-3 w-3 rounded-full flex-shrink-0 ${
@@ -101,8 +110,6 @@ function DateGroup({
         />
         <div className="w-px flex-1 bg-card-border mt-1" />
       </div>
-
-      {/* Content */}
       <div className="flex-1 pb-2">
         <p
           className={`text-xs font-semibold mb-2 ${

@@ -8,8 +8,10 @@ import {
   ExternalLink,
   Heart,
   Share2,
-  AlertTriangle,
   CheckCircle2,
+  Sparkles,
+  Tv,
+  Ticket,
 } from 'lucide-react'
 import { getEventById, formatEventDate } from '@/lib/mockEvents'
 import { getIdolById } from '@/lib/mockIdols'
@@ -26,7 +28,6 @@ export default function EventDetailPage({
 
   const idol = getIdolById(event.idolId)
   const dateLabel = formatEventDate(event.date)
-  const eventDate = new Date(event.date)
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -39,7 +40,6 @@ export default function EventDetailPage({
             : 'linear-gradient(135deg, #1e1b4b, #312e81)',
         }}
       >
-        {/* Back button */}
         <Link
           href="/schedule"
           className="absolute top-12 left-4 flex items-center gap-1.5 text-white/80"
@@ -48,7 +48,6 @@ export default function EventDetailPage({
           <span className="text-sm">返回</span>
         </Link>
 
-        {/* Action buttons */}
         <div className="absolute top-12 right-4 flex items-center gap-2">
           <button className="rounded-full bg-white/10 backdrop-blur-sm p-2">
             <Share2 className="h-4 w-4 text-white" />
@@ -61,7 +60,6 @@ export default function EventDetailPage({
         </div>
 
         <div className="flex items-end gap-3">
-          {/* Idol avatar */}
           <div
             className="h-16 w-16 rounded-2xl flex items-center justify-center text-2xl font-bold text-white ring-2 ring-white/20 flex-shrink-0"
             style={{
@@ -82,14 +80,20 @@ export default function EventDetailPage({
       </div>
 
       {/* Content */}
-      <div className="flex-1 px-4 py-5 flex flex-col gap-5">
+      <div className="flex-1 px-4 py-5 flex flex-col gap-4">
+
+        {/* Demo data notice */}
+        <div className="flex items-start gap-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 px-3 py-2.5">
+          <span className="text-amber-400 text-sm leading-none mt-0.5">⚠️</span>
+          <p className="text-xs text-amber-300 leading-snug">
+            <span className="font-semibold">Demo 展示資料</span>
+            ｜非真實官方行程，請以官方 SNS 或購票平台公告為準
+          </p>
+        </div>
+
         {/* Title & confirmed status */}
         <div>
-          <div className="flex items-start gap-2">
-            <h1 className="flex-1 text-lg font-bold text-text-base leading-snug">
-              {event.title}
-            </h1>
-          </div>
+          <h1 className="text-lg font-bold text-text-base leading-snug">{event.title}</h1>
           <div className="flex items-center gap-2 mt-2">
             {event.confirmed ? (
               <span className="flex items-center gap-1 text-xs text-emerald-400">
@@ -98,15 +102,14 @@ export default function EventDetailPage({
               </span>
             ) : (
               <span className="flex items-center gap-1 text-xs text-amber-400">
-                <AlertTriangle className="h-3.5 w-3.5" />
-                待確認，資訊可能變動
+                ⚠ 待確認，資訊可能變動
               </span>
             )}
           </div>
         </div>
 
         {/* Info grid */}
-        <div className="rounded-2xl border border-card-border bg-card p-4 grid grid-cols-1 gap-3">
+        <div className="rounded-2xl border border-card-border bg-card p-4 flex flex-col gap-3">
           <InfoRow
             icon={<Clock className="h-4 w-4" />}
             label="日期時間"
@@ -126,48 +129,72 @@ export default function EventDetailPage({
           )}
         </div>
 
-        {/* Description */}
-        <div className="rounded-2xl border border-card-border bg-card p-4">
-          <h2 className="text-xs font-semibold text-muted mb-2">活動說明</h2>
-          <p className="text-sm text-text-base leading-relaxed">{event.description}</p>
-        </div>
-
-        {/* Tags */}
-        {event.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {event.tags.map((tag) => (
-              <span
-                key={tag}
-                className="rounded-full bg-card border border-card-border px-3 py-1 text-xs text-muted"
-              >
-                #{tag}
-              </span>
-            ))}
+        {/* AI summary mock */}
+        <div className="rounded-2xl border border-violet-500/25 bg-violet-500/5 p-4">
+          <div className="flex items-center gap-2 mb-2.5">
+            <Sparkles className="h-3.5 w-3.5 text-violet-400" />
+            <span className="text-xs font-semibold text-violet-400">AI 繁中摘要</span>
+            <span className="ml-auto text-[10px] text-muted bg-card border border-card-border px-1.5 py-0.5 rounded-full">
+              Demo
+            </span>
           </div>
-        )}
+          <p className="text-sm text-text-base leading-relaxed">{event.description}</p>
+          {event.tags.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {event.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full bg-violet-500/10 border border-violet-500/20 px-2.5 py-0.5 text-xs text-violet-300"
+                >
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Source */}
         <div className="rounded-2xl border border-card-border bg-card p-4">
-          <h2 className="text-xs font-semibold text-muted mb-2">資訊來源</h2>
-          <SourceBadge
-            source={event.source}
-            label={event.sourceLabel}
-            showDesc
-            size="md"
-          />
+          <h2 className="text-xs font-semibold text-muted mb-2.5">資訊來源</h2>
+          <SourceBadge source={event.source} label={event.sourceLabel} showDesc size="md" />
         </div>
 
-        {/* Ticket CTA */}
+        {/* Ticket info */}
         {event.ticketUrl && (
-          <a
-            href={event.ticketUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-sm font-bold text-white"
-          >
-            <ExternalLink className="h-4 w-4" />
-            前往購票
-          </a>
+          <div className="rounded-2xl border border-orange-500/25 bg-orange-500/5 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Ticket className="h-4 w-4 text-orange-400" />
+              <h2 className="text-xs font-semibold text-orange-400">票務資訊</h2>
+            </div>
+            <a
+              href={event.ticketUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-bold text-white"
+            >
+              <ExternalLink className="h-4 w-4" />
+              前往購票
+            </a>
+          </div>
+        )}
+
+        {/* Streaming info */}
+        {event.streamUrl && (
+          <div className="rounded-2xl border border-indigo-500/25 bg-indigo-500/5 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Tv className="h-4 w-4 text-indigo-400" />
+              <h2 className="text-xs font-semibold text-indigo-400">串流 / 直播資訊</h2>
+            </div>
+            <a
+              href={event.streamUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3.5 text-sm font-bold text-white"
+            >
+              <ExternalLink className="h-4 w-4" />
+              前往觀看
+            </a>
+          </div>
         )}
       </div>
     </div>

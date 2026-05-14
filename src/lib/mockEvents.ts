@@ -7,6 +7,12 @@ export type EventType =
   | 'variety'
   | 'interview'
   | 'award'
+  | 'ticketing'
+  | 'livestream'
+  | 'streaming'
+  | 'magazine'
+  | 'brand'
+  | 'announcement'
 
 export type SourceLevel = 'official' | 'verified' | 'community' | 'unverified'
 
@@ -24,12 +30,16 @@ export interface IdolEvent {
   source: SourceLevel
   sourceLabel: string
   sourceUrl?: string
+  streamUrl?: string
   description: string
   isFavorited: boolean
   ticketUrl?: string
   tags: string[]
   confirmed: boolean
 }
+
+// Only official and verified sources are shown in the frontend
+export const VISIBLE_SOURCES: SourceLevel[] = ['official', 'verified']
 
 export const EVENT_TYPE_LABELS: Record<EventType, string> = {
   concert: '演唱會',
@@ -40,6 +50,12 @@ export const EVENT_TYPE_LABELS: Record<EventType, string> = {
   variety: '綜藝節目',
   interview: '採訪宣傳',
   award: '頒獎典禮',
+  ticketing: '開票售票',
+  livestream: '直播',
+  streaming: '串流',
+  magazine: '雜誌媒體',
+  brand: '代言品牌',
+  announcement: '官方公告',
 }
 
 export const EVENT_TYPE_COLORS: Record<EventType, string> = {
@@ -51,6 +67,12 @@ export const EVENT_TYPE_COLORS: Record<EventType, string> = {
   variety: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
   interview: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
   award: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+  ticketing: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+  livestream: 'bg-red-500/20 text-red-300 border-red-500/30',
+  streaming: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
+  magazine: 'bg-teal-500/20 text-teal-300 border-teal-500/30',
+  brand: 'bg-lime-500/20 text-lime-300 border-lime-500/30',
+  announcement: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
 }
 
 export const SOURCE_CONFIG: Record<
@@ -58,19 +80,19 @@ export const SOURCE_CONFIG: Record<
   { label: string; color: string; dot: string; desc: string }
 > = {
   official: {
-    label: '官方',
+    label: '官方確認',
     color: 'text-emerald-400',
     dot: 'bg-emerald-400',
     desc: '來自官方 SNS 或官網公告',
   },
   verified: {
-    label: '已驗證',
+    label: '媒體確認',
     color: 'text-blue-400',
     dot: 'bg-blue-400',
     desc: '由知名粉絲帳號或媒體確認',
   },
   community: {
-    label: '社群',
+    label: '社群整理',
     color: 'text-amber-400',
     dot: 'bg-amber-400',
     desc: '粉絲社群匯整，可信度中等',
@@ -92,6 +114,7 @@ const d = (offset: number, hour = 19, min = 0) => {
 }
 
 export const MOCK_EVENTS: IdolEvent[] = [
+  // ── 原有 15 筆 ──────────────────────────────────────────────────────
   {
     id: 'ev-001',
     idolId: 'bts',
@@ -233,13 +256,14 @@ export const MOCK_EVENTS: IdolEvent[] = [
     country: '韓國',
     countryFlag: '🇰🇷',
     source: 'verified',
-    sourceLabel: '@@twiceupdates_',
+    sourceLabel: '@twiceupdates_',
     description: 'TWICE 確認出演本週《人氣歌謠》，預計演唱新回歸主打歌。',
     isFavorited: false,
     tags: ['音樂節目', '人氣歌謠', '回歸宣傳'],
     confirmed: true,
   },
   {
+    // community source — 前台不顯示，作為候選資料保留
     id: 'ev-009',
     idolId: 'le-sserafim',
     idolName: 'LE SSERAFIM',
@@ -310,6 +334,7 @@ export const MOCK_EVENTS: IdolEvent[] = [
     confirmed: true,
   },
   {
+    // community source — 前台不顯示
     id: 'ev-013',
     idolId: 'blackpink',
     idolName: 'BLACKPINK',
@@ -327,6 +352,7 @@ export const MOCK_EVENTS: IdolEvent[] = [
     confirmed: false,
   },
   {
+    // unverified source — 前台不顯示
     id: 'ev-014',
     idolId: 'bts',
     idolName: 'BTS',
@@ -363,19 +389,189 @@ export const MOCK_EVENTS: IdolEvent[] = [
     tags: ['吉隆坡', '東南亞', '巡演最終場'],
     confirmed: true,
   },
+
+  // ── 新增 9 筆（ev-016 ~ ev-024）────────────────────────────────────
+  {
+    id: 'ev-016',
+    idolId: 'bts',
+    idolName: 'BTS',
+    title: 'BTS 台北演唱會正式開票 · PERMISSION TO DANCE',
+    type: 'ticketing',
+    date: d(1),
+    time: '12:00',
+    location: '台北小巨蛋',
+    country: '台灣',
+    countryFlag: '🇹🇼',
+    source: 'official',
+    sourceLabel: 'HYBE 官方',
+    description: 'BTS 台北小巨蛋演唱會今日 12:00 正式開票，一般席與 ARMY 預購票同步開搶，請備妥購票帳號。',
+    isFavorited: true,
+    ticketUrl: '#',
+    tags: ['開票', '台北', 'PERMISSION TO DANCE'],
+    confirmed: true,
+  },
+  {
+    id: 'ev-017',
+    idolId: 'blackpink',
+    idolName: 'BLACKPINK',
+    title: 'BLACKPINK《REBIRTH》回歸直播 · Weverse',
+    type: 'livestream',
+    date: d(6),
+    time: '21:00',
+    country: '線上',
+    countryFlag: '💻',
+    source: 'official',
+    sourceLabel: '@BLACKPINK',
+    description: '《REBIRTH》專輯發行週，四人齊聚 Weverse 進行回歸直播，與全球 BLINK 同慶新專輯。',
+    isFavorited: false,
+    streamUrl: '#',
+    tags: ['Weverse直播', 'REBIRTH', '回歸'],
+    confirmed: true,
+  },
+  {
+    id: 'ev-018',
+    idolId: 'aespa',
+    idolName: 'aespa',
+    title: 'aespa《Into the æ-WORLD》紀錄片 Netflix 上線',
+    type: 'streaming',
+    date: d(12),
+    time: '08:00',
+    country: '全球',
+    countryFlag: '🌍',
+    source: 'verified',
+    sourceLabel: 'Netflix Korea',
+    description: 'aespa 首部幕後紀錄片《Into the æ-WORLD》於 Netflix 全球同步上線，揭露世界巡演籌備幕後與 æ 宇宙故事。',
+    isFavorited: false,
+    streamUrl: '#',
+    tags: ['Netflix', '紀錄片', '幕後特輯'],
+    confirmed: true,
+  },
+  {
+    id: 'ev-019',
+    idolId: 'ive',
+    idolName: 'IVE',
+    title: 'IVE × VOGUE KOREA 六月號封面特輯',
+    type: 'magazine',
+    date: d(8),
+    time: '10:00',
+    country: '韓國',
+    countryFlag: '🇰🇷',
+    source: 'official',
+    sourceLabel: 'VOGUE KOREA',
+    description: 'IVE 六人全員登上《VOGUE Korea》六月號封面，主題「In Full Bloom」，收錄獨家採訪與時尚大片。',
+    isFavorited: false,
+    tags: ['VOGUE', '雜誌封面', '六月號'],
+    confirmed: true,
+  },
+  {
+    id: 'ev-020',
+    idolId: 'le-sserafim',
+    idolName: 'LE SSERAFIM',
+    title: 'LE SSERAFIM × PUMA 台北快閃店',
+    type: 'brand',
+    date: d(16),
+    time: '11:00',
+    location: '台北信義區 PUMA 旗艦店',
+    country: '台灣',
+    countryFlag: '🇹🇼',
+    source: 'official',
+    sourceLabel: 'PUMA Taiwan',
+    description: 'LE SSERAFIM 與 PUMA 合作快閃店於台北信義區盛大開幕，展出聯名系列並設互動打卡區，限量周邊現場贈送。',
+    isFavorited: false,
+    tags: ['PUMA', '品牌合作', '快閃', '台北'],
+    confirmed: true,
+  },
+  {
+    id: 'ev-021',
+    idolId: 'newjeans',
+    idolName: 'NewJeans',
+    title: 'NewJeans 正規二輯《NJWMN》發行計畫公告',
+    type: 'announcement',
+    date: d(2),
+    time: '09:00',
+    country: '全球',
+    countryFlag: '🌍',
+    source: 'official',
+    sourceLabel: '@NewJeans_ADOR',
+    description: 'ADOR 官方公告 NewJeans 第二張正規專輯《NJWMN》預計下季發行，同步公開宣傳排程預告與概念圖。',
+    isFavorited: false,
+    tags: ['官方公告', '新專輯', 'NJWMN'],
+    confirmed: true,
+  },
+  {
+    id: 'ev-022',
+    idolId: 'twice',
+    idolName: 'TWICE',
+    title: 'TWICE READY TO BE 台北場正式開票',
+    type: 'ticketing',
+    date: d(11),
+    time: '12:00',
+    location: '台北小巨蛋',
+    country: '台灣',
+    countryFlag: '🇹🇼',
+    source: 'official',
+    sourceLabel: 'JYP Entertainment',
+    description: 'TWICE 台北演唱會全區開票，熱門場次預計秒殺，建議提前備妥購票帳號與信用卡。',
+    isFavorited: false,
+    ticketUrl: '#',
+    tags: ['開票', '台北', 'READY TO BE'],
+    confirmed: true,
+  },
+  {
+    id: 'ev-023',
+    idolId: 'txt',
+    idolName: 'TXT',
+    title: 'TXT《Chasing》發行特別直播 Q&A',
+    type: 'livestream',
+    date: d(1),
+    time: '20:00',
+    country: '線上',
+    countryFlag: '💻',
+    source: 'official',
+    sourceLabel: '@TXT_bighit',
+    description: 'TXT 新曲《Chasing》發行隔日，五人齊聚 YouTube 官方頻道進行直播，現場即時回答粉絲提問。',
+    isFavorited: false,
+    streamUrl: '#',
+    tags: ['YouTube直播', 'Q&A', 'Chasing'],
+    confirmed: true,
+  },
+  {
+    id: 'ev-024',
+    idolId: 'stray-kids',
+    idolName: 'Stray Kids',
+    title: "Stray Kids × Harper's Bazaar Korea 七月號封面",
+    type: 'magazine',
+    date: d(15),
+    time: '10:00',
+    country: '韓國',
+    countryFlag: '🇰🇷',
+    source: 'verified',
+    sourceLabel: "Harper's Bazaar Korea",
+    description: "Stray Kids 登上《Harper's Bazaar Korea》七月號封面，主題「Untamed」，收錄獨家採訪與 3RACHA 幕後花絮。",
+    isFavorited: false,
+    tags: ['時尚雜誌', '封面', "Harper's Bazaar"],
+    confirmed: true,
+  },
 ]
+
+// ── Query helpers ────────────────────────────────────────────────────────────
+
+export function getVisibleEvents(): IdolEvent[] {
+  return MOCK_EVENTS.filter((e) => VISIBLE_SOURCES.includes(e.source))
+}
 
 export function getEventById(id: string): IdolEvent | undefined {
   return MOCK_EVENTS.find((e) => e.id === id)
 }
 
 export function getEventsByIdol(idolId: string): IdolEvent[] {
-  return MOCK_EVENTS.filter((e) => e.idolId === idolId)
+  return MOCK_EVENTS.filter((e) => e.idolId === idolId && VISIBLE_SOURCES.includes(e.source))
 }
 
 export function getTodayEvents(): IdolEvent[] {
   const today = new Date()
   return MOCK_EVENTS.filter((e) => {
+    if (!VISIBLE_SOURCES.includes(e.source)) return false
     const d = new Date(e.date)
     return (
       d.getFullYear() === today.getFullYear() &&
@@ -390,13 +586,26 @@ export function getUpcomingEvents(days = 14): IdolEvent[] {
   const cutoff = new Date(now)
   cutoff.setDate(cutoff.getDate() + days)
   return MOCK_EVENTS.filter((e) => {
+    if (!VISIBLE_SOURCES.includes(e.source)) return false
     const d = new Date(e.date)
     return d >= now && d <= cutoff
   }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 }
 
 export function getFavoritedEvents(): IdolEvent[] {
-  return MOCK_EVENTS.filter((e) => e.isFavorited)
+  return MOCK_EVENTS.filter((e) => e.isFavorited && VISIBLE_SOURCES.includes(e.source))
+}
+
+export function getEventsByTypes(types: EventType[], days = 14): IdolEvent[] {
+  const now = new Date()
+  const cutoff = new Date(now)
+  cutoff.setDate(cutoff.getDate() + days)
+  return MOCK_EVENTS.filter((e) => {
+    if (!VISIBLE_SOURCES.includes(e.source)) return false
+    if (!types.includes(e.type)) return false
+    const d = new Date(e.date)
+    return d >= now && d <= cutoff
+  }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 }
 
 export function formatEventDate(dateStr: string): string {

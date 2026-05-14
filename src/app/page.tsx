@@ -1,12 +1,13 @@
 import Link from 'next/link'
-import { Bell, ChevronRight, Zap } from 'lucide-react'
+import { Bell, ChevronRight, Zap, Star, Play, Newspaper, Timer } from 'lucide-react'
 import {
   MOCK_EVENTS,
+  VISIBLE_SOURCES,
   getTodayEvents,
-  getUpcomingEvents,
-  getFavoritedEvents,
+  getEventsByTypes,
+  type IdolEvent,
 } from '@/lib/mockEvents'
-import { getFollowingIdols } from '@/lib/mockIdols'
+import { getFollowingIdols, getIdolById } from '@/lib/mockIdols'
 import EventCard from '@/components/EventCard'
 
 export default function HomePage() {
@@ -15,13 +16,27 @@ export default function HomePage() {
   const dateStr = `${today.getMonth() + 1}月${today.getDate()}日 週${weekdays[today.getDay()]}`
 
   const todayEvents = getTodayEvents()
-  const upcomingEvents = getUpcomingEvents(7)
+  const weekHighlights = getEventsByTypes(['concert', 'fanmeet', 'fansign', 'award'], 7)
+  const streamableEvents = getEventsByTypes(['livestream', 'streaming'], 14)
+  const newsEvents = getEventsByTypes(['announcement', 'magazine', 'brand', 'release'], 14)
+
   const followingIdols = getFollowingIdols()
-  const followingIds = new Set(followingIdols.map((i) => i.id))
-  const myEvents = MOCK_EVENTS.filter((e) => followingIds.has(e.idolId))
-    .filter((e) => new Date(e.date) >= today)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(0, 5)
+
+  const myCountdown = followingIdols
+    .map((idol) => {
+      const next = MOCK_EVENTS.filter(
+        (e) =>
+          e.idolId === idol.id &&
+          VISIBLE_SOURCES.includes(e.source) &&
+          new Date(e.date) >= today,
+      ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0]
+      if (!next) return null
+      const daysUntil = Math.ceil(
+        (new Date(next.date).getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+      )
+      return { event: next, daysUntil }
+    })
+    .filter((x): x is { event: IdolEvent; daysUntil: number } => x !== null)
 
   return (
     <div className="flex flex-col gap-6 px-4 pt-12 pb-6">
@@ -40,30 +55,16 @@ export default function HomePage() {
         </button>
       </header>
 
-      {/* Today's highlight */}
-      {todayEvents.length > 0 ? (
-        <section>
-          <div className="flex items-center gap-2 mb-3">
-            <Zap className="h-4 w-4 text-primary" />
-            <h2 className="text-sm font-semibold text-text-base">今日活動</h2>
-            <span className="ml-auto text-xs text-primary font-medium">{todayEvents.length} 場</span>
-          </div>
-          <div className="flex flex-col gap-2">
-            {todayEvents.map((event) => (
-              <EventCard key={event.id} event={event} />
-            ))}
-          </div>
-        </section>
-      ) : (
-        <div className="rounded-2xl border border-card-border bg-card px-4 py-5 text-center">
-          <p className="text-sm text-muted">今天沒有追蹤偶像的活動</p>
-          <Link href="/schedule" className="mt-1 inline-block text-xs text-primary">
-            查看完整行程 →
-          </Link>
-        </div>
-      )}
+      {/* Demo data banner */}
+      <div className="flex items-start gap-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 px-3 py-2.5">
+        <span className="text-amber-400 text-sm leading-none mt-0.5">⚠️</span>
+        <p className="text-xs text-amber-300 leading-snug">
+          <span className="font-semibold">Demo 展示資料</span>
+          ｜目前為展示資料，非真實官方行程，請勿作為購票或出行依據
+        </p>
+      </div>
 
-      {/* Following idols quick strip */}
+      {/* Following idols strip */}
       {followingIdols.length > 0 && (
         <section>
           <div className="flex items-center justify-between mb-3">
@@ -76,7 +77,7 @@ export default function HomePage() {
             {followingIdols.map((idol) => (
               <Link
                 key={idol.id}
-                href={`/idols`}
+                href="/idols"
                 className="flex flex-col items-center gap-1.5 flex-shrink-0"
               >
                 <div
@@ -85,14 +86,13 @@ export default function HomePage() {
                 >
                   {idol.name.charAt(0)}
                 </div>
-                <span className="text-xs text-muted max-w-[56px] truncate text-center">{idol.name}</span>
+                <span className="text-xs text-muted max-w-[56px] truncate text-center">
+                  {idol.name}
+                </span>
               </Link>
             ))}
-            <Link
-              href="/idols"
-              className="flex flex-col items-center gap-1.5 flex-shrink-0"
-            >
-              <div className="h-14 w-14 rounded-2xl border-2 border-dashed border-card-border flex items-center justify-center text-muted">
+            <Link href="/idols" className="flex flex-col items-center gap-1.5 flex-shrink-0">
+              <div className="h-14 w-14 rounded-2xl border-2 border-dashed border-card-border flex items-center justify-center text-muted text-xl">
                 +
               </div>
               <span className="text-xs text-muted">追蹤</span>
@@ -101,37 +101,164 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* My idols upcoming events */}
-      {myEvents.length > 0 && (
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-text-base">近期行程</h2>
-            <Link href="/schedule" className="flex items-center gap-0.5 text-xs text-muted">
-              全部 <ChevronRight className="h-3 w-3" />
+      {/* Section 1: 今日不能錯過 */}
+      <section>
+        <SectionHeader
+          icon={<Zap className="h-4 w-4 text-primary" />}
+          title="今日不能錯過"
+          count={todayEvents.length}
+          href="/schedule"
+        />
+        {todayEvents.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            {todayEvents.map((event) => (
+              <EventCard key={event.id} event={event} />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-card-border bg-card px-4 py-5 text-center">
+            <p className="text-sm text-muted">今天沒有公開確認的活動</p>
+            <Link href="/schedule" className="mt-1 inline-block text-xs text-primary">
+              查看完整行程 →
             </Link>
           </div>
+        )}
+      </section>
+
+      {/* Section 2: 本週重點 */}
+      {weekHighlights.length > 0 && (
+        <section>
+          <SectionHeader
+            icon={<Star className="h-4 w-4 text-yellow-400" />}
+            title="本週重點"
+            count={weekHighlights.length}
+            href="/schedule"
+          />
           <div className="flex flex-col gap-2">
-            {myEvents.map((event) => (
+            {weekHighlights.slice(0, 3).map((event) => (
               <EventCard key={event.id} event={event} compact />
             ))}
           </div>
         </section>
       )}
 
-      {/* Upcoming hot events */}
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-text-base">近 7 天熱門活動</h2>
-          <Link href="/schedule" className="flex items-center gap-0.5 text-xs text-muted">
-            全部 <ChevronRight className="h-3 w-3" />
-          </Link>
-        </div>
-        <div className="flex flex-col gap-2">
-          {upcomingEvents.slice(0, 4).map((event) => (
-            <EventCard key={event.id} event={event} compact />
-          ))}
-        </div>
-      </section>
+      {/* Section 3: 我的倒數 */}
+      {myCountdown.length > 0 && (
+        <section>
+          <SectionHeader
+            icon={<Timer className="h-4 w-4 text-violet-400" />}
+            title="我的倒數"
+            href="/schedule"
+          />
+          <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1">
+            {myCountdown.map(({ event, daysUntil }) => (
+              <CountdownCard key={event.id} event={event} daysUntil={daysUntil} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Section 4: 最近可看 */}
+      {streamableEvents.length > 0 && (
+        <section>
+          <SectionHeader
+            icon={<Play className="h-4 w-4 text-red-400" />}
+            title="最近可看"
+            count={streamableEvents.length}
+            href="/schedule"
+          />
+          <div className="flex flex-col gap-2">
+            {streamableEvents.slice(0, 3).map((event) => (
+              <EventCard key={event.id} event={event} compact />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Section 5: 最新情報 */}
+      {newsEvents.length > 0 && (
+        <section>
+          <SectionHeader
+            icon={<Newspaper className="h-4 w-4 text-sky-400" />}
+            title="最新情報"
+            count={newsEvents.length}
+            href="/schedule"
+          />
+          <div className="flex flex-col gap-2">
+            {newsEvents.slice(0, 3).map((event) => (
+              <EventCard key={event.id} event={event} compact />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
+  )
+}
+
+function SectionHeader({
+  icon,
+  title,
+  count,
+  href,
+}: {
+  icon: React.ReactNode
+  title: string
+  count?: number
+  href: string
+}) {
+  return (
+    <div className="flex items-center gap-2 mb-3">
+      {icon}
+      <h2 className="text-sm font-semibold text-text-base">{title}</h2>
+      {count !== undefined && count > 0 && (
+        <span className="text-xs text-primary font-medium">{count} 場</span>
+      )}
+      <Link
+        href={href}
+        className="ml-auto flex items-center gap-0.5 text-xs text-muted"
+      >
+        全部 <ChevronRight className="h-3 w-3" />
+      </Link>
+    </div>
+  )
+}
+
+function CountdownCard({
+  event,
+  daysUntil,
+}: {
+  event: IdolEvent
+  daysUntil: number
+}) {
+  const idol = getIdolById(event.idolId)
+  const bgStyle = idol
+    ? `linear-gradient(135deg, ${idol.color}88, ${idol.color})`
+    : 'linear-gradient(135deg, #4c1d95, #6366f1)'
+
+  return (
+    <Link href={`/events/${event.id}`} className="flex-shrink-0 w-40">
+      <div className="rounded-2xl border border-card-border bg-card p-3 flex flex-col gap-2 h-full active:scale-[0.98] transition-transform">
+        <div className="flex items-center gap-2">
+          <div
+            className="h-8 w-8 rounded-lg flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
+            style={{ background: bgStyle }}
+          >
+            {event.idolName.charAt(0)}
+          </div>
+          <span className="text-xs font-semibold text-primary truncate">{event.idolName}</span>
+        </div>
+        <p className="text-xs text-text-base line-clamp-2 leading-snug flex-1">{event.title}</p>
+        <div className="flex items-baseline gap-1">
+          {daysUntil === 0 ? (
+            <span className="text-sm font-bold text-primary">今天！</span>
+          ) : (
+            <>
+              <span className="text-2xl font-bold text-primary leading-none">{daysUntil}</span>
+              <span className="text-xs text-muted">天後</span>
+            </>
+          )}
+        </div>
+      </div>
+    </Link>
   )
 }
