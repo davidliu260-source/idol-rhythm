@@ -33,7 +33,10 @@
 | `supabase/migrations/001_initial_schema.sql` | 完整 schema migration（已硬化，含 RLS 21 條 policy） |
 | `supabase/seed.sql` | 10 idols + 21 events + 21 event_sources + 3 event_candidates |
 | Supabase tables 建立 | 10 張 tables 已在 Supabase 建立完成 |
-| Supabase seed 匯入 | seed data 已執行匯入 |
+| Supabase seed 匯入 | seed data 已執行匯入，資料已確認 |
+| Supabase env 設定 | .env.local + Vercel env 均已設定（URL + anon key） |
+| Supabase read client | `src/lib/supabase/client.ts` + `src/lib/supabase/events.ts` 已建立 |
+| /schedule 接 Supabase | 行程頁優先讀 Supabase，fallback mock，已設為 dynamic rendering |
 
 ---
 
@@ -54,14 +57,25 @@
 | `source_clicks` | 來源點擊紀錄（匿名可寫） |
 | `user_activity_logs` | 使用者行為紀錄（需登入） |
 
-### Seed data 筆數
+### Seed data 筆數（已確認匯入）
 
-| 資料 | 筆數 |
-|---|---|
-| idols | 10 |
-| events（is_published = TRUE） | 21 |
-| event_sources | 21 |
-| event_candidates（review_status = pending） | 3 |
+| 資料 | 筆數 | 說明 |
+|---|---|---|
+| idols | 10 | 全部 is_active = TRUE |
+| events | 21 | 全部 is_published = TRUE，trust_level = official / media |
+| event_sources | 21 | 一對一對應每筆 event |
+| event_candidates | 3 | review_status = pending，不顯示於前台 |
+
+> ✅ pending 候選資料僅存在 `event_candidates`，前台 RLS 與 query filter 均排除。
+
+### Env 設定狀態
+
+| 環境 | NEXT_PUBLIC_SUPABASE_URL | NEXT_PUBLIC_SUPABASE_ANON_KEY |
+|---|---|---|
+| 本地 `.env.local` | ✅ 已設定 | ✅ 已設定 |
+| Vercel（idol-rhythm project） | ✅ 已設定 | ✅ 已設定 |
+
+> ⚠️ `.env.local` 不可提交版控。service role key / secret key 絕對不可進版控或貼入任何程式碼。
 
 ### RLS
 
@@ -73,13 +87,38 @@
 
 ---
 
-## 4. 目前仍是 mock / local 的部分
+## 4. 前台讀 Supabase 進度
+
+| 頁面 | 資料來源 | 說明 |
+|---|---|---|
+| `/schedule` 行程頁 | ✅ Supabase（fallback mock） | `getPublishedEvents()`，dynamic rendering |
+| `/idols` 偶像頁 | ⏳ 仍讀 mock | 下一步 |
+| `/events/[id]` 詳情頁 | ⏳ 仍讀 mock | 下一步 |
+| `/` 首頁 | ⏳ 仍讀 mock | 第三步 |
+| `/favorites` 收藏頁 | ⏳ localStorage | 需登入後才考慮 |
+| `/me` 個人頁 | ⏳ localStorage | 需登入後才考慮 |
+
+### Supabase read functions（src/lib/supabase/events.ts）
+
+| 函式 | 說明 |
+|---|---|
+| `getPublishedEvents()` | 讀 events（is_published + trust_level 過濾）+ JOIN idols + event_sources |
+| `getActiveIdols()` | 讀 idols（is_active = true） |
+| `getEventById(id)` | 讀單筆 event（同上過濾）+ JOIN |
+| `getEventSources(eventId)` | 讀特定 event 的所有來源 |
+
+> 所有函式在 env 未設定或查詢失敗時均安全回傳空陣列 / null，不影響 build 與靜態頁面。
+
+---
+
+## 5. 目前仍是 mock / local 的部分
 
 | 項目 | 現況 |
 |---|---|
-| 前台資料來源 | 仍主要讀取 `src/lib/mockIdols.ts` / `src/lib/mockEvents.ts` |
+| 偶像頁資料 | 仍讀取 `src/lib/mockIdols.ts` |
+| 詳情頁資料 | 仍讀取 `src/lib/mockEvents.ts` |
+| 首頁資料 | 仍讀取 mock（含 HomePersonalized 個人化倒數） |
 | 個人化資料 | localStorage，僅存在瀏覽器本機，重置即消失 |
-| Supabase read | 尚未接入前台（schema + seed 已就緒，等待 Phase 4） |
 | 使用者登入 | 尚未實作（Supabase Auth 待接入） |
 | Admin 後台 | 尚未建立（`/admin/*` 頁面尚未存在） |
 | AI 搜尋 / 整理 | 尚未實作 |
@@ -87,23 +126,31 @@
 
 ---
 
-## 5. 下一步建議順序
+## 6. 明天下一步（優先順序）
 
-| Phase | 內容 | 前提 |
+| 優先 | 目標 | 作法 |
 |---|---|---|
-| **Phase 4a** | 建立 Supabase read client（`@supabase/supabase-js`） | ✅ Schema + seed 已完成 |
-| **Phase 4b** | 設定 `.env.local` + Vercel env（`SUPABASE_URL` / `SUPABASE_ANON_KEY`） | Phase 4a |
-| **Phase 4c** | 首頁 / 行程 / 詳情頁改讀 Supabase，移除 mock data 依賴 | Phase 4b |
-| **Phase 5** | 極簡 admin 後台（`/admin/events`、`/admin/idols` CRUD） | Phase 4c + JWT claim 設定 |
-| **Phase 6** | `event_candidates` review 介面（候選池 → event approve 流程） | Phase 5 |
-| **Phase 6b** | `idol_candidates` 候選池（新偶像提案審核） | Phase 6 |
-| **Phase 7** | AI 自動整理 / 自動更新（爬蟲 + AI 整理 → candidates） | Phase 6 完成後 |
-
-> ⚠️ Phase 5 以後每個階段均屬高風險任務，需先經 GPT 拆解工作單確認範圍後才能執行。
+| **第一** | `/idols` 偶像頁讀 Supabase | 呼叫 `getActiveIdols()`，fallback `MOCK_IDOLS`，dynamic rendering |
+| **第二** | `/events/[id]` 詳情頁讀 Supabase | 呼叫 `getEventById(id)` + `getEventSources(id)`，fallback mock |
+| **第三** | 首頁讀 Supabase events / idols | 首頁 + HomePersonalized，注意 hydration 問題 |
+| **之後** | Admin 後台、AI 候選池 | 需 GPT 工作單拆解後才執行（高風險任務） |
 
 ---
 
-## 6. 重要注意事項
+## 7. 重要 commit 紀錄
+
+| Commit | 說明 |
+|---|---|
+| `7fc4d11` | Read schedule events from Supabase |
+| `56ea725` | Add Supabase read client foundation |
+| `152a71d` | Document current Idol Rhythm project status |
+| `04fc900` | Fix Supabase seed data quality |
+| `9ed7115` | Add Supabase seed data |
+| `7eb0f93` | Harden initial Supabase schema migration |
+
+---
+
+## 8. 重要注意事項
 
 | 規則 | 說明 |
 |---|---|
@@ -117,7 +164,7 @@
 
 ---
 
-## 7. 重要檔案索引
+## 9. 重要檔案索引
 
 | 檔案 | 說明 |
 |---|---|
@@ -126,8 +173,12 @@
 | `SUPABASE_SCHEMA.md` | Schema 規劃草稿（tables / enums / RLS / 7 階段計畫） |
 | `supabase/migrations/001_initial_schema.sql` | 正式 schema migration |
 | `supabase/seed.sql` | Demo seed data（idempotent） |
-| `src/lib/mockIdols.ts` | 前台暫用 mock 偶像資料 |
-| `src/lib/mockEvents.ts` | 前台暫用 mock 活動資料 |
+| `src/lib/supabase/client.ts` | Supabase client 工廠（env 缺失時回傳 null） |
+| `src/lib/supabase/events.ts` | 4 個唯讀查詢函式 + row 轉換邏輯 |
+| `src/lib/mockIdols.ts` | 前台 fallback mock 偶像資料 |
+| `src/lib/mockEvents.ts` | 前台 fallback mock 活動資料 |
 | `src/lib/appState.ts` | localStorage 個人化狀態管理 |
+| `src/app/schedule/page.tsx` | 行程頁（已接 Supabase，dynamic） |
 | `src/app/layout.tsx` | 根 layout（metadata、PWA manifest） |
 | `public/manifest.json` | PWA manifest |
+| `.env.example` | 環境變數範例（不含任何 key） |
