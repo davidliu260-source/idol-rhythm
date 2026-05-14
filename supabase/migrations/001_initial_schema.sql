@@ -17,7 +17,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 
 -- =============================================================================
--- SECTION 2: ENUM TYPES
+-- SECTION 2: ENUM TYPES (10 types)
 -- =============================================================================
 
 -- Idol music category
@@ -168,7 +168,9 @@ CREATE INDEX idx_idols_is_active ON idols (is_active);
 -- ---------------------------------------------------------------------------
 CREATE TABLE events (
   id            uuid          PRIMARY KEY DEFAULT uuid_generate_v4(),
-  idol_id       uuid          NOT NULL REFERENCES idols (id) ON DELETE CASCADE,
+  -- RESTRICT prevents accidental idol deletion from wiping all events.
+  -- Use idols.is_active = false to hide an idol from the frontend instead.
+  idol_id       uuid          NOT NULL REFERENCES idols (id) ON DELETE RESTRICT,
   -- Denormalised name to avoid joins on hot read paths
   idol_name     text          NOT NULL,
   title         text          NOT NULL,
@@ -382,11 +384,16 @@ ALTER TABLE user_activity_logs  ENABLE ROW LEVEL SECURITY;
 -- ---------------------------------------------------------------------------
 -- 6.1 idols — public read (active only)
 -- ---------------------------------------------------------------------------
+-- ⚠️  ADMIN JWT CLAIM — applies to ALL "admin all" policies below:
+--     All admin policies check: (auth.jwt() ->> 'user_role') = 'admin'
+--     Before enabling any admin UI, configure a Supabase custom JWT claim:
+--       user_role = 'admin'
+--     This is done via Dashboard → Authentication → Hooks (or a custom
+--     Auth JWT Template). Without it, no admin policy will ever match.
 CREATE POLICY "idols: public read active"
   ON idols FOR SELECT
   USING (is_active = true);
 
--- Admin full access — ⚠️ Review: confirm 'admin' claim key before executing
 CREATE POLICY "idols: admin all"
   ON idols FOR ALL
   USING ((auth.jwt() ->> 'user_role') = 'admin')
@@ -478,6 +485,14 @@ CREATE POLICY "reminders: user delete own"
   ON reminders FOR DELETE
   USING (auth.uid() = user_id);
 
+-- Users may update their own reminder (e.g. change reminder_type).
+-- NOTE: reminders.is_sent MUST only be updated by the service role / system job,
+--       not by the user. Enforce this at the application layer.
+CREATE POLICY "reminders: user update own"
+  ON reminders FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
 
 -- ---------------------------------------------------------------------------
 -- 6.7 event_candidates — admin only
@@ -490,10 +505,12 @@ CREATE POLICY "event_candidates: admin all"
 
 -- ---------------------------------------------------------------------------
 -- 6.8 event_clicks — insert-only for all (including anonymous); read for admin
+-- ⚠️  WITH CHECK (true) allows anon insert. Requires rate limiting / bot
+--     protection at the application layer before going to production.
 -- ---------------------------------------------------------------------------
 CREATE POLICY "event_clicks: insert anon or authed"
   ON event_clicks FOR INSERT
-  WITH CHECK (true);  -- open insert; frontend must not expose sensitive data here
+  WITH CHECK (true);  -- open insert; see review checklist item 2
 
 CREATE POLICY "event_clicks: admin read"
   ON event_clicks FOR SELECT
@@ -502,6 +519,7 @@ CREATE POLICY "event_clicks: admin read"
 
 -- ---------------------------------------------------------------------------
 -- 6.9 source_clicks — same pattern as event_clicks
+-- ⚠️  Same rate limiting / bot protection note applies (see checklist item 2).
 -- ---------------------------------------------------------------------------
 CREATE POLICY "source_clicks: insert anon or authed"
   ON source_clicks FOR INSERT
@@ -513,11 +531,12 @@ CREATE POLICY "source_clicks: admin read"
 
 
 -- ---------------------------------------------------------------------------
--- 6.10 user_activity_logs — insert-only for all; admin read
+-- 6.10 user_activity_logs — authenticated users insert own logs; admin read
+-- Anonymous sessions are tracked via session_id only; user_id must match.
 -- ---------------------------------------------------------------------------
-CREATE POLICY "user_activity_logs: insert anon or authed"
+CREATE POLICY "user_activity_logs: user insert own"
   ON user_activity_logs FOR INSERT
-  WITH CHECK (true);
+  WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "user_activity_logs: admin read"
   ON user_activity_logs FOR SELECT
@@ -528,29 +547,44 @@ CREATE POLICY "user_activity_logs: admin read"
 -- HUMAN REVIEW CHECKLIST (required before executing in Supabase)
 -- =============================================================================
 --
---  [ ] 1. JWT claim key: all admin policies use (auth.jwt() ->> 'user_role').
---         Confirm this matches how the admin role is set in your Supabase project
---         (Dashboard → Authentication → Hooks, or via custom claims).
+--  [ ] 1. ADMIN CUSTOM CLAIM (blocker):
+--         All admin policies use (auth.jwt() ->> 'user_role') = 'admin'.
+--         Before enabling any admin UI, configure a custom JWT claim in
+--         Supabase Dashboard → Authentication → Hooks (or JWT Template):
+--           user_role = 'admin'
+--         Without this, all 8 admin policies silently deny every request.
 --
---  [ ] 2. event_clicks / source_clicks INSERT WITH CHECK (true):
---         This allows anyone to insert a click row. Confirm this is acceptable
---         or add rate-limiting at the application layer.
+--  [ ] 2. ANALYTICS RATE LIMITING (security):
+--         event_clicks and source_clicks allow anonymous INSERT (WITH CHECK (true)).
+--         This is intentional for click tracking, but requires rate limiting and
+--         bot / abuse protection at the application or edge layer before going live.
+--         Consider Supabase Edge Functions or a middleware proxy.
 --
---  [ ] 3. user_activity_logs INSERT WITH CHECK (true):
---         Same as above — open insert. Review whether anonymous logging is needed.
+--  [ ] 3. SERVICE ROLE FOR reminders.is_sent (operational):
+--         The "reminders: user update own" policy lets users change reminder_type,
+--         but is_sent should only be flipped by the notification system.
+--         Ensure your push / email job uses the Supabase SERVICE ROLE key,
+--         which bypasses RLS, to update is_sent = true.
 --
---  [ ] 4. ON DELETE CASCADE on events → user_follows / saved_events / reminders:
---         Deleting an event will delete all user saves and reminders.
---         Confirm this cascading behaviour is intentional.
+--  [ ] 4. EVENT DELETE CASCADE TO saved_events / reminders (data safety):
+--         events.id → saved_events and reminders are ON DELETE CASCADE.
+--         Deleting an event permanently removes all user bookmarks and reminders
+--         for that event. Confirm this is acceptable, or add a soft-delete column
+--         (e.g. is_archived boolean) and use it instead of hard DELETE.
 --
---  [ ] 5. updated_at trigger: set_updated_at() is idempotent; safe to re-run.
+--  [ ] 5. ARCHIVED / SOFT-DELETE STATUS (product decision):
+--         There is currently no 'archived' status on events or idols.
+--         If you need to hide past events without deleting them, add:
+--           is_archived boolean NOT NULL DEFAULT false
+--         and update the public-read RLS policy to exclude archived rows.
+--         Decide before seeding data (Phase 3), as retrofitting is disruptive.
 --
---  [ ] 6. uuid-ossp extension: Supabase enables this by default.
---         Verify it is available before running CREATE EXTENSION.
+--  [ ] 6. uuid-ossp extension:
+--         Supabase enables this by default. Verify before running.
 --
 --  [ ] 7. No seed data is included here. Run seed script separately (Phase 3).
 --
---  [ ] 8. Run this migration in a single transaction if possible:
---         BEGIN; <paste SQL>; COMMIT; — to allow rollback on partial failure.
+--  [ ] 8. Run this migration in a single transaction:
+--         BEGIN; <paste SQL>; COMMIT; — allows full rollback on any error.
 --
 -- =============================================================================
