@@ -73,7 +73,7 @@ export default function HomePage() {
               管理 <ChevronRight className="h-3 w-3" />
             </Link>
           </div>
-          <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1">
+          <div className="flex gap-3 overflow-x-auto scrollbar-none pb-3">
             {followingIdols.map((idol) => (
               <Link
                 key={idol.id}
@@ -150,7 +150,7 @@ export default function HomePage() {
             title="我的倒數"
             href="/schedule"
           />
-          <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1">
+          <div className="flex gap-3 overflow-x-auto scrollbar-none pb-3">
             {myCountdown.map(({ event, daysUntil }) => (
               <CountdownCard key={event.id} event={event} daysUntil={daysUntil} />
             ))}
@@ -234,7 +234,7 @@ function CountdownCard({
 
   return (
     <Link href={`/events/${event.id}`} className="flex-shrink-0 w-40">
-      <div className="rounded-2xl border border-card-border bg-card p-3 flex flex-col gap-2 h-full active:scale-[0.98] transition-transform">
+      <div className="rounded-2xl border border-card-border bg-card p-3 flex flex-col gap-2 active:scale-[0.98] transition-transform">
         <div className="flex items-center gap-2">
           <div
             className="h-8 w-8 rounded-lg flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
