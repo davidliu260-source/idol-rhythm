@@ -115,6 +115,25 @@ CREATE TRIGGER trg_admin_users_updated_at
 -- SECTION 4: ROW LEVEL SECURITY
 -- =============================================================================
 
+-- ---------------------------------------------------------------------------
+-- GRANT — table-level privilege
+-- ---------------------------------------------------------------------------
+-- PostgreSQL has two independent access control layers:
+--   1. Object privileges (GRANT/REVOKE) — can the role touch the table at all?
+--   2. Row Level Security policies       — which rows may it see?
+--
+-- In Supabase, the `authenticated` role is used for all logged-in users.
+-- Without an explicit GRANT, even a correctly authenticated user receives
+-- "permission denied for table admin_users" (error 42501) before RLS
+-- policies are even evaluated.
+--
+-- This GRANT gives `authenticated` the minimum necessary privilege (SELECT).
+-- The RLS policy below then further restricts which rows are visible.
+-- anon gets no grant, so unauthenticated requests are blocked at the
+-- privilege layer before RLS is reached.
+-- ---------------------------------------------------------------------------
+GRANT SELECT ON TABLE admin_users TO authenticated;
+
 ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
 
 -- ---------------------------------------------------------------------------
@@ -123,6 +142,11 @@ ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
 -- An authenticated user can SELECT their own row IF is_active = true.
 -- This is the only operation the frontend ever needs to perform on this table:
 -- checking whether the current user is an active admin.
+--
+-- Two-layer protection:
+--   Layer 1 (GRANT above) — only the `authenticated` role may SELECT at all.
+--   Layer 2 (this policy) — within that role, only the row whose user_id
+--                           matches auth.uid() and is_active = true is visible.
 --
 -- No INSERT / UPDATE / DELETE policies are created here.
 -- All writes to admin_users must go through:
