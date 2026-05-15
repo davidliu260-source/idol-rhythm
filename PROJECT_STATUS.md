@@ -1,6 +1,6 @@
 # Idol Rhythm — 專案進度備份與交接文件
 
-> 最後更新：2026-05-15
+> 最後更新：2026-05-15（換窗前更新）
 > 本文件紀錄目前 Idol Rhythm 的完成進度、Supabase 狀態與下一步建議。
 
 ---
@@ -41,6 +41,8 @@
 | /events/[id] 接 Supabase | 詳情頁支援 UUID 與 ev-XXX 雙格式，`getEventById()` fallback mock |
 | / 首頁接 Supabase | async Server Component，Promise.all 並行抓 events + idols，HomePersonalized 改為 props |
 | /favorites 接 Supabase | 拆 Server Component + FavoritesClient，`getPublishedEvents()` fallback mock，localStorage 保留 |
+| /me 接 Supabase | 拆 Server Component + MeClient，`Promise.all` 並行抓 idols + events，統計數字改為動態 |
+| dev:clean 指令 | `package.json` 新增清除 .next 快取後重啟的指令，解決本地 CSS 掉光問題 |
 | CLAUDE.md 強化 | 整合 AGENTS.md 核心規範 + Karpathy 編碼原則 |
 
 ---
@@ -101,14 +103,14 @@
 | `/events/[id]` 詳情頁 | ✅ Supabase（fallback mock） | `getEventById()`，支援 UUID + ev-XXX 雙格式 |
 | `/` 首頁 | ✅ Supabase（fallback mock） | `Promise.all` 並行，HomePersonalized 改 props |
 | `/favorites` 收藏頁 | ✅ Supabase（fallback mock） | `getPublishedEvents()`，Server + FavoritesClient 拆分 |
-| `/me` 個人頁 | ⏳ localStorage | 純本機，需登入後才考慮接 Supabase |
+| `/me` 個人頁 | ✅ Supabase（fallback mock） | `Promise.all` 並行抓 idols + events，MeClient 處理 localStorage 統計 |
 
 ### Supabase read functions（src/lib/supabase/events.ts）
 
 | 函式 | 說明 | 使用頁面 |
 |---|---|---|
-| `getPublishedEvents()` | 讀 events（is_published + trust_level 過濾）+ JOIN idols + event_sources | `/schedule`、`/`、`/favorites` |
-| `getActiveIdols()` | 讀 idols（is_active = true） | `/idols`、`/` |
+| `getPublishedEvents()` | 讀 events（is_published + trust_level 過濾）+ JOIN idols + event_sources | `/schedule`、`/`、`/favorites`、`/me` |
+| `getActiveIdols()` | 讀 idols（is_active = true） | `/idols`、`/`、`/me` |
 | `getEventById(id)` | 讀單筆 event（同上過濾）+ JOIN | `/events/[id]` |
 | `getEventSources(eventId)` | 讀特定 event 的所有來源 | 備用（詳情頁目前未獨立呼叫） |
 
@@ -121,8 +123,7 @@
 | 項目 | 現況 |
 |---|---|
 | mock 資料 | 仍保留 `mockEvents.ts` / `mockIdols.ts` 作為所有頁面的 fallback |
-| 個人化資料 | localStorage，僅存在瀏覽器本機，重置即消失 |
-| `/me` 個人頁 | localStorage only，尚未接 Supabase |
+| 個人化資料 | localStorage，僅存在瀏覽器本機，重置即消失（following / favorites / reminders） |
 | 使用者登入 | 尚未實作（Supabase Auth 待接入） |
 | Admin 後台 | 尚未建立（`/admin/*` 頁面尚未存在） |
 | AI 搜尋 / 整理 | 尚未實作 |
@@ -132,7 +133,7 @@
 
 ## 6. 下一步方向（優先順序）
 
-> 所有前台頁面已接 Supabase，mock fallback 仍保留。
+> ✅ 所有前台頁面均已接 Supabase，mock fallback 完整保留。
 
 | 優先 | 目標 | 說明 |
 |---|---|---|
@@ -141,12 +142,24 @@
 | **第三** | Admin 後台 | 事件候選池審核介面（高風險任務，需 GPT 工作單） |
 | **之後** | AI 搜尋 / 爬蟲 / 推播 | 需架構設計後才執行 |
 
+### 本地開發 CSS 問題
+
+Next.js 14 App Router 在長時間使用或切換 branch 後，`.next` 快取可能失效，導致 Tailwind 樣式完全消失。
+
+| 情境 | 指令 |
+|---|---|
+| 日常開發 | `npm run dev` |
+| CSS 掉光 / pull 新 code 後 / 切換 branch 後 | `npm run dev:clean` |
+
 ---
 
 ## 7. 重要 commit 紀錄
 
 | Commit | 說明 |
 |---|---|
+| `7184732` | Improve local dev CSS reliability（dev:clean 指令） |
+| `47436e9` | Read profile stats from Supabase |
+| `7a86edf` | Update PROJECT_STATUS.md to reflect current Supabase integration |
 | `814b12f` | Read favorites events from Supabase |
 | `ab2446c` | Read homepage data from Supabase |
 | `9b4d54a` | Read event detail from Supabase |
@@ -196,6 +209,8 @@
 | `src/app/events/[id]/page.tsx` | 詳情頁（已接 Supabase，支援 UUID + ev-XXX） |
 | `src/app/favorites/page.tsx` | 收藏頁 Server Component（已接 Supabase） |
 | `src/app/favorites/FavoritesClient.tsx` | 收藏頁 Client Component（localStorage favorites / reminders） |
+| `src/app/me/page.tsx` | 個人頁 Server Component（已接 Supabase） |
+| `src/app/me/MeClient.tsx` | 個人頁 Client Component（localStorage 統計 + 追蹤偶像列表） |
 | `src/components/HomePersonalized.tsx` | 首頁個人化（接受 events + idols props，hydration 安全） |
 | `src/app/layout.tsx` | 根 layout（metadata、PWA manifest） |
 | `public/manifest.json` | PWA manifest |
