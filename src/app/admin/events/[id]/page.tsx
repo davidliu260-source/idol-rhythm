@@ -2,14 +2,77 @@ export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
 import { ArrowLeft, Eye } from 'lucide-react'
-import { getEventById as getSupabaseEvent } from '@/lib/supabase/events'
+import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import {
   getEventById as getMockEvent,
   EVENT_TYPE_LABELS,
   EVENT_SUBTYPE_LABELS,
   SOURCE_CONFIG,
 } from '@/lib/mockEvents'
-import type { Event, TrustLevel, EventSubType } from '@/lib/types'
+import type {
+  Event, TrustLevel, EventSubType, EventType, EventStatus, SourceType,
+} from '@/lib/types'
+
+// Fetches any event by UUID, including unpublished drafts.
+// Uses the server client so the admin's session cookie is forwarded to Supabase,
+// allowing the "events: admin_users select" RLS policy to grant access.
+async function getAdminEvent(id: string): Promise<Event | null> {
+  const supabase = getSupabaseServerClient()
+  if (!supabase) return null
+
+  const { data, error } = await supabase
+    .from('events')
+    .select('*, idols(slug), event_sources(id, event_id, level, label, type, url)')
+    .eq('id', id)
+    .single()
+
+  if (error || !data) return null
+
+  const row = data as {
+    id: string; idol_id: string; idol_name: string; title: string
+    type: string; sub_type: string | null; status: string; trust_level: string
+    date: string; time: string | null; location: string | null
+    country: string; country_flag: string; description: string | null
+    tags: string[] | null; ticket_url: string | null; stream_url: string | null
+    is_published: boolean
+    idols?: { slug: string } | null
+    event_sources?: Array<{
+      id: string; event_id: string; level: string
+      label: string; type: string | null; url: string | null
+    }> | null
+  }
+
+  const primarySource = row.event_sources?.[0]
+  const source = primarySource
+    ? {
+        level: primarySource.level as TrustLevel,
+        label: primarySource.label,
+        type: (primarySource.type ?? undefined) as SourceType | undefined,
+        url: primarySource.url ?? undefined,
+      }
+    : { level: row.trust_level as TrustLevel, label: row.idol_name }
+
+  return {
+    id: row.id,
+    idolId: row.idols?.slug ?? row.idol_id,
+    idolName: row.idol_name,
+    title: row.title,
+    type: row.type as EventType,
+    subType: (row.sub_type ?? undefined) as EventSubType | undefined,
+    status: row.status as EventStatus,
+    date: row.date,
+    time: row.time ?? undefined,
+    location: row.location ?? undefined,
+    country: row.country,
+    countryFlag: row.country_flag,
+    source,
+    description: row.description ?? '',
+    isFavorited: false,
+    ticketUrl: row.ticket_url ?? undefined,
+    streamUrl: row.stream_url ?? undefined,
+    tags: row.tags ?? [],
+  }
+}
 
 export default async function AdminEventDetailPage({
   params,
@@ -18,8 +81,8 @@ export default async function AdminEventDetailPage({
 }) {
   const { id } = params
 
-  // Prefer Supabase; fall back to mock if not found or env missing
-  let event: Event | null = await getSupabaseEvent(id)
+  // Try Supabase (includes drafts); fall back to mock for dev UUIDs
+  let event: Event | null = await getAdminEvent(id)
   if (!event) {
     event = getMockEvent(id) ?? null
   }
