@@ -1,6 +1,6 @@
 # Idol Rhythm — 專案進度備份與交接文件
 
-> 最後更新：2026-05-15（Phase G 草稿編輯完成，人工驗收通過）
+> 最後更新：2026-05-15（Phase H1/H2 偶像列表 + 詳情 + 新增完成；anon SELECT idols 修正；前台 /idols 接真實資料）
 > 本文件紀錄目前 Idol Rhythm 的完成進度、Supabase 狀態與下一步建議。
 
 ---
@@ -64,6 +64,13 @@
 | Admin events/new tags 修正 | 空白 tags 改傳 `[]` 而非 `null`，修正 `[23502] not-null constraint` 錯誤 |
 | Admin events/[id] 草稿讀取修正 | 改用 `getAdminEvent()`（server client，不加 is_published filter），讓詳情頁可讀草稿 |
 | 後台新增草稿活動閉環 | admin 登入 → 填表 → INSERT events（is_published=false）→ INSERT event_sources → redirect /admin/events/[id] → 讀取草稿詳情，全流程人工驗收通過 |
+| `supabase/migrations/007_admin_users_edit_draft_events_policy.sql` | events content fields GRANT UPDATE + draft UPDATE policy；event_sources GRANT DELETE + draft DELETE policy |
+| `supabase/migrations/008_admin_users_insert_idols_policy.sql` | `GRANT INSERT ON public.idols TO authenticated` + INSERT policy（admin_users-based） |
+| `supabase/migrations/009_grant_anon_read_idols.sql` | `GRANT SELECT ON public.idols TO anon`，修正前台 /idols 讀不到真實資料的問題 |
+| `/admin/idols`（Phase H1） | 偶像列表，管理員可見「新增偶像」按鈕；每列啟用狀態指示 + slug / category / type / agency |
+| `/admin/idols/[id]`（Phase H2） | 只讀偶像詳情：identity / 分類 / 詳細資訊 / 時間紀錄 / id |
+| `/admin/idols/new`（Phase H2） | 新增偶像表單，admin guard，slug 自動生成 + 即時格式驗證，成功後 redirect 詳情頁 |
+| 前台 /idols 接真實 Supabase 資料 | 補上 `GRANT SELECT ON public.idols TO anon`（migration 009）後，`getActiveIdols()` 不再 fallback MOCK_IDOLS |
 | `supabase/migrations/006_admin_users_publish_events_policy.sql` | events 的 UPDATE policy（admin_users-based，USING + WITH CHECK）+ column-level GRANT UPDATE (is_published, published_at, updated_at) |
 | `/admin/events/[id]/actions.ts` | Server Actions：`publishEvent` / `unpublishEvent`，雙重防線（getCurrentAdmin + RLS），revalidatePath 涵蓋前後台 |
 | Admin 發布 / 下架流程（Phase F） | Admin 在 `/admin/events/[id]` 可一鍵發布（is_published=true, published_at=now）或下架（is_published=false, published_at=null），前台即時反映 |
@@ -134,6 +141,10 @@
 | Admin 發布 / 下架流程（Phase F） | ✅ 人工驗收通過（`cf4049a`） |
 | Admin edit draft events RLS（migration 007） | ✅ 已執行 |
 | Admin 草稿編輯（Phase G） | ✅ 人工驗收通過（`d89ab37`，2026-05-15） |
+| Admin insert idols RLS（migration 008） | ✅ 已執行（`ffc8e1a`） |
+| Admin 偶像列表（Phase H1） | ✅ 完成（`ffc8e1a`） |
+| Admin 偶像詳情 + 新增（Phase H2） | ✅ 完成（`ffc8e1a`） |
+| anon SELECT idols fix（migration 009） | ✅ 已執行（`890b5e0`），前台 /idols 接真實 Supabase 資料 |
 
 ---
 
@@ -184,7 +195,8 @@
 
 | 優先 | 目標 | 說明 |
 |---|---|---|
-| **第一** | Idols Management（Phase H） | `/admin/idols`，新增 / 編輯偶像（高風險，需獨立工作單） |
+| **第一** | Phase H3：Edit Idol Info | `/admin/idols/[id]/edit`，編輯偶像基本資料（slug 不可改）；需 GPT 工作單 |
+| **第一（並行）** | Phase H4：Toggle is_active | 偶像詳情頁啟用 / 停用按鈕；需 GPT 工作單 |
 | **第二** | 真實 seed 資料補充 | 補足更多 events（尤其台灣本地活動）讓 Demo 更真實 |
 | **第三** | 前台 Supabase Auth 接入 | 讓 localStorage 狀態可雲端同步（user_follows / saved_events / reminders） |
 | **之後** | AI 搜尋 / 爬蟲 / 推播 | 需架構設計後才執行 |
@@ -206,6 +218,8 @@ Next.js 14 App Router 在長時間使用或切換 branch 後，`.next` 快取可
 
 | Commit | 說明 |
 |---|---|
+| `890b5e0` | Grant anon SELECT on idols（migration 009，修正前台 /idols 讀 MOCK_IDOLS 的問題） |
+| `ffc8e1a` | Add admin idols list, detail, and create pages（Phase H1/H2，migration 008） |
 | `d89ab37` | Add admin draft event editing（Phase G：migration 007 + edit form + Server Action） |
 | `cf4049a` | Add admin publish/unpublish controls for events（Phase F：migration 006 + Server Actions + UI） |
 | `070edc6` | Polish admin event detail page with draft info（草稿詳情頁完整資訊） |
@@ -288,7 +302,12 @@ Next.js 14 App Router 在長時間使用或切換 branch 後，`.next` 快取可
 | `src/app/admin/events/[id]/edit/EditEventForm.tsx` | 草稿編輯表單（Client Component，初始值由 props 傳入） |
 | `src/app/admin/events/[id]/edit/actions.ts` | Server Action：updateDraftEvent（UPDATE events + DELETE/INSERT sources） |
 | `src/app/admin/events/new/page.tsx` | 新增草稿活動頁（isAdmin guard） |
-| `src/app/admin/events/new/NewEventForm.tsx` | 新增草稿活動表單（待 migration 003 解 RLS） |
+| `src/app/admin/events/new/NewEventForm.tsx` | 新增草稿活動表單 |
+| `src/app/admin/idols/page.tsx` | 後台偶像列表 Server Component |
+| `src/app/admin/idols/[id]/page.tsx` | 後台偶像只讀詳情 Server Component |
+| `src/app/admin/idols/new/page.tsx` | 新增偶像頁（admin guard） |
+| `src/app/admin/idols/new/NewIdolForm.tsx` | 新增偶像表單（Client Component，slug 自動生成 + 格式驗證） |
+| `src/app/admin/idols/new/actions.ts` | Server Action `createIdol()`：INSERT + redirect |
 | `src/app/schedule/page.tsx` | 行程頁（已接 Supabase，dynamic） |
 | `src/app/idols/page.tsx` | 偶像頁 Server Component（已接 Supabase） |
 | `src/app/idols/IdolsClient.tsx` | 偶像頁 Client Component（搜尋 / 追蹤互動） |
