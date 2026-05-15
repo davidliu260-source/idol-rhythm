@@ -140,8 +140,8 @@ export default async function AdminPage() {
       </div>
 
       {/* Quick nav */}
-      <div className="px-4 mt-6">
-        <p className="text-xs font-semibold text-text-base mb-2">後台頁面</p>
+      <div className="px-4 mt-6 flex flex-col gap-2">
+        <p className="text-xs font-semibold text-text-base mb-1">後台頁面</p>
         <Link
           href="/admin/events"
           className="flex items-center justify-between rounded-xl bg-card border border-card-border px-4 py-3 hover:border-violet/40 transition-colors"
@@ -149,6 +149,16 @@ export default async function AdminPage() {
           <div className="flex items-center gap-2">
             <CalendarCheck className="h-4 w-4 text-violet" />
             <span className="text-sm text-text-base">後台活動列表</span>
+          </div>
+          <ChevronRight className="h-4 w-4 text-muted" />
+        </Link>
+        <Link
+          href="/admin/idols"
+          className="flex items-center justify-between rounded-xl bg-card border border-card-border px-4 py-3 hover:border-violet/40 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-violet" />
+            <span className="text-sm text-text-base">後台偶像列表</span>
           </div>
           <ChevronRight className="h-4 w-4 text-muted" />
         </Link>
