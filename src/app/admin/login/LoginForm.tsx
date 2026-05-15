@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
-import { getSupabaseClient } from '@/lib/supabase/client'
+import { getBrowserSupabaseClient } from '@/lib/supabase/browserClient'
 
 export default function LoginForm() {
   const router = useRouter()
@@ -17,7 +17,7 @@ export default function LoginForm() {
     setError(null)
     setLoading(true)
 
-    const supabase = getSupabaseClient()
+    const supabase = getBrowserSupabaseClient()
     if (!supabase) {
       setError('Supabase 連線未設定，請確認環境變數。')
       setLoading(false)
