@@ -1,18 +1,54 @@
+export const dynamic = 'force-dynamic'
+
 import Link from 'next/link'
 import { Bell, ChevronRight, Zap, Star, Play, Newspaper } from 'lucide-react'
-import { getTodayEvents, getEventsByTypes } from '@/lib/mockEvents'
+import { getVisibleEvents, type Event } from '@/lib/mockEvents'
+import { MOCK_IDOLS } from '@/lib/mockIdols'
+import { getPublishedEvents, getActiveIdols } from '@/lib/supabase/events'
 import EventCard from '@/components/EventCard'
 import HomePersonalized from '@/components/HomePersonalized'
 
-export default function HomePage() {
+function isToday(dateStr: string): boolean {
+  const d = new Date(dateStr)
+  const now = new Date()
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  )
+}
+
+function isUpcomingWithin(dateStr: string, days: number): boolean {
+  const d = new Date(dateStr)
+  const now = new Date()
+  const cutoff = new Date(now)
+  cutoff.setDate(cutoff.getDate() + days)
+  return d >= now && d <= cutoff
+}
+
+export default async function HomePage() {
+  const [supabaseEvents, supabaseIdols] = await Promise.all([
+    getPublishedEvents(),
+    getActiveIdols(),
+  ])
+
+  const events: Event[] = supabaseEvents.length > 0 ? supabaseEvents : getVisibleEvents()
+  const idols = supabaseIdols.length > 0 ? supabaseIdols : MOCK_IDOLS
+
   const today = new Date()
   const weekdays = ['日', '一', '二', '三', '四', '五', '六']
   const dateStr = `${today.getMonth() + 1}月${today.getDate()}日 週${weekdays[today.getDay()]}`
 
-  const todayEvents = getTodayEvents()
-  const weekHighlights = getEventsByTypes(['concert', 'brand'], 7)
-  const streamableEvents = getEventsByTypes(['livestream', 'streaming'], 14)
-  const newsEvents = getEventsByTypes(['official', 'media'], 14)
+  const todayEvents = events.filter((e) => isToday(e.date))
+  const weekHighlights = events.filter(
+    (e) => ['concert', 'brand'].includes(e.type) && isUpcomingWithin(e.date, 7),
+  )
+  const streamableEvents = events.filter(
+    (e) => ['livestream', 'streaming'].includes(e.type) && isUpcomingWithin(e.date, 14),
+  )
+  const newsEvents = events.filter(
+    (e) => ['official', 'media'].includes(e.type) && isUpcomingWithin(e.date, 14),
+  )
 
   return (
     <div className="flex flex-col gap-6 px-4 pt-12 pb-6">
@@ -41,7 +77,7 @@ export default function HomePage() {
       </div>
 
       {/* Personalized: following strip + my countdown (client, localStorage) */}
-      <HomePersonalized />
+      <HomePersonalized events={events} idols={idols} />
 
       {/* Section 1: 今日不能錯過 */}
       <section>

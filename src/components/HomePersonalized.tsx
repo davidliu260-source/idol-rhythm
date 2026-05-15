@@ -3,11 +3,17 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Timer, ChevronRight } from 'lucide-react'
-import { MOCK_EVENTS, VISIBLE_TRUST_LEVELS, type Event } from '@/lib/mockEvents'
-import { MOCK_IDOLS, getIdolById } from '@/lib/mockIdols'
+import { VISIBLE_TRUST_LEVELS, type Event } from '@/lib/mockEvents'
+import { getIdolById, type Idol } from '@/lib/mockIdols'
 import { useAppState } from '@/lib/appState'
 
-export default function HomePersonalized() {
+export default function HomePersonalized({
+  events,
+  idols,
+}: {
+  events: Event[]
+  idols: Idol[]
+}) {
   const { following } = useAppState()
   const [mounted, setMounted] = useState(false)
 
@@ -15,19 +21,21 @@ export default function HomePersonalized() {
     setMounted(true)
   }, [])
 
-  const followingIdols = MOCK_IDOLS.filter((idol) => following.has(idol.id))
+  const followingIdols = idols.filter((idol) => following.has(idol.id))
 
   const myCountdown = !mounted
     ? []
     : followingIdols
         .map((idol) => {
           const now = new Date()
-          const next = MOCK_EVENTS.filter(
-            (e) =>
-              e.idolId === idol.id &&
-              VISIBLE_TRUST_LEVELS.includes(e.source.level) &&
-              new Date(e.date) >= now,
-          ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0]
+          const next = events
+            .filter(
+              (e) =>
+                e.idolId === idol.id &&
+                VISIBLE_TRUST_LEVELS.includes(e.source.level) &&
+                new Date(e.date) >= now,
+            )
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0]
           if (!next) return null
           const daysUntil = Math.ceil(
             (new Date(next.date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
@@ -97,6 +105,7 @@ export default function HomePersonalized() {
 }
 
 function CountdownCard({ event, daysUntil }: { event: Event; daysUntil: number }) {
+  // getIdolById uses slug as id, which matches both Supabase (idolId = slug) and mock events
   const idol = getIdolById(event.idolId)
   const bgStyle = idol
     ? `linear-gradient(135deg, ${idol.color}88, ${idol.color})`
