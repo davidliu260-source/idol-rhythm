@@ -1,6 +1,6 @@
 # Idol Rhythm — 專案進度備份與交接文件
 
-> 最後更新：2026-05-14
+> 最後更新：2026-05-15
 > 本文件紀錄目前 Idol Rhythm 的完成進度、Supabase 狀態與下一步建議。
 
 ---
@@ -37,6 +37,11 @@
 | Supabase env 設定 | .env.local + Vercel env 均已設定（URL + anon key） |
 | Supabase read client | `src/lib/supabase/client.ts` + `src/lib/supabase/events.ts` 已建立 |
 | /schedule 接 Supabase | 行程頁優先讀 Supabase，fallback mock，已設為 dynamic rendering |
+| /idols 接 Supabase | 偶像頁拆 Server Component + IdolsClient，`getActiveIdols()` fallback MOCK_IDOLS |
+| /events/[id] 接 Supabase | 詳情頁支援 UUID 與 ev-XXX 雙格式，`getEventById()` fallback mock |
+| / 首頁接 Supabase | async Server Component，Promise.all 並行抓 events + idols，HomePersonalized 改為 props |
+| /favorites 接 Supabase | 拆 Server Component + FavoritesClient，`getPublishedEvents()` fallback mock，localStorage 保留 |
+| CLAUDE.md 強化 | 整合 AGENTS.md 核心規範 + Karpathy 編碼原則 |
 
 ---
 
@@ -92,20 +97,20 @@
 | 頁面 | 資料來源 | 說明 |
 |---|---|---|
 | `/schedule` 行程頁 | ✅ Supabase（fallback mock） | `getPublishedEvents()`，dynamic rendering |
-| `/idols` 偶像頁 | ⏳ 仍讀 mock | 下一步 |
-| `/events/[id]` 詳情頁 | ⏳ 仍讀 mock | 下一步 |
-| `/` 首頁 | ⏳ 仍讀 mock | 第三步 |
-| `/favorites` 收藏頁 | ⏳ localStorage | 需登入後才考慮 |
-| `/me` 個人頁 | ⏳ localStorage | 需登入後才考慮 |
+| `/idols` 偶像頁 | ✅ Supabase（fallback mock） | `getActiveIdols()`，Server + IdolsClient 拆分 |
+| `/events/[id]` 詳情頁 | ✅ Supabase（fallback mock） | `getEventById()`，支援 UUID + ev-XXX 雙格式 |
+| `/` 首頁 | ✅ Supabase（fallback mock） | `Promise.all` 並行，HomePersonalized 改 props |
+| `/favorites` 收藏頁 | ✅ Supabase（fallback mock） | `getPublishedEvents()`，Server + FavoritesClient 拆分 |
+| `/me` 個人頁 | ⏳ localStorage | 純本機，需登入後才考慮接 Supabase |
 
 ### Supabase read functions（src/lib/supabase/events.ts）
 
-| 函式 | 說明 |
-|---|---|
-| `getPublishedEvents()` | 讀 events（is_published + trust_level 過濾）+ JOIN idols + event_sources |
-| `getActiveIdols()` | 讀 idols（is_active = true） |
-| `getEventById(id)` | 讀單筆 event（同上過濾）+ JOIN |
-| `getEventSources(eventId)` | 讀特定 event 的所有來源 |
+| 函式 | 說明 | 使用頁面 |
+|---|---|---|
+| `getPublishedEvents()` | 讀 events（is_published + trust_level 過濾）+ JOIN idols + event_sources | `/schedule`、`/`、`/favorites` |
+| `getActiveIdols()` | 讀 idols（is_active = true） | `/idols`、`/` |
+| `getEventById(id)` | 讀單筆 event（同上過濾）+ JOIN | `/events/[id]` |
+| `getEventSources(eventId)` | 讀特定 event 的所有來源 | 備用（詳情頁目前未獨立呼叫） |
 
 > 所有函式在 env 未設定或查詢失敗時均安全回傳空陣列 / null，不影響 build 與靜態頁面。
 
@@ -115,10 +120,9 @@
 
 | 項目 | 現況 |
 |---|---|
-| 偶像頁資料 | 仍讀取 `src/lib/mockIdols.ts` |
-| 詳情頁資料 | 仍讀取 `src/lib/mockEvents.ts` |
-| 首頁資料 | 仍讀取 mock（含 HomePersonalized 個人化倒數） |
+| mock 資料 | 仍保留 `mockEvents.ts` / `mockIdols.ts` 作為所有頁面的 fallback |
 | 個人化資料 | localStorage，僅存在瀏覽器本機，重置即消失 |
+| `/me` 個人頁 | localStorage only，尚未接 Supabase |
 | 使用者登入 | 尚未實作（Supabase Auth 待接入） |
 | Admin 後台 | 尚未建立（`/admin/*` 頁面尚未存在） |
 | AI 搜尋 / 整理 | 尚未實作 |
@@ -126,14 +130,16 @@
 
 ---
 
-## 6. 明天下一步（優先順序）
+## 6. 下一步方向（優先順序）
 
-| 優先 | 目標 | 作法 |
+> 所有前台頁面已接 Supabase，mock fallback 仍保留。
+
+| 優先 | 目標 | 說明 |
 |---|---|---|
-| **第一** | `/idols` 偶像頁讀 Supabase | 呼叫 `getActiveIdols()`，fallback `MOCK_IDOLS`，dynamic rendering |
-| **第二** | `/events/[id]` 詳情頁讀 Supabase | 呼叫 `getEventById(id)` + `getEventSources(id)`，fallback mock |
-| **第三** | 首頁讀 Supabase events / idols | 首頁 + HomePersonalized，注意 hydration 問題 |
-| **之後** | Admin 後台、AI 候選池 | 需 GPT 工作單拆解後才執行（高風險任務） |
+| **第一** | 真實 seed 資料補充 | 補足更多 events（尤其台灣本地活動）讓 Demo 更真實 |
+| **第二** | Supabase Auth 接入 | 讓 localStorage 狀態可雲端同步（user_follows / saved_events / reminders） |
+| **第三** | Admin 後台 | 事件候選池審核介面（高風險任務，需 GPT 工作單） |
+| **之後** | AI 搜尋 / 爬蟲 / 推播 | 需架構設計後才執行 |
 
 ---
 
@@ -141,6 +147,12 @@
 
 | Commit | 說明 |
 |---|---|
+| `814b12f` | Read favorites events from Supabase |
+| `ab2446c` | Read homepage data from Supabase |
+| `9b4d54a` | Read event detail from Supabase |
+| `35108e3` | Read idols page from Supabase with mock fallback |
+| `ba70f2e` | Consolidate core rules into CLAUDE.md from AGENTS.md |
+| `4e8d1da` | Apply Karpathy coding principles to CLAUDE.md |
 | `7fc4d11` | Read schedule events from Supabase |
 | `56ea725` | Add Supabase read client foundation |
 | `152a71d` | Document current Idol Rhythm project status |
@@ -179,6 +191,12 @@
 | `src/lib/mockEvents.ts` | 前台 fallback mock 活動資料 |
 | `src/lib/appState.ts` | localStorage 個人化狀態管理 |
 | `src/app/schedule/page.tsx` | 行程頁（已接 Supabase，dynamic） |
+| `src/app/idols/page.tsx` | 偶像頁 Server Component（已接 Supabase） |
+| `src/app/idols/IdolsClient.tsx` | 偶像頁 Client Component（搜尋 / 追蹤互動） |
+| `src/app/events/[id]/page.tsx` | 詳情頁（已接 Supabase，支援 UUID + ev-XXX） |
+| `src/app/favorites/page.tsx` | 收藏頁 Server Component（已接 Supabase） |
+| `src/app/favorites/FavoritesClient.tsx` | 收藏頁 Client Component（localStorage favorites / reminders） |
+| `src/components/HomePersonalized.tsx` | 首頁個人化（接受 events + idols props，hydration 安全） |
 | `src/app/layout.tsx` | 根 layout（metadata、PWA manifest） |
 | `public/manifest.json` | PWA manifest |
 | `.env.example` | 環境變數範例（不含任何 key） |
