@@ -111,7 +111,7 @@ export default function NewEventForm({
         country_flag: countryFlag.trim() || null,
         location: location.trim() || null,
         description: description.trim() || null,
-        tags: tagArray.length > 0 ? tagArray : null,
+        tags: tagArray,
         ticket_url: ticketUrl.trim() || null,
         stream_url: streamUrl.trim() || null,
         is_published: false,
