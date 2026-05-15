@@ -6,19 +6,40 @@ import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import NewEventForm from './NewEventForm'
 
-async function getIdolsForForm(): Promise<{ id: string; name: string }[]> {
+async function getIdolsForForm(): Promise<{
+  idols: { id: string; name: string }[]
+  idolsError: string | null
+}> {
   const supabase = getSupabaseServerClient()
-  if (!supabase) return []
-  const { data } = await supabase
+  if (!supabase) {
+    return {
+      idols: [],
+      idolsError:
+        'Supabase 環境變數未設定（NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY）',
+    }
+  }
+
+  const { data, error } = await supabase
     .from('idols')
     .select('id, name')
     .eq('is_active', true)
     .order('name')
-  return (data ?? []) as { id: string; name: string }[]
+
+  if (error) {
+    return {
+      idols: [],
+      idolsError: `查詢偶像失敗：${error.code ? `[${error.code}] ` : ''}${error.message}`,
+    }
+  }
+
+  return {
+    idols: (data ?? []) as { id: string; name: string }[],
+    idolsError: null,
+  }
 }
 
 export default async function AdminNewEventPage() {
-  const [{ isAdmin }, idols] = await Promise.all([
+  const [{ isAdmin }, { idols, idolsError }] = await Promise.all([
     getCurrentAdmin(),
     getIdolsForForm(),
   ])
@@ -76,6 +97,27 @@ export default async function AdminNewEventPage() {
           </p>
         </div>
       </div>
+
+      {/* Idol query error / empty warning */}
+      {idolsError && (
+        <div className="px-4 mb-4">
+          <div className="rounded-xl bg-red-500/10 border border-red-500/25 px-3 py-3">
+            <p className="text-xs font-semibold text-red-400 mb-1">偶像清單載入失敗</p>
+            <p className="text-xs text-red-400/80 break-all leading-relaxed">{idolsError}</p>
+          </div>
+        </div>
+      )}
+
+      {!idolsError && idols.length === 0 && (
+        <div className="px-4 mb-4">
+          <div className="rounded-xl bg-amber-500/10 border border-amber-500/25 px-3 py-3">
+            <p className="text-xs font-semibold text-amber-300 mb-1">資料庫尚無偶像資料</p>
+            <p className="text-xs text-amber-300/70 leading-relaxed">
+              請先在 Supabase SQL Editor 執行 seed.sql，或手動 INSERT 偶像資料，再重新整理此頁面。
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Form */}
       <div className="px-4">
