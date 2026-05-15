@@ -1,6 +1,6 @@
 # Idol Rhythm — 專案進度備份與交接文件
 
-> 最後更新：2026-05-15（Phase F 發布 / 下架流程完成）
+> 最後更新：2026-05-15（Phase G 草稿編輯完成，人工驗收通過）
 > 本文件紀錄目前 Idol Rhythm 的完成進度、Supabase 狀態與下一步建議。
 
 ---
@@ -130,8 +130,10 @@
 | Admin read idols RLS（migration 004） | ✅ 已執行，偶像下拉選單正常 |
 | Admin read drafts RLS（migration 005） | ✅ 已執行，/admin/events/[id] 可讀草稿 |
 | 後台新增草稿活動閉環 | ✅ 人工驗收通過（2026-05-15） |
-| Admin update events RLS（migration 006） | ⏳ 程式碼已推送，待人工在 Supabase SQL Editor 執行 |
-| Admin 發布 / 下架流程（Phase F） | ✅ 程式碼完成（`cf4049a`），待 migration 006 執行後人工驗收 |
+| Admin update events RLS（migration 006） | ✅ 已執行 |
+| Admin 發布 / 下架流程（Phase F） | ✅ 人工驗收通過（`cf4049a`） |
+| Admin edit draft events RLS（migration 007） | ✅ 已執行 |
+| Admin 草稿編輯（Phase G） | ✅ 人工驗收通過（`d89ab37`，2026-05-15） |
 
 ---
 
@@ -166,8 +168,8 @@
 | mock 資料 | 仍保留 `mockEvents.ts` / `mockIdols.ts` 作為所有頁面的 fallback |
 | 個人化資料 | localStorage，僅存在瀏覽器本機，重置即消失（following / favorites / reminders） |
 | 使用者登入 | 尚未實作（Supabase Auth 待接入，前台非 admin 使用者登入流程尚未建立） |
-| Admin 發布 / 下架草稿 | ✅ Phase F 完成（`cf4049a`）；migration 006 待人工執行 |
-| Admin 編輯草稿 | 尚未實作（Phase G：edit form + UPDATE policy，需獨立工作單） |
+| Admin 發布 / 下架草稿 | ✅ Phase F 完成（`cf4049a`），人工驗收通過 |
+| Admin 草稿編輯（Phase G） | ✅ 完成（`d89ab37`），人工驗收通過（2026-05-15） |
 | Admin 刪除草稿 | 禁止實作（需獨立工作單 + GPT 審查） |
 | AI 搜尋 / 整理 | 尚未實作 |
 | 真實資料自動更新 | 尚未實作 |
@@ -182,8 +184,7 @@
 
 | 優先 | 目標 | 說明 |
 |---|---|---|
-| **⏳ 待完成** | 執行 migration 006 + 驗收 Phase F | 在 Supabase SQL Editor 執行後，人工測試發布 / 下架流程 |
-| **第一** | 草稿編輯（Phase G） | `/admin/events/[id]/edit`，修改已建立草稿（需獨立工作單 + UPDATE policy） |
+| **第一** | Idols Management（Phase H） | `/admin/idols`，新增 / 編輯偶像（高風險，需獨立工作單） |
 | **第二** | 真實 seed 資料補充 | 補足更多 events（尤其台灣本地活動）讓 Demo 更真實 |
 | **第三** | 前台 Supabase Auth 接入 | 讓 localStorage 狀態可雲端同步（user_follows / saved_events / reminders） |
 | **之後** | AI 搜尋 / 爬蟲 / 推播 | 需架構設計後才執行 |
@@ -205,8 +206,9 @@ Next.js 14 App Router 在長時間使用或切換 branch 後，`.next` 快取可
 
 | Commit | 說明 |
 |---|---|
+| `d89ab37` | Add admin draft event editing（Phase G：migration 007 + edit form + Server Action） |
 | `cf4049a` | Add admin publish/unpublish controls for events（Phase F：migration 006 + Server Actions + UI） |
-| `070edc6` | Polish admin event detail page with draft info（草稿詳情頁完整資訊，Reviewer 審查通過） |
+| `070edc6` | Polish admin event detail page with draft info（草稿詳情頁完整資訊） |
 | `cb43a76` | Fix admin event detail page reading draft events（getAdminEvent，不加 is_published filter） |
 | `8fbfd30` | Fix tags null constraint in admin event form（空 tags 改傳 `[]`） |
 | `3b0a37a` | Add admin users read draft policies（migration 005，events + event_sources SELECT） |
@@ -245,7 +247,7 @@ Next.js 14 App Router 在長時間使用或切換 branch 後，`.next` 快取可
 | 前台資料可見性 | 前台只能顯示 `trust_level = official / media` 且 `is_published = TRUE` 的活動 |
 | pending 資料隔離 | `trust_level = pending` 的資料只能進 `event_candidates` 候選池，不得直接進 `events` |
 | Admin 角色設定 | 使用 `admin_users` table（Method B），不依賴 JWT custom claim |
-| Admin write RLS | migrations 003–005 已執行：INSERT（003）、idols SELECT（004）、draft SELECT（005）均完成；migration 006（UPDATE）程式碼已推送，待人工執行 |
+| Admin write RLS | migrations 003–007 均已執行：INSERT（003）、idols SELECT（004）、draft SELECT（005）、publish UPDATE（006）、draft content UPDATE + source DELETE（007） |
 | Admin 禁止項目 | 完整 CRUD、草稿刪除、批量操作、event_candidates approve、AI auto-publish 均禁止，需獨立工作單才可實作 |
 
 ---
@@ -264,7 +266,8 @@ Next.js 14 App Router 在長時間使用或切換 branch 後，`.next` 快取可
 | `supabase/migrations/003_admin_users_write_policy.sql` | events + event_sources INSERT policy（已執行） |
 | `supabase/migrations/004_admin_users_read_idols_policy.sql` | idols SELECT policy（已執行） |
 | `supabase/migrations/005_admin_users_read_drafts_policy.sql` | events + event_sources SELECT policy（已執行） |
-| `supabase/migrations/006_admin_users_publish_events_policy.sql` | events UPDATE policy + column-level GRANT（⏳ 待人工執行） |
+| `supabase/migrations/006_admin_users_publish_events_policy.sql` | events UPDATE policy + column-level GRANT（已執行） |
+| `supabase/migrations/007_admin_users_edit_draft_events_policy.sql` | events content GRANT UPDATE + draft UPDATE policy；event_sources GRANT DELETE + draft DELETE policy（已執行） |
 | `supabase/seed.sql` | Demo seed data（idempotent） |
 | `src/lib/supabase/client.ts` | Supabase client 工廠（localStorage-based，前台唯讀用） |
 | `src/lib/supabase/browserClient.ts` | cookie-based browser client（`createBrowserClient`，admin 登入 / 寫入用） |
@@ -279,8 +282,11 @@ Next.js 14 App Router 在長時間使用或切換 branch 後，`.next` 快取可
 | `src/app/admin/login/page.tsx` | 管理員登入頁（Server wrapper） |
 | `src/app/admin/login/LoginForm.tsx` | 登入表單（`createBrowserClient`，cookie session） |
 | `src/app/admin/events/page.tsx` | 後台活動列表（isAdmin 顯示新增按鈕） |
-| `src/app/admin/events/[id]/page.tsx` | 後台活動詳情：Admin 見發布 / 下架按鈕，非 admin 見只讀 banner |
-| `src/app/admin/events/[id]/actions.ts` | Server Actions：publishEvent / unpublishEvent（getCurrentAdmin 雙重防線） |
+| `src/app/admin/events/[id]/page.tsx` | 後台活動詳情：發布 / 下架按鈕 + 草稿時顯示「編輯草稿內容」連結 |
+| `src/app/admin/events/[id]/actions.ts` | Server Actions：publishEvent / unpublishEvent |
+| `src/app/admin/events/[id]/edit/page.tsx` | 草稿編輯頁（Guard + 預填表單） |
+| `src/app/admin/events/[id]/edit/EditEventForm.tsx` | 草稿編輯表單（Client Component，初始值由 props 傳入） |
+| `src/app/admin/events/[id]/edit/actions.ts` | Server Action：updateDraftEvent（UPDATE events + DELETE/INSERT sources） |
 | `src/app/admin/events/new/page.tsx` | 新增草稿活動頁（isAdmin guard） |
 | `src/app/admin/events/new/NewEventForm.tsx` | 新增草稿活動表單（待 migration 003 解 RLS） |
 | `src/app/schedule/page.tsx` | 行程頁（已接 Supabase，dynamic） |
