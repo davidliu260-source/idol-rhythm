@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
-import { ArrowLeft, CalendarCheck, ShieldCheck, Newspaper, Clock } from 'lucide-react'
+import { ArrowLeft, CalendarCheck, ShieldCheck, Newspaper, Clock, ChevronRight } from 'lucide-react'
 import { getPublishedEvents } from '@/lib/supabase/events'
 import { getVisibleEvents, EVENT_TYPE_LABELS, SOURCE_CONFIG } from '@/lib/mockEvents'
 import type { Event, TrustLevel } from '@/lib/types'
@@ -97,7 +97,10 @@ function EventRow({ event, now }: { event: Event; now: Date }) {
   }
 
   return (
-    <div className={`rounded-xl bg-card border border-card-border px-4 py-3 flex flex-col gap-1.5 ${isPast ? 'opacity-50' : ''}`}>
+    <Link
+      href={`/admin/events/${event.id}`}
+      className={`rounded-xl bg-card border border-card-border px-4 py-3 flex flex-col gap-1.5 active:opacity-70 transition-opacity ${isPast ? 'opacity-50' : ''}`}
+    >
       {/* Top row: trust badge + type + date */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className={`text-[10px] font-semibold ${trustConfig.color}`}>
@@ -109,8 +112,11 @@ function EventRow({ event, now }: { event: Event; now: Date }) {
         <span className="ml-auto text-[10px] text-muted tabular-nums">{event.date.slice(0, 10)}</span>
       </div>
 
-      {/* Title */}
-      <p className="text-sm font-semibold text-text-base leading-snug">{event.title}</p>
+      {/* Title + chevron */}
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm font-semibold text-text-base leading-snug">{event.title}</p>
+        <ChevronRight className="h-4 w-4 text-muted flex-shrink-0 mt-0.5" />
+      </div>
 
       {/* Bottom row: idol + status + published */}
       <div className="flex items-center gap-2 flex-wrap">
@@ -122,6 +128,6 @@ function EventRow({ event, now }: { event: Event; now: Date }) {
           published
         </span>
       </div>
-    </div>
+    </Link>
   )
 }
