@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 
-import { LayoutDashboard, Users, CalendarCheck, Clock, FileSearch } from 'lucide-react'
+import Link from 'next/link'
+import { LayoutDashboard, Users, CalendarCheck, Clock, FileSearch, ChevronRight } from 'lucide-react'
 import { getAdminStats } from '@/lib/supabase/adminStats'
 
 export default async function AdminPage() {
@@ -69,17 +70,32 @@ export default async function AdminPage() {
         />
       </div>
 
-      {/* Phase info */}
+      {/* Quick nav */}
       <div className="px-4 mt-6">
+        <p className="text-xs font-semibold text-text-base mb-2">後台頁面</p>
+        <Link
+          href="/admin/events"
+          className="flex items-center justify-between rounded-xl bg-card border border-card-border px-4 py-3 hover:border-violet/40 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <CalendarCheck className="h-4 w-4 text-violet" />
+            <span className="text-sm text-text-base">後台活動列表</span>
+          </div>
+          <ChevronRight className="h-4 w-4 text-muted" />
+        </Link>
+      </div>
+
+      {/* Phase info */}
+      <div className="px-4 mt-4">
         <div className="rounded-xl bg-card border border-card-border px-4 py-4 flex flex-col gap-2">
-          <p className="text-xs font-semibold text-text-base">Phase 1 範圍</p>
+          <p className="text-xs font-semibold text-text-base">Admin Roadmap</p>
           <ul className="flex flex-col gap-1">
             {[
-              '✅ 只讀 Supabase counts',
-              '✅ env 缺失時顯示 empty state',
-              '⏳ Events list（Phase 2）',
-              '🔒 資料寫入（Phase 3，需 auth）',
-              '🔒 Candidates 審核（Phase 5，需 auth）',
+              '✅ Phase 1：只讀 Dashboard',
+              '✅ Phase 2：Events 列表',
+              '⏳ Phase 3：Event 新增 / 編輯（需 auth）',
+              '🔒 Phase 4：Idols 管理（需 auth）',
+              '🔒 Phase 5：Candidates 審核（需 auth）',
             ].map((item) => (
               <li key={item} className="text-xs text-muted">
                 {item}
