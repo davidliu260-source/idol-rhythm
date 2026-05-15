@@ -1,8 +1,9 @@
 export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
-import { ArrowLeft, Eye, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Eye, AlertTriangle, Send, EyeOff } from 'lucide-react'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
+import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
 import {
   getEventById as getMockEvent,
   EVENT_TYPE_LABELS,
@@ -10,6 +11,7 @@ import {
   SOURCE_CONFIG,
 } from '@/lib/mockEvents'
 import type { TrustLevel, EventSubType, EventType, EventStatus, SourceType } from '@/lib/types'
+import { publishEvent, unpublishEvent } from './actions'
 
 // ── Admin-only types (not exported — used only in this page) ──────────────────
 
@@ -160,8 +162,12 @@ export default async function AdminEventDetailPage({
 }) {
   const { id } = params
 
-  const event: AdminEventDetail | null =
-    (await getAdminEvent(id)) ?? mockToAdminDetail(id)
+  const [eventResult, { isAdmin }] = await Promise.all([
+    getAdminEvent(id),
+    getCurrentAdmin(),
+  ])
+
+  const event: AdminEventDetail | null = eventResult ?? mockToAdminDetail(id)
 
   if (!event) {
     return (
@@ -223,13 +229,39 @@ export default async function AdminEventDetailPage({
         </div>
       )}
 
-      {/* Read-only banner */}
+      {/* Publish / Unpublish action — admin only; read-only banner for others */}
       <div className="px-4 mb-4">
-        <div className="rounded-xl bg-violet/10 border border-violet/25 px-3 py-2.5">
-          <p className="text-xs text-muted leading-snug">
-            只讀詳情預覽｜發布 / 編輯功能規劃中
-          </p>
-        </div>
+        {isAdmin ? (
+          event.isPublished ? (
+            /* ── Unpublish button ── */
+            <form action={unpublishEvent.bind(null, event.id)}>
+              <button
+                type="submit"
+                className="w-full flex items-center gap-2 rounded-xl bg-amber-500/15 border border-amber-500/30 px-3 py-2.5 hover:bg-amber-500/25 transition-colors text-left"
+              >
+                <EyeOff className="h-4 w-4 text-amber-400 flex-shrink-0" />
+                <span className="text-xs font-semibold text-amber-400">下架活動（取消發布）</span>
+              </button>
+            </form>
+          ) : (
+            /* ── Publish button ── */
+            <form action={publishEvent.bind(null, event.id)}>
+              <button
+                type="submit"
+                className="w-full flex items-center gap-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 px-3 py-2.5 hover:bg-emerald-500/25 transition-colors text-left"
+              >
+                <Send className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+                <span className="text-xs font-semibold text-emerald-400">發布活動（立即上線）</span>
+              </button>
+            </form>
+          )
+        ) : (
+          <div className="rounded-xl bg-violet/10 border border-violet/25 px-3 py-2.5">
+            <p className="text-xs text-muted leading-snug">
+              只讀詳情預覽｜發布 / 編輯功能規劃中
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Main card */}
