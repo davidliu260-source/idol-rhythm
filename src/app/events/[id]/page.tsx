@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -11,8 +13,12 @@ import {
   Tv,
   Ticket,
 } from 'lucide-react'
-import { getEventById, formatEventDate } from '@/lib/mockEvents'
+import {
+  getEventById as getMockEventById,
+  formatEventDate,
+} from '@/lib/mockEvents'
 import { getIdolById } from '@/lib/mockIdols'
+import { getEventById as getSupabaseEventById } from '@/lib/supabase/events'
 import SourceBadge from '@/components/SourceBadge'
 import EventTypeBadge from '@/components/EventTypeBadge'
 import {
@@ -21,12 +27,15 @@ import {
   EventDetailShareBtn,
 } from '@/components/EventDetailActions'
 
-export default function EventDetailPage({
+export default async function EventDetailPage({
   params,
 }: {
   params: { id: string }
 }) {
-  const event = getEventById(params.id)
+  // Try Supabase first (UUID ids); fall back to mock (ev-XXX ids).
+  // This lets old mock-based links keep working alongside Supabase UUIDs.
+  const supabaseEvent = await getSupabaseEventById(params.id)
+  const event = supabaseEvent ?? getMockEventById(params.id)
   if (!event) return notFound()
 
   const idol = getIdolById(event.idolId)
