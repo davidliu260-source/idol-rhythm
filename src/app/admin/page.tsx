@@ -1,11 +1,16 @@
 export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
-import { LayoutDashboard, Users, CalendarCheck, Clock, FileSearch, ChevronRight } from 'lucide-react'
+import { LayoutDashboard, Users, CalendarCheck, Clock, FileSearch, ChevronRight, Lock, ShieldCheck } from 'lucide-react'
 import { getAdminStats } from '@/lib/supabase/adminStats'
+import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
 
 export default async function AdminPage() {
-  const stats = await getAdminStats()
+  const [{ isAdmin, user }, stats] = await Promise.all([
+    getCurrentAdmin(),
+    getAdminStats(),
+  ])
+
   const hasData = stats.activeIdols !== null || stats.publishedEvents !== null
 
   return (
@@ -19,12 +24,44 @@ export default async function AdminPage() {
         <p className="text-xs text-muted mt-1">Idol Rhythm 後台概覽</p>
       </div>
 
-      {/* Status banner */}
+      {/* Admin guard notice — shown when not logged in or not admin */}
+      {!isAdmin && (
+        <div className="px-4 mb-4">
+          <div className="rounded-xl bg-amber-500/10 border border-amber-500/25 px-3 py-3 flex items-start gap-2.5">
+            <Lock className="h-4 w-4 text-amber-400 flex-shrink-0 mt-0.5" />
+            <div className="flex flex-col gap-0.5">
+              <p className="text-xs font-semibold text-amber-300">需要管理員登入</p>
+              <p className="text-xs text-amber-300/70 leading-snug">
+                {user
+                  ? '您的帳號無後台管理權限。請確認已加入 admin_users 且 is_active = true。'
+                  : '請先登入管理員帳號才能使用寫入功能。目前僅顯示只讀預覽。'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin confirmed banner — shown when logged in as admin */}
+      {isAdmin && user && (
+        <div className="px-4 mb-4">
+          <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/25 px-3 py-2.5 flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+            <p className="text-xs text-emerald-300">
+              管理員已驗證
+              {user.email && (
+                <span className="text-emerald-300/60 ml-1">· {user.email}</span>
+              )}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Read-only preview banner */}
       <div className="px-4 mb-4">
         <div className="rounded-xl bg-violet/10 border border-violet/25 px-3 py-2.5 flex flex-col gap-0.5">
           <p className="text-xs font-semibold text-violet">Admin Preview｜Read-only dashboard</p>
           <p className="text-xs text-muted leading-snug">
-            No auth / no write actions in this phase．資料唯讀，不影響前台。
+            資料唯讀，不影響前台。寫入功能需管理員身份驗證（Phase 3）。
           </p>
         </div>
       </div>
@@ -93,7 +130,9 @@ export default async function AdminPage() {
             {[
               '✅ Phase 1：只讀 Dashboard',
               '✅ Phase 2：Events 列表',
-              '⏳ Phase 3：Event 新增 / 編輯（需 auth）',
+              '✅ Phase D：Admin Guard 基礎',
+              '⏳ Phase C：/admin/login 登入頁',
+              '🔒 Phase 3：Event 新增 / 編輯（需 auth）',
               '🔒 Phase 4：Idols 管理（需 auth）',
               '🔒 Phase 5：Candidates 審核（需 auth）',
             ].map((item) => (
