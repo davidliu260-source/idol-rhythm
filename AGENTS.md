@@ -15,7 +15,7 @@
 | 本地路徑 | `~/Desktop/idol-rhythm` |
 | GitHub repo | https://github.com/davidliu260-source/idol-rhythm |
 | 技術 | Next.js 14 App Router + TypeScript + Tailwind CSS |
-| 目前階段 | MVP Demo / mock data 階段 |
+| 目前階段 | Admin 後台寫入功能進行中 |
 
 任何 Idol Rhythm 相關任務都必須在以下目錄執行：
 
@@ -258,18 +258,20 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 
 ## 12. 推薦工作順序
 
-| 階段 | 內容 |
-|------|------|
-| 1 | MVP foundation — 頁面骨架、mock data、元件 |
-| 2 | UI polish + demo data 補強 |
-| 3 | 資料模型整理（types.ts、型別收斂） |
-| 4 | 前端互動 localStorage（收藏、追蹤持久化） |
-| 5 | Supabase schema 草稿（不連線，只定義） |
-| 6 | 前台讀 Supabase（替換 mock data） |
-| 7 | 極簡 admin 後台（活動管理） |
-| 8 | event_candidates 候選池 |
-| 9 | AI 搜尋 / 整理輔助 |
-| 10 | 真實通知 / 使用者個人化 |
+| 階段 | 內容 | 狀態 |
+|------|------|------|
+| 1 | MVP foundation — 頁面骨架、mock data、元件 | ✅ 完成 |
+| 2 | UI polish + demo data 補強 | ✅ 完成 |
+| 3 | 資料模型整理（types.ts、型別收斂） | ✅ 完成 |
+| 4 | 前端互動 localStorage（收藏、追蹤持久化） | ✅ 完成 |
+| 5 | Supabase schema 定義（migrations 001–003） | ✅ 完成（需人工執行） |
+| 6 | Admin 後台基礎設施（登入、guard、dashboard、清單） | ✅ 完成 |
+| 7 | Admin 草稿新增（INSERT events + event_sources） | ✅ 完成 |
+| 8 | Admin 草稿發布 / 編輯 / 刪除（UPDATE / DELETE policy）| 🔲 下一步 |
+| 9 | 前台讀 Supabase（替換 mock data） | 🔲 待辦 |
+| 10 | event_candidates 候選池管理 | 🔲 待辦 |
+| 11 | AI 搜尋 / 整理輔助 | 🔲 待辦 |
+| 12 | 真實通知 / 使用者個人化 | 🔲 待辦 |
 
 **不得跳過前面階段直接做大型系統。**
 
@@ -296,30 +298,59 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 
 ### ✅ 已完成
 
+**前台 MVP**
 - Next.js 14 + TypeScript + Tailwind CSS 專案初始化
 - GitHub repo 建立並 push（`davidliu260-source/idol-rhythm`）
-- MVP 六個頁面（/ / schedule / idols / events/[id] / favorites / me）
-- 底部導航（5 tab，active 狀態正確）
+- 前台六頁（`/` / `/schedule` / `/idols` / `/events/[id]` / `/favorites` / `/me`）
+- 底部導航（5 tab，admin 頁面自動隱藏）
 - `src/lib/types.ts` — 統一型別定義（Idol / Event / TrustLevel / EventCandidate 等）
-- mock idols data（10 組，含 gender / category 欄位）
-- mock events data（24 筆，7 大 EventType，3 層 TrustLevel）
+- mock idols data（10 組）、mock events data（24 筆，7 大 EventType，3 層 TrustLevel）
 - 活動卡片（full + compact 兩種模式，含操作列）
 - 活動詳情頁（AI 摘要 mock、票務/串流區塊）
 - Demo data 標示（首頁 / 行程頁 / 詳情頁）
-- 前台過濾 `pending` 資料（只顯示 official / media）
+- 前台過濾 `pending`（只顯示 official / media）
 - 首頁五區塊（今日不能錯過 / 本週重點 / 我的倒數 / 最近可看 / 最新情報）
-- Build 全程通過，無 TypeScript 錯誤
 
-### 🔲 仍是 mock（尚未真實實作）
+**Supabase 基礎設施**
+- `src/lib/supabase/client.ts` — 公開 anon client
+- `src/lib/supabase/serverClient.ts` — Server Component 用 server client
+- `src/lib/supabase/browserClient.ts` — Client Component 用 browser client
+- `src/lib/supabase/events.ts` — 前台讀取：`getPublishedEvents` / `getActiveIdols` / `getEventById` / `getEventSources`
+- `src/lib/supabase/adminAuth.ts` — `getCurrentAdmin()`：查 `admin_users` 驗管理員身份
+- `src/lib/supabase/adminStats.ts` — `getAdminStats()`：Dashboard 統計數字
 
-- 收藏 / 取消收藏（前端 state，無持久化）
-- 提醒設定
-- 分享功能
-- AI 繁中摘要
-- 票務 / 串流連結（全為 `#`）
-- 使用者資料
-- 偶像篩選（tab 顯示但無過濾效果）
-- 後台 / 資料庫
+**資料庫 Migrations（已建，需人工在 Supabase SQL Editor 執行）**
+- `supabase/migrations/001_initial_schema.sql` — 完整表格 + RLS + 枚舉
+- `supabase/migrations/002_admin_users.sql` — `admin_users` 表 + SELECT policy
+- `supabase/migrations/003_admin_users_write_policy.sql` — INSERT policy（events / event_sources）+ GRANT
+
+**Admin 後台（唯讀 → 草稿新增）**
+- `/admin/login` — 登入頁（Supabase Auth Email/Password）+ 登入後 session cookie
+- `/admin` — Dashboard（活動統計數字）
+- `/admin/events` — 活動清單（讀取 Supabase，含 draft / published 狀態）
+- `/admin/events/[id]` — 活動詳情預覽
+- `/admin/events/new` — 新增草稿活動表單（INSERT events + event_sources，`is_published = false`）
+- Admin Guard：`getCurrentAdmin()` 驗證 `admin_users.is_active = true`，未登入導向 `/admin/login`
+
+### 🔲 仍是 mock 或待實作
+
+- 前台資料來源：頁面仍優先讀 mock data；Supabase 函式已建但需 env vars + 真實資料才生效
+- 草稿發布（Publish）：需另立 UPDATE policy + 發布按鈕
+- 草稿編輯（Edit）：需 UPDATE policy
+- 草稿刪除（Delete）：需 DELETE policy
+- 活動候選池（event_candidates）：schema 已定義，管理介面尚未建立
+- 收藏 / 提醒持久化：仍為前端 state，無 Supabase 連線
+- AI 繁中摘要：mock 文字
+- 票務 / 串流連結：全為 `#`
+- 偶像篩選：UI tab 顯示但無過濾效果
+- 使用者個人資料（/me）
+
+### ⚠️ 需要人工在 Supabase 執行的事項
+
+1. 在 Supabase SQL Editor 執行三支 migration（001 → 002 → 003）
+2. 在 Authentication → Users 建立 admin 帳號
+3. 手動 INSERT 到 `admin_users`：`INSERT INTO admin_users (user_id, email) VALUES ('<uuid>', '<email>');`
+4. 設定 `.env.local`：`NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
 ---
 
@@ -328,22 +359,59 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 ```
 src/
 ├── app/
-│   ├── layout.tsx              # Root layout（含 BottomNav）
-│   ├── page.tsx                # 首頁 /（5 個區塊）
-│   ├── schedule/page.tsx       # 行程時間軸 /schedule
-│   ├── idols/page.tsx          # 偶像選擇 /idols（'use client'）
-│   ├── events/[id]/page.tsx    # 活動詳情 /events/:id
-│   ├── favorites/page.tsx      # 收藏頁 /favorites
-│   └── me/page.tsx             # 我的頁 /me
+│   ├── layout.tsx                        # Root layout（含 BottomNav）
+│   ├── page.tsx                          # 首頁 /（5 個區塊）
+│   ├── error.tsx                         # 全域錯誤邊界
+│   ├── global-error.tsx                  # Global Error Boundary
+│   ├── not-found.tsx                     # 404 頁面
+│   ├── schedule/page.tsx                 # 行程時間軸 /schedule
+│   ├── idols/
+│   │   ├── page.tsx
+│   │   └── IdolsClient.tsx               # 偶像選擇（'use client'）
+│   ├── events/[id]/page.tsx              # 活動詳情 /events/:id
+│   ├── favorites/
+│   │   ├── page.tsx
+│   │   └── FavoritesClient.tsx           # 收藏頁（'use client'）
+│   ├── me/
+│   │   ├── page.tsx
+│   │   └── MeClient.tsx                  # 我的頁（'use client'）
+│   └── admin/
+│       ├── page.tsx                      # Dashboard /admin
+│       ├── login/
+│       │   ├── page.tsx
+│       │   └── LoginForm.tsx             # 登入表單（'use client'）
+│       └── events/
+│           ├── page.tsx                  # 活動清單 /admin/events
+│           ├── [id]/page.tsx             # 活動詳情預覽
+│           └── new/
+│               ├── page.tsx
+│               └── NewEventForm.tsx      # 新增草稿表單（'use client'）
 ├── components/
-│   ├── BottomNav.tsx           # 底部導航（'use client'）
-│   ├── EventCard.tsx           # 活動卡片（'use client'，含操作列）
-│   ├── SourceBadge.tsx         # 來源可信度標籤
-│   └── EventTypeBadge.tsx      # 活動類型標籤（支援 subType）
+│   ├── BottomNav.tsx                     # 底部導航（'use client'，admin 路由自動隱藏）
+│   ├── EventCard.tsx                     # 活動卡片（'use client'，含操作列）
+│   ├── EventDetailActions.tsx            # 活動詳情操作按鈕
+│   ├── EventTypeBadge.tsx                # 活動類型標籤（支援 subType）
+│   ├── HomePersonalized.tsx              # 首頁個人化區塊
+│   └── SourceBadge.tsx                   # 來源可信度標籤
 └── lib/
-    ├── types.ts                # 所有核心型別定義
-    ├── mockIdols.ts            # Mock 偶像資料 + 查詢函式
-    └── mockEvents.ts           # Mock 活動資料 + 查詢函式 + 顯示常數
+    ├── types.ts                          # 所有核心型別定義
+    ├── appState.tsx                      # 全域 app 狀態（Context）
+    ├── mockIdols.ts                      # Mock 偶像資料 + 查詢函式
+    ├── mockEvents.ts                     # Mock 活動資料 + 查詢函式 + 顯示常數
+    └── supabase/
+        ├── client.ts                     # 公開 anon client（SSR + CSR）
+        ├── serverClient.ts               # Server Component 用 server client
+        ├── browserClient.ts              # Client Component 用 browser client
+        ├── events.ts                     # 前台讀取函式（published + trusted only）
+        ├── adminAuth.ts                  # getCurrentAdmin()：查 admin_users 驗身份
+        └── adminStats.ts                 # getAdminStats()：Dashboard 統計數字
+
+supabase/
+├── migrations/
+│   ├── 001_initial_schema.sql            # 完整表格、枚舉、RLS policies
+│   ├── 002_admin_users.sql               # admin_users 表 + SELECT policy
+│   └── 003_admin_users_write_policy.sql  # INSERT policy（events / event_sources）
+└── seed.sql                              # 種子資料（手動執行）
 ```
 
 ---
