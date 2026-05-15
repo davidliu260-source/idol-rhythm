@@ -29,13 +29,21 @@ export default async function AdminPage() {
         <div className="px-4 mb-4">
           <div className="rounded-xl bg-amber-500/10 border border-amber-500/25 px-3 py-3 flex items-start gap-2.5">
             <Lock className="h-4 w-4 text-amber-400 flex-shrink-0 mt-0.5" />
-            <div className="flex flex-col gap-0.5">
+            <div className="flex flex-col gap-1">
               <p className="text-xs font-semibold text-amber-300">需要管理員登入</p>
               <p className="text-xs text-amber-300/70 leading-snug">
                 {user
                   ? '您的帳號無後台管理權限。請確認已加入 admin_users 且 is_active = true。'
                   : '請先登入管理員帳號才能使用寫入功能。目前僅顯示只讀預覽。'}
               </p>
+              {!user && (
+                <Link
+                  href="/admin/login"
+                  className="mt-0.5 self-start text-xs font-semibold text-amber-300 underline underline-offset-2"
+                >
+                  前往管理員登入 →
+                </Link>
+              )}
             </div>
           </div>
         </div>
