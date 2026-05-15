@@ -6,7 +6,7 @@ import { getAdminStats } from '@/lib/supabase/adminStats'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
 
 export default async function AdminPage() {
-  const [{ isAdmin, user }, stats] = await Promise.all([
+  const [{ isAdmin, user, diag }, stats] = await Promise.all([
     getCurrentAdmin(),
     getAdminStats(),
   ])
@@ -26,7 +26,7 @@ export default async function AdminPage() {
 
       {/* Admin guard notice — shown when not logged in or not admin */}
       {!isAdmin && (
-        <div className="px-4 mb-4">
+        <div className="px-4 mb-4 flex flex-col gap-2">
           <div className="rounded-xl bg-amber-500/10 border border-amber-500/25 px-3 py-3 flex items-start gap-2.5">
             <Lock className="h-4 w-4 text-amber-400 flex-shrink-0 mt-0.5" />
             <div className="flex flex-col gap-1">
@@ -45,6 +45,30 @@ export default async function AdminPage() {
                 </Link>
               )}
             </div>
+          </div>
+
+          {/* Dev diagnostics — remove or hide once auth is confirmed working */}
+          <div className="rounded-xl bg-card border border-card-border px-3 py-3 flex flex-col gap-1.5">
+            <p className="text-[10px] font-semibold text-muted uppercase tracking-wide">Auth 診斷（開發用）</p>
+            <DiagRow label="Supabase 連線" ok={diag.supabaseReady} value={diag.supabaseReady ? 'env OK' : 'env missing'} />
+            <DiagRow label="Auth user" ok={diag.gotUser} value={
+              diag.gotUser && user
+                ? `${user.email ?? '—'} · uid: ${user.id.slice(0, 8)}…`
+                : diag.userError ?? 'no session'
+            } />
+            <DiagRow
+              label="admin_users row"
+              ok={diag.adminRowFound === true}
+              value={
+                diag.adminRowFound === null
+                  ? '未查詢（無 user）'
+                  : diag.adminRowFound
+                  ? '找到，is_active=true'
+                  : diag.adminError
+                  ? `找不到 — ${diag.adminError}`
+                  : '找不到（user_id 不匹配或 RLS 阻擋）'
+              }
+            />
           </div>
         </div>
       )}
@@ -151,6 +175,18 @@ export default async function AdminPage() {
           </ul>
         </div>
       </div>
+    </div>
+  )
+}
+
+function DiagRow({ label, ok, value }: { label: string; ok: boolean; value: string }) {
+  return (
+    <div className="flex items-start gap-2">
+      <span className={`text-[10px] font-mono flex-shrink-0 ${ok ? 'text-emerald-400' : 'text-red-400'}`}>
+        {ok ? '✓' : '✗'}
+      </span>
+      <span className="text-[10px] text-muted flex-shrink-0 w-24">{label}</span>
+      <span className="text-[10px] text-muted/70 break-all">{value}</span>
     </div>
   )
 }
