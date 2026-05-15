@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
-import { ArrowLeft, Eye, AlertTriangle, Send, EyeOff } from 'lucide-react'
+import { ArrowLeft, Eye, AlertTriangle, Send, EyeOff, FileEdit } from 'lucide-react'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
 import {
@@ -263,6 +263,19 @@ export default async function AdminEventDetailPage({
           </div>
         )}
       </div>
+
+      {/* Edit draft link — admin only, draft only */}
+      {isAdmin && !event.isPublished && (
+        <div className="px-4 mb-1">
+          <Link
+            href={`/admin/events/${event.id}/edit`}
+            className="flex items-center gap-2 rounded-xl bg-card border border-card-border px-3 py-2.5 hover:bg-card-border/30 transition-colors"
+          >
+            <FileEdit className="h-4 w-4 text-muted flex-shrink-0" />
+            <span className="text-xs font-medium text-muted">編輯草稿內容</span>
+          </Link>
+        </div>
+      )}
 
       {/* Main card */}
       <div className="px-4 flex flex-col gap-3">
