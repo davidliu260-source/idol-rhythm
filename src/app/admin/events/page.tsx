@@ -1,13 +1,17 @@
 export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
-import { ArrowLeft, CalendarCheck, ShieldCheck, Newspaper, Clock, ChevronRight } from 'lucide-react'
+import { ArrowLeft, CalendarCheck, ShieldCheck, Newspaper, Clock, ChevronRight, FilePlus } from 'lucide-react'
 import { getPublishedEvents } from '@/lib/supabase/events'
 import { getVisibleEvents, EVENT_TYPE_LABELS, SOURCE_CONFIG } from '@/lib/mockEvents'
+import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
 import type { Event, TrustLevel } from '@/lib/types'
 
 export default async function AdminEventsPage() {
-  const supabaseEvents = await getPublishedEvents()
+  const [{ isAdmin }, supabaseEvents] = await Promise.all([
+    getCurrentAdmin(),
+    getPublishedEvents(),
+  ])
   const events: Event[] = supabaseEvents.length > 0 ? supabaseEvents : getVisibleEvents()
 
   const now = new Date()
@@ -35,13 +39,23 @@ export default async function AdminEventsPage() {
         <p className="text-xs text-muted mt-1">共 {events.length} 筆已發布活動</p>
       </div>
 
-      {/* Read-only banner */}
-      <div className="px-4 mb-4">
-        <div className="rounded-xl bg-violet/10 border border-violet/25 px-3 py-2.5">
-          <p className="text-xs text-muted leading-snug">
-            目前為只讀後台預覽，尚未啟用管理員登入與寫入權限。不提供新增、編輯、刪除。
-          </p>
-        </div>
+      {/* Admin action / read-only banner */}
+      <div className="px-4 mb-4 flex flex-col gap-2">
+        {isAdmin ? (
+          <Link
+            href="/admin/events/new"
+            className="flex items-center gap-2 rounded-xl bg-violet/15 border border-violet/30 px-3 py-2.5 hover:bg-violet/20 transition-colors"
+          >
+            <FilePlus className="h-4 w-4 text-violet flex-shrink-0" />
+            <span className="text-xs font-semibold text-violet">新增草稿活動</span>
+          </Link>
+        ) : (
+          <div className="rounded-xl bg-violet/10 border border-violet/25 px-3 py-2.5">
+            <p className="text-xs text-muted leading-snug">
+              目前為只讀後台預覽。新增 / 編輯需要管理員登入。
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Summary stats */}
