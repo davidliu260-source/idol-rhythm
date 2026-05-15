@@ -1,8 +1,9 @@
 export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
-import { ArrowLeft, User } from 'lucide-react'
+import { ArrowLeft, User, FileEdit } from 'lucide-react'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
+import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
 
 // ── Data fetcher ──────────────────────────────────────────────────────────────
 
@@ -69,7 +70,10 @@ export default async function AdminIdolDetailPage({
   params: { id: string }
 }) {
   const { id } = params
-  const idol = await getIdolById(id)
+  const [{ isAdmin }, idol] = await Promise.all([
+    getCurrentAdmin(),
+    getIdolById(id),
+  ])
 
   if (!idol) {
     return (
@@ -120,11 +124,21 @@ export default async function AdminIdolDetailPage({
         </div>
       </div>
 
-      {/* Read-only banner */}
+      {/* Edit link (admin) / read-only banner (non-admin) */}
       <div className="px-4 mb-4">
-        <div className="rounded-xl bg-violet/10 border border-violet/25 px-3 py-2.5">
-          <p className="text-xs text-muted leading-snug">只讀詳情預覽｜編輯 / 啟用 / 停用功能規劃中（Phase H3/H4）</p>
-        </div>
+        {isAdmin ? (
+          <Link
+            href={`/admin/idols/${idol.id}/edit`}
+            className="flex items-center gap-2 rounded-xl bg-violet/15 border border-violet/30 px-3 py-2.5 hover:bg-violet/20 transition-colors"
+          >
+            <FileEdit className="h-4 w-4 text-violet flex-shrink-0" />
+            <span className="text-xs font-semibold text-violet">編輯偶像資料</span>
+          </Link>
+        ) : (
+          <div className="rounded-xl bg-violet/10 border border-violet/25 px-3 py-2.5">
+            <p className="text-xs text-muted leading-snug">只讀詳情預覽｜啟用 / 停用功能規劃中（Phase H4）</p>
+          </div>
+        )}
       </div>
 
       {/* Detail cards */}
