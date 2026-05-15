@@ -1,6 +1,6 @@
 # Idol Rhythm — 專案進度備份與交接文件
 
-> 最後更新：2026-05-15（Phase H1/H2 偶像列表 + 詳情 + 新增完成；anon SELECT idols 修正；前台 /idols 接真實資料）
+> 最後更新：2026-05-15（Phase H3 偶像編輯完成，人工驗收通過）
 > 本文件紀錄目前 Idol Rhythm 的完成進度、Supabase 狀態與下一步建議。
 
 ---
@@ -145,6 +145,8 @@
 | Admin 偶像列表（Phase H1） | ✅ 完成（`ffc8e1a`） |
 | Admin 偶像詳情 + 新增（Phase H2） | ✅ 完成（`ffc8e1a`） |
 | anon SELECT idols fix（migration 009） | ✅ 已執行（`890b5e0`），前台 /idols 接真實 Supabase 資料 |
+| Admin update idols RLS（migration 010） | ✅ 已執行（`7cc1f12`） |
+| Admin 偶像編輯（Phase H3） | ✅ 完成（`7cc1f12`），人工驗收通過（2026-05-15） |
 
 ---
 
@@ -195,8 +197,7 @@
 
 | 優先 | 目標 | 說明 |
 |---|---|---|
-| **第一** | Phase H3：Edit Idol Info | `/admin/idols/[id]/edit`，編輯偶像基本資料（slug 不可改）；需 GPT 工作單 |
-| **第一（並行）** | Phase H4：Toggle is_active | 偶像詳情頁啟用 / 停用按鈕；需 GPT 工作單 |
+| **第一** | Phase H4：Toggle is_active | 偶像詳情頁啟用 / 停用按鈕；需 GPT 工作單 |
 | **第二** | 真實 seed 資料補充 | 補足更多 events（尤其台灣本地活動）讓 Demo 更真實 |
 | **第三** | 前台 Supabase Auth 接入 | 讓 localStorage 狀態可雲端同步（user_follows / saved_events / reminders） |
 | **之後** | AI 搜尋 / 爬蟲 / 推播 | 需架構設計後才執行 |
@@ -218,6 +219,7 @@ Next.js 14 App Router 在長時間使用或切換 branch 後，`.next` 快取可
 
 | Commit | 說明 |
 |---|---|
+| `7cc1f12` | Add admin idol edit page（Phase H3：migration 010 + EditIdolForm + updateIdol action） |
 | `890b5e0` | Grant anon SELECT on idols（migration 009，修正前台 /idols 讀 MOCK_IDOLS 的問題） |
 | `ffc8e1a` | Add admin idols list, detail, and create pages（Phase H1/H2，migration 008） |
 | `d89ab37` | Add admin draft event editing（Phase G：migration 007 + edit form + Server Action） |
@@ -308,6 +310,9 @@ Next.js 14 App Router 在長時間使用或切換 branch 後，`.next` 快取可
 | `src/app/admin/idols/new/page.tsx` | 新增偶像頁（admin guard） |
 | `src/app/admin/idols/new/NewIdolForm.tsx` | 新增偶像表單（Client Component，slug 自動生成 + 格式驗證） |
 | `src/app/admin/idols/new/actions.ts` | Server Action `createIdol()`：INSERT + redirect |
+| `src/app/admin/idols/[id]/edit/page.tsx` | 偶像編輯頁（admin guard + 預填表單） |
+| `src/app/admin/idols/[id]/edit/EditIdolForm.tsx` | 偶像編輯表單（slug disabled，is_active 不在表單） |
+| `src/app/admin/idols/[id]/edit/actions.ts` | Server Action `updateIdol()`：UPDATE content fields + redirect |
 | `src/app/schedule/page.tsx` | 行程頁（已接 Supabase，dynamic） |
 | `src/app/idols/page.tsx` | 偶像頁 Server Component（已接 Supabase） |
 | `src/app/idols/IdolsClient.tsx` | 偶像頁 Client Component（搜尋 / 追蹤互動） |
