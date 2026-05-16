@@ -1,9 +1,10 @@
 export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
-import { ArrowLeft, User, FileEdit } from 'lucide-react'
+import { ArrowLeft, User, FileEdit, Power, PowerOff } from 'lucide-react'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
+import { activateIdol, deactivateIdol } from './actions'
 
 // ── Data fetcher ──────────────────────────────────────────────────────────────
 
@@ -124,19 +125,42 @@ export default async function AdminIdolDetailPage({
         </div>
       </div>
 
-      {/* Edit link (admin) / read-only banner (non-admin) */}
-      <div className="px-4 mb-4">
+      {/* Activate / Deactivate toggle + Edit link — admin only */}
+      <div className="px-4 mb-4 flex flex-col gap-2">
         {isAdmin ? (
-          <Link
-            href={`/admin/idols/${idol.id}/edit`}
-            className="flex items-center gap-2 rounded-xl bg-violet/15 border border-violet/30 px-3 py-2.5 hover:bg-violet/20 transition-colors"
-          >
-            <FileEdit className="h-4 w-4 text-violet flex-shrink-0" />
-            <span className="text-xs font-semibold text-violet">編輯偶像資料</span>
-          </Link>
+          <>
+            {idol.is_active ? (
+              <form action={deactivateIdol.bind(null, idol.id)}>
+                <button
+                  type="submit"
+                  className="w-full flex items-center gap-2 rounded-xl bg-amber-500/15 border border-amber-500/30 px-3 py-2.5 hover:bg-amber-500/25 transition-colors text-left"
+                >
+                  <PowerOff className="h-4 w-4 text-amber-400 flex-shrink-0" />
+                  <span className="text-xs font-semibold text-amber-400">停用偶像（從前台隱藏）</span>
+                </button>
+              </form>
+            ) : (
+              <form action={activateIdol.bind(null, idol.id)}>
+                <button
+                  type="submit"
+                  className="w-full flex items-center gap-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 px-3 py-2.5 hover:bg-emerald-500/25 transition-colors text-left"
+                >
+                  <Power className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+                  <span className="text-xs font-semibold text-emerald-400">啟用偶像（出現在前台）</span>
+                </button>
+              </form>
+            )}
+            <Link
+              href={`/admin/idols/${idol.id}/edit`}
+              className="flex items-center gap-2 rounded-xl bg-violet/15 border border-violet/30 px-3 py-2.5 hover:bg-violet/20 transition-colors"
+            >
+              <FileEdit className="h-4 w-4 text-violet flex-shrink-0" />
+              <span className="text-xs font-semibold text-violet">編輯偶像資料</span>
+            </Link>
+          </>
         ) : (
           <div className="rounded-xl bg-violet/10 border border-violet/25 px-3 py-2.5">
-            <p className="text-xs text-muted leading-snug">只讀詳情預覽｜啟用 / 停用功能規劃中（Phase H4）</p>
+            <p className="text-xs text-muted leading-snug">只讀詳情預覽｜請以管理員身份登入</p>
           </div>
         )}
       </div>
