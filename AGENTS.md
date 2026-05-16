@@ -86,10 +86,8 @@ Claude Code 收到任務後應依序執行：
 
 在未被明確要求前，**不得加入以下功能**：
 
-- 後端資料庫 / Supabase 連線
-- 使用者登入 / 會員系統
 - 付款 / 訂閱
-- AI 搜尋 / 自動爬蟲
+- AI 搜尋 / 自動爬蟲（寫入 event_candidates 的 pipeline）
 - 真實推播通知
 - 社群功能（留言、按讚、轉發）
 - 粉絲論壇 / 電商
@@ -97,17 +95,17 @@ Claude Code 收到任務後應依序執行：
 - 官方藝人合作功能
 - 多語系國際版
 - 地圖模式完整版
+- Apple Sign-In（需 Apple Developer $99/年，上 App Store 前再做）
 
-**目前 MVP 只驗證：**
+**目前已實作的範圍：**
 
-- 偶像選擇
-- 活動時間軸
-- 活動卡片
-- 活動詳情
-- 收藏概念（mock）
-- 提醒概念（mock）
-- 來源可信度
-- Demo data 展示
+- 前台：偶像列表 / 活動時間軸 / 活動卡片 / 活動詳情 / 來源可信度 / Demo 標示
+- 前台會員：Email magic link + Google OAuth 登入、登出
+- 持久化：收藏（Supabase `saved_events`，登入後雲端同步）
+- 仍是 localStorage：追蹤偶像、提醒（待後續 milestone）
+- 後台 admin：Events、Idols、Candidates 三線 CRUD + 發布 / 啟用 / 審核
+
+**仍需 GPT 工作單才能擴大的方向**：見 section 12 的待辦清單。
 
 ---
 
@@ -126,7 +124,7 @@ Claude Code 收到任務後應依序執行：
 - 未標來源整理文
 - 社群轉傳但未確認資料
 
-`pending` 資料只能作為未來 `event_candidates` 候選池概念保留在 mock data 中，**不得渲染到**首頁、行程頁、收藏頁或活動詳情頁。
+`pending` 資料在 `event_candidates` 後台候選池審核流程中流轉，admin 可在 `/admin/event-candidates` 審核並 approve 成草稿 event。**不得渲染到**首頁、行程頁、收藏頁或活動詳情頁。
 
 技術實作上使用 `VISIBLE_TRUST_LEVELS: TrustLevel[] = ['official', 'media']`，所有查詢函式一律過濾。
 
@@ -134,9 +132,9 @@ Claude Code 收到任務後應依序執行：
 
 ## 6. Demo data 規則
 
-目前所有資料仍是 mock data。
+前台優先讀 Supabase（events / idols / event_sources），失敗時 fallback 為 `src/lib/mockEvents.ts` / `mockIdols.ts`。
 
-UI **必須清楚標示**：
+不論資料來源是 Supabase seed 還是 fallback mock，目前都仍是 demo 性質（非真實官方公告）。UI **必須清楚標示**：
 
 ```
 ⚠️ Demo 展示資料｜目前為展示資料，非真實官方行程
@@ -144,9 +142,9 @@ UI **必須清楚標示**：
 
 此標示需出現在：首頁頂部、行程頁頂部、活動詳情頁內容區。
 
-**不得讓使用者誤以為資料是真實官方行程。**
+**不得讓使用者誤以為資料是真實官方公告。**
 
-Mock data 可以使用真實藝人名稱作為展示，但不能假裝是真實公告。
+資料可以使用真實藝人名稱作為展示，但不能假裝是真實公告。Demo 標示要等到接入真實官方資料來源後才能移除。
 
 ---
 
