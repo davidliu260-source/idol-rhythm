@@ -225,6 +225,140 @@ function useFavorites(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Reminders controller (mirrors FavoritesController, backed by reminders table)
+//
+//   mode = 'cloud' when logged in  → reads/writes Supabase reminders
+//   mode = 'local' when anonymous  → reads/writes localStorage
+//
+// Reminders rows have a `type` column ('day_before' / 'week_before' / 'hour_before')
+// with UNIQUE(user_id, event_id, type). The current UI is a simple on/off toggle
+// per event, so we always insert with the DB default ('day_before') and dedupe
+// event_ids on read. A future milestone can expose reminder-type selection.
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface RemindersController {
+  ids: string[]
+  has: (id: string) => boolean
+  toggle: (id: string) => Promise<void> | void
+  mode: 'cloud' | 'local'
+  isLoading: boolean
+}
+
+function useReminders(
+  user: AuthUser | null,
+  isUserLoading: boolean,
+): RemindersController {
+  const local = useStoredSet('idol-rhythm:reminders', [])
+  const [cloudIds, setCloudIds] = useState<string[]>([])
+  const [isCloudLoading, setIsCloudLoading] = useState(false)
+
+  // Fetch the user's reminders whenever the auth user changes.
+  useEffect(() => {
+    if (!user) {
+      setCloudIds([])
+      setIsCloudLoading(false)
+      return
+    }
+
+    const supabase = getBrowserSupabaseClient()
+    if (!supabase) return
+
+    let cancelled = false
+    setIsCloudLoading(true)
+
+    supabase
+      .from('reminders')
+      .select('event_id')
+      .eq('user_id', user.id)
+      .then(({ data, error }) => {
+        if (cancelled) return
+        if (error) {
+          console.error('Failed to load reminders:', error)
+          setCloudIds([])
+        } else if (data) {
+          // Dedupe in case the same event has multiple reminder_type rows.
+          const unique = Array.from(
+            new Set(data.map((row) => row.event_id as string)),
+          )
+          setCloudIds(unique)
+        }
+        setIsCloudLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [user])
+
+  const cloudHas = useCallback(
+    (id: string) => cloudIds.includes(id),
+    [cloudIds],
+  )
+
+  const cloudToggle = useCallback(
+    async (id: string) => {
+      if (!user) return
+      const supabase = getBrowserSupabaseClient()
+      if (!supabase) return
+
+      const isSet = cloudIds.includes(id)
+
+      // Optimistic update
+      setCloudIds((prev) =>
+        isSet ? prev.filter((x) => x !== id) : [...prev, id],
+      )
+
+      if (isSet) {
+        // Delete ALL reminder rows for this event (any type). Matches the
+        // current toggle UI semantics: "turn off reminder for this event".
+        const { error } = await supabase
+          .from('reminders')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('event_id', id)
+
+        if (error) {
+          setCloudIds((prev) => (prev.includes(id) ? prev : [...prev, id]))
+          console.error('Failed to delete reminder:', error)
+        }
+      } else {
+        // INSERT with DB default type = 'day_before'. The UNIQUE constraint
+        // (user_id, event_id, type) prevents duplicates on rapid double-click.
+        const { error } = await supabase
+          .from('reminders')
+          .insert({ user_id: user.id, event_id: id })
+
+        if (error) {
+          setCloudIds((prev) => prev.filter((x) => x !== id))
+          console.error('Failed to insert reminder:', error)
+        }
+      }
+    },
+    [user, cloudIds],
+  )
+
+  const mode: 'cloud' | 'local' = user ? 'cloud' : 'local'
+
+  if (mode === 'local') {
+    return {
+      ids: local.ids,
+      has: local.has,
+      toggle: local.toggle,
+      mode,
+      isLoading: isUserLoading,
+    }
+  }
+
+  return {
+    ids: cloudIds,
+    has: cloudHas,
+    toggle: cloudToggle,
+    mode,
+    isLoading: isUserLoading || isCloudLoading,
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Context
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -233,7 +367,7 @@ interface AppState {
   isUserLoading: boolean
   following: StoredSet
   favorites: FavoritesController
-  reminders: StoredSet
+  reminders: RemindersController
 }
 
 const AppStateContext = createContext<AppState | null>(null)
@@ -241,8 +375,8 @@ const AppStateContext = createContext<AppState | null>(null)
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const { user, isLoading: isUserLoading } = useAuthUser()
   const following = useStoredSet('idol-rhythm:following', DEFAULT_FOLLOWING)
-  const reminders = useStoredSet('idol-rhythm:reminders', [])
   const favorites = useFavorites(user, isUserLoading)
+  const reminders = useReminders(user, isUserLoading)
 
   return (
     <AppStateContext.Provider
