@@ -276,11 +276,10 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 | 14 | 前台 reminders 持久化 Milestone 2 | ✅ 完成（migration 014） |
 | 15 | 前台 Auth Milestone 3：Email + Password 登入 / 註冊 | ✅ 完成（不需 migration） |
 | 16 | 前台 user_follows 持久化 Milestone 4 | ✅ 完成（migration 015） |
-| 17 | 個人化首頁（用 user_follows 過濾 timeline、reminders 倒數區塊） | 🔲 待辦 |
-| 18 | 真實提醒發送（Email / Push / cron） | 🔲 待辦 |
-| 19 | AI 搜尋 / 整理輔助 / 爬蟲 pipeline | 🔲 待辦 |
-| 20 | 忘記密碼 / 改密碼 / 帳號設定頁 | 🔲 待辦 |
-| 21 | Apple Sign-In（上 App Store 前再做）| 🔲 待辦 |
+| 17 | 個人化首頁（用 user_follows 過濾 timeline + reminders 顯示 UI 倒數區塊） | 🔲 待辦 |
+| 18 | AI 搜尋 / 整理輔助 / 爬蟲 pipeline | 🔲 待辦 |
+| 19 | 忘記密碼 / 改密碼 / 帳號設定頁 | 🔲 待辦 |
+| 20 | Apple Sign-In（上 App Store 前再做）| 🔲 待辦 |
 
 **不得跳過前面階段直接做大型系統。**
 
@@ -395,13 +394,16 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 
 ### 🔲 待實作
 
-- 個人化首頁（用 user_follows 過濾 timeline、reminders 顯示倒數）
-- 真實提醒發送（Email / Browser push + cron / Edge Function）
+- 個人化首頁（用 user_follows 過濾 timeline、reminders 顯示 UI 倒數）
 - 忘記密碼 / 改密碼 / 帳號設定頁 / provider 管理 UI
 - AI 自動整理 / 爬蟲 pipeline（寫入 event_candidates）
 - Apple Sign-In（要 Apple Developer $99/年，上 App Store 前再考慮）
 - Google OAuth 從 Testing 切到 Production（要對外開放給陌生使用者時再做）
 - Supabase Email 改用 custom SMTP（Resend）以避開內建 rate limit
+
+### ❌ 明確不規劃（已評估後決定不做）
+
+- **真實 email / push / cron 提醒發送**：UI 倒數提醒已能涵蓋核心需求；外部通知需 cron + 付費 SMTP + 模板 + 重試邏輯，工作量是 UI 提醒的 5–10 倍，使用者開啟率低，CP 值不足。`reminders` 表保留 `is_sent` 欄位作為未來預留，但本階段不實作 dispatch 邏輯。
 
 ### ⚠️ 環境設定（已完成）
 
