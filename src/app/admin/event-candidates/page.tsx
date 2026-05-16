@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { ArrowLeft, FileSearch, ChevronRight, Plus } from 'lucide-react'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
+import CrawlerButton from './CrawlerButton'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -123,6 +124,13 @@ export default async function AdminCandidatesPage() {
             <p className="text-xs font-semibold text-red-400 mb-1">候選清單載入失敗</p>
             <p className="text-xs text-red-400/80 break-all leading-relaxed">{error}</p>
           </div>
+        </div>
+      )}
+
+      {/* Crawler trigger — admin only */}
+      {isAdmin && (
+        <div className="px-4 mb-4">
+          <CrawlerButton />
         </div>
       )}
 
