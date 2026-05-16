@@ -15,7 +15,7 @@
 | 本地路徑 | `~/Desktop/idol-rhythm` |
 | GitHub repo | https://github.com/davidliu260-source/idol-rhythm |
 | 技術 | Next.js 14 App Router + TypeScript + Tailwind CSS |
-| 目前階段 | 後台主幹完成；前台會員系統第一步完成（Email magic link + Google OAuth + 收藏持久化） |
+| 目前階段 | 後台主幹完成；前台會員系統完整（三種登入 + 三大個人化資料持久化） |
 
 任何 Idol Rhythm 相關任務都必須在以下目錄執行：
 
@@ -100,9 +100,11 @@ Claude Code 收到任務後應依序執行：
 **目前已實作的範圍：**
 
 - 前台：偶像列表 / 活動時間軸 / 活動卡片 / 活動詳情 / 來源可信度 / Demo 標示
-- 前台會員：Email magic link + Google OAuth 登入、登出
-- 持久化：收藏（Supabase `saved_events`，登入後雲端同步）
-- 仍是 localStorage：追蹤偶像、提醒（待後續 milestone）
+- 前台會員：Email magic link + Google OAuth + Email/Password 三種登入、登出
+- 持久化（登入後 Supabase 雲端 / 未登入 localStorage fallback）：
+  - 收藏活動 `saved_events`
+  - 提醒活動 `reminders`
+  - 追蹤偶像 `user_follows`
 - 後台 admin：Events、Idols、Candidates 三線 CRUD + 發布 / 啟用 / 審核
 
 **仍需 GPT 工作單才能擴大的方向**：見 section 12 的待辦清單。
@@ -271,10 +273,14 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 | 11 | event_candidates 候選池審核（approve / reject MVP） | ✅ 完成（migration 012，Phase I） |
 | 12 | 前台 Auth Milestone 1：Email magic link + 收藏持久化 | ✅ 完成（migration 013） |
 | 13 | 前台 Auth Milestone 2：加入 Google OAuth 登入 | ✅ 完成（不需 migration） |
-| 14 | 提醒 / 追蹤偶像持久化（localStorage → Supabase） | 🔲 待辦 |
-| 15 | AI 搜尋 / 整理輔助 / 爬蟲 pipeline | 🔲 待辦 |
-| 16 | 真實推播通知 / 使用者個人化 | 🔲 待辦 |
-| 17 | Apple Sign-In（上 App Store 前再做）| 🔲 待辦 |
+| 14 | 前台 reminders 持久化 Milestone 2 | ✅ 完成（migration 014） |
+| 15 | 前台 Auth Milestone 3：Email + Password 登入 / 註冊 | ✅ 完成（不需 migration） |
+| 16 | 前台 user_follows 持久化 Milestone 4 | ✅ 完成（migration 015） |
+| 17 | 個人化首頁（用 user_follows 過濾 timeline、reminders 倒數區塊） | 🔲 待辦 |
+| 18 | 真實提醒發送（Email / Push / cron） | 🔲 待辦 |
+| 19 | AI 搜尋 / 整理輔助 / 爬蟲 pipeline | 🔲 待辦 |
+| 20 | 忘記密碼 / 改密碼 / 帳號設定頁 | 🔲 待辦 |
+| 21 | Apple Sign-In（上 App Store 前再做）| 🔲 待辦 |
 
 **不得跳過前面階段直接做大型系統。**
 
@@ -323,7 +329,7 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 - `src/lib/supabase/adminStats.ts` — `getAdminStats()`：Dashboard 統計數字
 - `src/lib/supabase/auth.ts` — `getCurrentUser()`：取前台一般使用者（不是 admin）
 
-**資料庫 Migrations（001–013 全部已執行）**
+**資料庫 Migrations（001–015 全部已執行）**
 - `001_initial_schema.sql` — 完整表格 + RLS + 枚舉
 - `002_admin_users.sql` — `admin_users` 表 + SELECT policy
 - `003_admin_users_write_policy.sql` — INSERT policy（events / event_sources）+ GRANT
@@ -337,6 +343,8 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 - `011_admin_users_toggle_idol_active_policy.sql` — GRANT UPDATE (is_active) ON idols（Phase H4）
 - `012_admin_users_review_event_candidates_policy.sql` — event_candidates GRANT SELECT + GRANT UPDATE(review_status, reviewer_note, approved_event_id) + admin_users SELECT/UPDATE policy（Phase I）
 - `013_authenticated_saved_events_grants.sql` — saved_events GRANT SELECT / INSERT / DELETE TO authenticated（補 migration 001 缺的 GRANT，Milestone 1）
+- `014_authenticated_reminders_grants.sql` — reminders GRANT SELECT / INSERT / DELETE TO authenticated（補 migration 001 缺的 GRANT，提醒持久化）
+- `015_authenticated_user_follows_grants.sql` — user_follows GRANT SELECT / INSERT / DELETE TO authenticated（補 migration 001 缺的 GRANT，追蹤偶像持久化）
 
 **Admin 後台（全功能，已完成）**
 - `/admin/login` — Email 登入，session cookie
@@ -355,17 +363,27 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 **前台（已接 Supabase，全頁 fallback mock）**
 - `/`、`/schedule`、`/idols`、`/events/[id]`、`/favorites`、`/me` — 全部優先讀 Supabase，失敗時 fallback mock data
 
-**前台會員系統（Milestone 1 + 2 已完成）**
-- `/login` — Email magic link + Google OAuth 雙登入入口（Google 在上、Email 在下）
+**前台會員系統（Milestone 1–4 已完成）**
+- `/login` — 三種登入入口並列：
+  - Google OAuth（最上方，最快路徑）
+  - 「密碼」tab：Email + Password 登入 / 註冊（最小長度 8 字元）
+  - 「Magic Link」tab：Email magic link 寄送
 - `/auth/callback` — Route Handler，magic link / OAuth 共用，`exchangeCodeForSession` 換 cookie session
-- `/me` — 兩態：未登入顯示登入提示；登入顯示 email + 登出按鈕
+- `/me` — 兩態：未登入顯示登入提示；登入顯示 email + 登出按鈕 + 三大統計
 - `/favorites` — 兩態：未登入顯示登入提示；登入讀取 Supabase `saved_events`
-- `src/lib/appState.tsx` — favorites 雙模式：登入用 Supabase、anon 用 localStorage；following / reminders 仍 localStorage（待後續 milestone 處理）
-- **同 email identity linking**：Supabase 預設行為，magic link user 與 Google user 共用同一個 auth.users row
+- `src/lib/appState.tsx` — 三個個人化資料皆為 dual-mode：
+  - `favorites` (event UUID) → `saved_events`
+  - `reminders` (event UUID) → `reminders`（DB 預設 type = 'day_before'）
+  - `following` (idol slug，hook 內翻譯成 UUID) → `user_follows`
+  - anon 模式全部 fallback 到 localStorage，登入後切換到 Supabase
+- **同 email identity linking**：Supabase 預設行為，magic link / Google / password 同 email 共用同一個 auth.users row
 - **Open-redirect 防護**：`/login` 和 `/auth/callback` 的 `next` 參數都拒絕外部網址與 `//` 開頭
+- **未做的部分**：忘記密碼 / 改密碼 / 帳號設定頁 / Apple Sign-In
 
 **外部服務設定（人工，已完成）**
-- Supabase Auth → Providers → Google：Enabled，Client ID/Secret 已貼
+- Supabase Auth → Providers：
+  - Email：Enabled（含 magic link + password）
+  - Google：Enabled，Client ID/Secret 已貼
 - Supabase Auth → URL Configuration：
   - Site URL：`https://idol-rhythm.vercel.app`
   - Redirect URLs：vercel domain + `http://localhost:3000/auth/callback`
@@ -373,15 +391,17 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
   - OAuth Consent Screen：External / Testing
   - OAuth Client (Web)：Authorized redirect URI = Supabase callback
   - Test users：手動加入
+- **Confirm Email 設定**：依需求調整（開發階段可關閉以加速測試；正式上線前建議開啟）
 
 ### 🔲 待實作
 
-- 提醒 / 追蹤偶像持久化（reminders / user_follows，仍是 localStorage）
-- 會員設定頁、provider 管理 UI
+- 個人化首頁（用 user_follows 過濾 timeline、reminders 顯示倒數）
+- 真實提醒發送（Email / Browser push + cron / Edge Function）
+- 忘記密碼 / 改密碼 / 帳號設定頁 / provider 管理 UI
 - AI 自動整理 / 爬蟲 pipeline（寫入 event_candidates）
-- 真實推播通知 / 個人化首頁
 - Apple Sign-In（要 Apple Developer $99/年，上 App Store 前再考慮）
 - Google OAuth 從 Testing 切到 Production（要對外開放給陌生使用者時再做）
+- Supabase Email 改用 custom SMTP（Resend）以避開內建 rate limit
 
 ### ⚠️ 環境設定（已完成）
 
@@ -389,10 +409,11 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 - Vercel env：同上 ✅
 - Supabase admin 帳號：已建立，已加入 `admin_users` ✅
 - Supabase Auth Google Provider：Enabled，Client ID/Secret 已設定 ✅
+- Supabase Auth Email Provider：Enabled（含 magic link + password）✅
 - Supabase Auth URL Configuration：Site URL + Redirect URLs（vercel + localhost）✅
 - Google Cloud OAuth Client：已建立，redirect URI 指向 Supabase callback ✅
 - Google Cloud Test users：已加入測試帳號 ✅
-- migrations 001–013：全部已執行 ✅
+- migrations 001–015：全部已執行 ✅
 
 ---
 
@@ -466,7 +487,7 @@ src/
 │   └── SourceBadge.tsx
 └── lib/
     ├── types.ts                          # 所有核心型別
-    ├── appState.tsx                      # 應用狀態：user / favorites（雙模式）/ following / reminders
+    ├── appState.tsx                      # 應用狀態：user / favorites / reminders / following 三個雙模式 controller
     ├── mockIdols.ts / mockEvents.ts      # Fallback mock 資料
     └── supabase/
         ├── client.ts                     # 公開 anon client
@@ -491,7 +512,9 @@ supabase/
 │   ├── 010_admin_users_update_idols_basic_policy.sql
 │   ├── 011_admin_users_toggle_idol_active_policy.sql       # Phase H4：is_active GRANT
 │   ├── 012_admin_users_review_event_candidates_policy.sql  # Phase I：candidates GRANT + policies
-│   └── 013_authenticated_saved_events_grants.sql           # Milestone 1：補 saved_events GRANT
+│   ├── 013_authenticated_saved_events_grants.sql           # Milestone 1：補 saved_events GRANT
+│   ├── 014_authenticated_reminders_grants.sql              # Milestone 2 reminders：補 reminders GRANT
+│   └── 015_authenticated_user_follows_grants.sql           # Milestone 4：補 user_follows GRANT
 └── seed.sql                              # 種子資料（已執行，含 3 筆 pending candidates）
 ```
 
