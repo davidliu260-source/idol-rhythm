@@ -11,7 +11,7 @@ export default async function LoginPage({
   searchParams: { next?: string; error?: string }
 }) {
   const user = await getCurrentUser()
-  const next = searchParams.next && searchParams.next.startsWith('/') ? searchParams.next : '/me'
+  const next = sanitizeNextPath(searchParams.next)
 
   // Already signed in
   if (user) {
@@ -66,4 +66,16 @@ export default async function LoginPage({
       <LoginForm nextPath={next} />
     </div>
   )
+}
+
+/**
+ * Only accept internal relative paths for `next`.
+ * Rejects external URLs (https://evil.com) and protocol-relative URLs (//evil.com).
+ * Mirrors the sanitization in /auth/callback/route.ts so both layers agree.
+ */
+function sanitizeNextPath(raw: string | undefined): string {
+  if (!raw) return '/me'
+  if (!raw.startsWith('/')) return '/me'
+  if (raw.startsWith('//')) return '/me'
+  return raw
 }
