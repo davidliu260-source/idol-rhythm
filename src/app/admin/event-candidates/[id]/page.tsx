@@ -19,6 +19,7 @@ interface CandidateDetail {
   sourceUrl: string | null
   sourceName: string | null
   sourceType: string | null
+  sourceHash: string | null
   aiConfidence: number | null
   reviewStatus: 'pending' | 'approved' | 'rejected'
   reviewerNote: string | null
@@ -52,6 +53,7 @@ async function getCandidate(id: string): Promise<CandidateDetail | null> {
     source_url: string | null
     source_name: string | null
     source_type: string | null
+    source_hash: string | null
     ai_confidence: number | null
     review_status: string
     reviewer_note: string | null
@@ -83,6 +85,7 @@ async function getCandidate(id: string): Promise<CandidateDetail | null> {
     sourceUrl: row.source_url,
     sourceName: row.source_name,
     sourceType: row.source_type,
+    sourceHash: row.source_hash,
     aiConfidence: row.ai_confidence,
     reviewStatus: row.review_status as 'pending' | 'approved' | 'rejected',
     reviewerNote: row.reviewer_note,
@@ -357,6 +360,19 @@ export default async function AdminCandidateDetailPage({
                 >
                   {candidate.sourceUrl}
                 </a>
+              </Field>
+            </>
+          )}
+          {candidate.sourceHash && (
+            <>
+              <Divider />
+              <Field label="Source Hash">
+                <span
+                  className="font-mono text-[10px] text-muted/60"
+                  title={candidate.sourceHash}
+                >
+                  {candidate.sourceHash.slice(0, 12)}…
+                </span>
               </Field>
             </>
           )}

@@ -33,6 +33,10 @@
  */
 
 import * as cheerio from 'cheerio'
+import { computeSourceHash } from './sourceHash'
+
+/** Bump when the parser output shape changes meaningfully. */
+export const BLACKPINK_PARSER_VERSION = 1
 
 export const BLACKPINK_TOUR_URL =
   'https://blackpinkofficial.com/concert/2025TOUR/index.html'
@@ -116,10 +120,7 @@ export function extractFirstIsoDate(text: string): string | null {
  * Builds the candidate row payload from a parsed entry.
  * Shared by the route handler so the mapping is single-sourced.
  */
-export function entryToCandidatePayload(
-  entry: ParsedTourEntry,
-  blackpinkIdolId: string | null,
-): {
+export interface BlackpinkCandidatePayload {
   raw_title: string
   raw_content: string
   detected_idol_id: string | null
@@ -130,7 +131,25 @@ export function entryToCandidatePayload(
   source_type: 'official_website'
   ai_confidence: null
   reviewer_note: string
-} {
+  /** SHA-256 hex; required field for J4 dedupe. */
+  source_hash: string
+  /** Structured parsed payload, kept for future J3 / J6 re-processing. */
+  raw_data: {
+    source: 'blackpink-official-tour'
+    parser_version: number
+    city: string
+    city_id: string
+    venue: string | null
+    original_date_text: string | null
+    more_info_url: string | null
+    page_url: string
+  }
+}
+
+export function entryToCandidatePayload(
+  entry: ParsedTourEntry,
+  blackpinkIdolId: string | null,
+): BlackpinkCandidatePayload {
   const titleSuffix = entry.place ? ` @ ${entry.place}` : ''
   const raw_title = `BLACKPINK 2025 WORLD TOUR — ${entry.city}${titleSuffix}`
 
@@ -141,6 +160,10 @@ export function entryToCandidatePayload(
     entry.moreInfoUrl ? `More info: ${entry.moreInfoUrl}` : null,
     `Source: ${BLACKPINK_TOUR_URL}`,
   ].filter((x): x is string => x !== null)
+
+  // entry.sourceUrl is always present (page URL + #cityId), so the URL branch
+  // of computeSourceHash will fire and the return is guaranteed non-null.
+  const source_hash = computeSourceHash({ sourceUrl: entry.sourceUrl })!
 
   return {
     raw_title,
@@ -153,5 +176,16 @@ export function entryToCandidatePayload(
     source_type: 'official_website',
     ai_confidence: null,
     reviewer_note: 'auto-crawled from BLACKPINK official tour page',
+    source_hash,
+    raw_data: {
+      source: 'blackpink-official-tour',
+      parser_version: BLACKPINK_PARSER_VERSION,
+      city: entry.city,
+      city_id: entry.cityId,
+      venue: entry.place,
+      original_date_text: entry.rawDateText,
+      more_info_url: entry.moreInfoUrl,
+      page_url: BLACKPINK_TOUR_URL,
+    },
   }
 }

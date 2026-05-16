@@ -174,15 +174,31 @@ export async function POST(): Promise<NextResponse<CrawlerResponse>> {
     }
   }
 
-  // ── Dedup query: which source_urls already exist? ────────────────────────
-  const urls = limited.map((e) => e.sourceUrl)
-  const existing = new Set<string>()
+  // ── Compute payloads up front (gives us source_hash for dedup query) ─────
+  const payloads = limited.map((entry) => ({
+    entry,
+    payload: entryToCandidatePayload(entry, blackpinkIdolId),
+  }))
+
+  // ── Dedup query: which source_hashes / source_urls already exist? ────────
+  // Two simple .in() queries — easier to reason about than .or() with
+  // URL escaping. The volume per run is small (≤ MAX_ENTRIES_PER_RUN).
+  const hashes = payloads.map((p) => p.payload.source_hash)
+  const urls = payloads.map((p) => p.entry.sourceUrl)
+  const existingHashes = new Set<string>()
+  const existingUrls = new Set<string>()
   {
-    const { data, error } = await supabase
+    const hashQuery = supabase
+      .from('event_candidates')
+      .select('source_hash')
+      .in('source_hash', hashes)
+    const urlQuery = supabase
       .from('event_candidates')
       .select('source_url')
       .in('source_url', urls)
-    if (error) {
+    const [hashRes, urlRes] = await Promise.all([hashQuery, urlQuery])
+    if (hashRes.error || urlRes.error) {
+      const err = hashRes.error ?? urlRes.error
       return buildResponse(
         {
           ok: false,
@@ -190,14 +206,20 @@ export async function POST(): Promise<NextResponse<CrawlerResponse>> {
           fetched: limited.length,
           inserted: 0,
           skipped: 0,
-          errors: [`去重查詢失敗：${error.code ? `[${error.code}] ` : ''}${error.message}`],
+          errors: [
+            `去重查詢失敗：${err?.code ? `[${err.code}] ` : ''}${err?.message ?? '未知錯誤'}`,
+          ],
         },
         500,
       )
     }
-    for (const row of data ?? []) {
+    for (const row of hashRes.data ?? []) {
+      const h = (row as { source_hash: string | null }).source_hash
+      if (h) existingHashes.add(h)
+    }
+    for (const row of urlRes.data ?? []) {
       const u = (row as { source_url: string | null }).source_url
-      if (u) existing.add(u)
+      if (u) existingUrls.add(u)
     }
   }
 
@@ -206,14 +228,26 @@ export async function POST(): Promise<NextResponse<CrawlerResponse>> {
   let skipped = 0
   const errors: string[] = []
 
-  for (const entry of limited) {
-    if (existing.has(entry.sourceUrl)) {
+  for (const { entry, payload } of payloads) {
+    // Primary dedup: source_hash (matches DB partial unique index).
+    if (existingHashes.has(payload.source_hash)) {
       skipped += 1
       continue
     }
-    const payload = entryToCandidatePayload(entry, blackpinkIdolId)
+    // Secondary dedup: source_url, in case a historical row predates J4 and
+    // has source_url but no source_hash.
+    if (existingUrls.has(entry.sourceUrl)) {
+      skipped += 1
+      continue
+    }
     const { error } = await supabase.from('event_candidates').insert(payload)
     if (error) {
+      // 23505 = unique_violation → treat as skipped, not error.
+      // Race condition: another concurrent run inserted the same hash.
+      if (error.code === '23505') {
+        skipped += 1
+        continue
+      }
       errors.push(
         `${entry.city}: insert 失敗 ${error.code ? `[${error.code}] ` : ''}${error.message}`,
       )
