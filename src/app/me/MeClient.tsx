@@ -8,7 +8,7 @@ import {
   Star,
   Calendar,
   Heart,
-  Mail,
+  LogIn,
   LogOut,
   Loader2,
 } from 'lucide-react'
@@ -55,8 +55,8 @@ export default function MeClient({ idols, events }: { idols: Idol[]; events: Eve
             href="/login?next=/me"
             className="mt-1 inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white"
           >
-            <Mail className="h-4 w-4" />
-            email 登入
+            <LogIn className="h-4 w-4" />
+            登入 / 註冊
           </Link>
         </div>
 

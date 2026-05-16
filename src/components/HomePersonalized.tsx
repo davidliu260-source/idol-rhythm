@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Sparkles, Star, Heart, Bell, ChevronRight, Mail } from 'lucide-react'
+import { Sparkles, Star, Heart, Bell, ChevronRight, LogIn } from 'lucide-react'
 import { type Event } from '@/lib/mockEvents'
 import { getIdolById, type Idol } from '@/lib/mockIdols'
 import { useAppState } from '@/lib/appState'
@@ -113,7 +113,7 @@ export default function HomePersonalized({
       {/* Login prompt for anon (with localStorage hint when there's local data) */}
       {showLoginPrompt && (
         <div className="rounded-xl bg-violet/10 border border-violet/25 px-3 py-2.5 flex items-start gap-2">
-          <Mail className="h-3.5 w-3.5 text-violet-400 flex-shrink-0 mt-0.5" />
+          <LogIn className="h-3.5 w-3.5 text-violet-400 flex-shrink-0 mt-0.5" />
           <div className="flex-1 flex flex-col gap-1.5">
             <p className="text-xs text-muted leading-snug">
               {hasAnyData
@@ -124,7 +124,7 @@ export default function HomePersonalized({
               href="/login?next=/"
               className="self-start text-xs font-semibold text-primary underline underline-offset-2"
             >
-              登入 →
+              登入 / 註冊 →
             </Link>
           </div>
         </div>

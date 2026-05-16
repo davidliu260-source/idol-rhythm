@@ -1,6 +1,6 @@
 'use client'
 
-import { Heart, Mail, Loader2 } from 'lucide-react'
+import { Heart, LogIn, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { useAppState } from '@/lib/appState'
 import EventCard from '@/components/EventCard'
@@ -40,8 +40,8 @@ export default function FavoritesClient({ events }: { events: Event[] }) {
             href="/login?next=/favorites"
             className="mt-1 inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white"
           >
-            <Mail className="h-4 w-4" />
-            email 登入
+            <LogIn className="h-4 w-4" />
+            登入 / 註冊
           </Link>
         </div>
       </div>
