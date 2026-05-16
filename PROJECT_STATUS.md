@@ -1,6 +1,6 @@
 # Idol Rhythm — 專案進度備份與交接文件
 
-> 最後更新：2026-05-15（Phase H3 偶像編輯完成，人工驗收通過）
+> 最後更新：2026-05-17（J0–J4 AI pipeline 完成；PR 品管流程上線）
 > 本文件紀錄目前 Idol Rhythm 的完成進度、Supabase 狀態與下一步建議。
 
 ---
@@ -107,12 +107,14 @@
 
 ### Env 設定狀態
 
-| 環境 | NEXT_PUBLIC_SUPABASE_URL | NEXT_PUBLIC_SUPABASE_ANON_KEY |
+| 環境 | Supabase keys | ANTHROPIC_API_KEY |
 |---|---|---|
 | 本地 `.env.local` | ✅ 已設定 | ✅ 已設定 |
-| Vercel（idol-rhythm project） | ✅ 已設定 | ✅ 已設定 |
+| Vercel（Production + Preview） | ✅ 已設定 | ✅ 已設定 |
 
-> ⚠️ `.env.local` 不可提交版控。service role key / secret key 絕對不可進版控或貼入任何程式碼。
+可選：`ANTHROPIC_MODEL`（預設 `claude-haiku-4-5-20251001`，可 override 到其他模型）
+
+> ⚠️ `.env.local` 不可提交版控。service role key / secret key / ANTHROPIC_API_KEY 絕對不可進版控或貼入任何程式碼。
 
 ### RLS
 
@@ -147,6 +149,25 @@
 | anon SELECT idols fix（migration 009） | ✅ 已執行（`890b5e0`），前台 /idols 接真實 Supabase 資料 |
 | Admin update idols RLS（migration 010） | ✅ 已執行（`7cc1f12`） |
 | Admin 偶像編輯（Phase H3） | ✅ 完成（`7cc1f12`），人工驗收通過（2026-05-15） |
+| Phase H4：Toggle is_active（migration 011） | ✅ 已執行 |
+| Phase I：candidates review（migration 012） | ✅ 已執行 |
+| Auth saved_events（migration 013） | ✅ 已執行 |
+| Auth reminders（migration 014） | ✅ 已執行 |
+| Auth user_follows（migration 015） | ✅ 已執行 |
+| J1 candidates INSERT policy（migration 016） | ⚠️ 待確認執行 |
+| J4 source_hash + raw_data（migration 017） | ⚠️ 待確認執行 |
+| Phase H4：Toggle is_active（migration 011） | ✅ 完成 |
+| Phase I：event_candidates 審核（migration 012） | ✅ 完成 |
+| Auth Milestone 1：Email magic link + saved_events（migration 013） | ✅ 完成 |
+| Auth Milestone 2：Google OAuth | ✅ 完成 |
+| Auth Milestone 3：Email + Password 登入 / 註冊 | ✅ 完成 |
+| Auth Milestone 4：user_follows 持久化（migration 015） | ✅ 完成 |
+| J0：AI_PIPELINE_PLAN.md 設計文件 | ✅ 完成（`cf1bd6a`） |
+| J1：手動匯入候選表單（migration 016） | ✅ 完成（`4c1baf0`） |
+| J2：BLACKPINK 官方 tour fetcher + CrawlerButton | ✅ 完成（`acf7952`） |
+| J4：source_hash 去重（migration 017）| ✅ 完成（`2c2ec1c`） |
+| J3：AI 解析公告 — Claude Haiku + parse UI | ✅ 完成（`3cd09f2`） |
+| 品管流程：feature branch + PR → GPT audit → merge | ✅ 2026-05-17 起採用 |
 
 ---
 
@@ -192,17 +213,18 @@
 ## 6. 下一步方向（優先順序）
 
 > ✅ 所有前台頁面均已接 Supabase，mock fallback 完整保留。
-> ✅ Admin 後台完成：Dashboard、登入、列表、詳情、新增表單、發布 / 下架流程。
-> ✅ migrations 003、004、005 均已執行；migration 006 程式碼已推送，待人工執行。
+> ✅ Admin 後台完成：Dashboard、登入、Events、Idols、Candidates 全線 CRUD + 發布 / 啟用 / 審核。
+> ✅ 前台會員系統：三種登入 + 三大個人化資料 Supabase 持久化。
+> ✅ AI/爬蟲 pipeline J0–J4 完成：手動匯入 + BLACKPINK fetcher + AI 解析 + source_hash 去重。
 
 | 優先 | 目標 | 說明 |
 |---|---|---|
-| **第一** | Phase H4：Toggle is_active | 偶像詳情頁啟用 / 停用按鈕；需 GPT 工作單 |
-| **第二** | 真實 seed 資料補充 | 補足更多 events（尤其台灣本地活動）讓 Demo 更真實 |
-| **第三** | 前台 Supabase Auth 接入 | 讓 localStorage 狀態可雲端同步（user_follows / saved_events / reminders） |
-| **之後** | AI 搜尋 / 爬蟲 / 推播 | 需架構設計後才執行 |
+| **第一** | J3 人工驗收 | 測試 `/admin/event-candidates/parse` AI 解析流程 |
+| **第二** | Migration 016 + 017 確認 | 確認在 Supabase SQL Editor 已執行 |
+| **第三** | J5 Cron 自動觸發 | 需 GPT 工作單；高風險 |
+| **之後** | 個人化首頁、忘記密碼、J6 多來源 | 各需獨立工作單 |
 
-> ⛔ 明確禁止（未被工作單授權前不得實作）：完整 CRUD、草稿刪除、批量操作、event_candidates approve/reject、AI auto-publish。
+> ⛔ 明確禁止（未被工作單授權前不得實作）：草稿刪除、批量操作、AI auto-publish、直接 push to main（需開 PR）。
 
 ### 本地開發 CSS 問題
 
@@ -219,6 +241,11 @@ Next.js 14 App Router 在長時間使用或切換 branch 後，`.next` 快取可
 
 | Commit | 說明 |
 |---|---|
+| `3cd09f2` | Add AI candidate parser（J3：Claude Haiku + parse UI + commitAiCandidate） |
+| `2c2ec1c` | Add candidate source hash dedupe（J4：migrations 016/017 + sourceHash.ts） |
+| `acf7952` | Add Blackpink official tour fetcher prototype（J2：cheerio + route handler + CrawlerButton） |
+| `4c1baf0` | Add manual event candidate import（J1：/new form + createCandidate action） |
+| `cf1bd6a` | Document AI pipeline plan（J0：AI_PIPELINE_PLAN.md） |
 | `7cc1f12` | Add admin idol edit page（Phase H3：migration 010 + EditIdolForm + updateIdol action） |
 | `890b5e0` | Grant anon SELECT on idols（migration 009，修正前台 /idols 讀 MOCK_IDOLS 的問題） |
 | `ffc8e1a` | Add admin idols list, detail, and create pages（Phase H1/H2，migration 008） |
@@ -273,8 +300,9 @@ Next.js 14 App Router 在長時間使用或切換 branch 後，`.next` 快取可
 | 檔案 | 說明 |
 |---|---|
 | `AGENTS.md` | AI 助手工作守則（主要規範文件） |
-| `CLAUDE.md` | Claude Code CLI 入口規範 |
-| `ADMIN_ROADMAP.md` | Admin 後台分階段開發路線圖 |
+| `CLAUDE.md` | Claude Code CLI 入口規範（含 PR 品管流程） |
+| `ADMIN_ROADMAP.md` | Admin 後台分階段開發路線圖（含 J0–J4 AI pipeline） |
+| `AI_PIPELINE_PLAN.md` | AI/爬蟲 pipeline 設計文件（J0 產出，J1–J4 實作紀錄） |
 | `ADMIN_WRITE_PLAN.md` | Admin 寫入計畫（Method B：admin_users table） |
 | `SUPABASE_SCHEMA.md` | Schema 規劃草稿（tables / enums / RLS / 7 階段計畫） |
 | `supabase/migrations/001_initial_schema.sql` | 正式 schema migration（已執行） |
@@ -284,7 +312,17 @@ Next.js 14 App Router 在長時間使用或切換 branch 後，`.next` 快取可
 | `supabase/migrations/005_admin_users_read_drafts_policy.sql` | events + event_sources SELECT policy（已執行） |
 | `supabase/migrations/006_admin_users_publish_events_policy.sql` | events UPDATE policy + column-level GRANT（已執行） |
 | `supabase/migrations/007_admin_users_edit_draft_events_policy.sql` | events content GRANT UPDATE + draft UPDATE policy；event_sources GRANT DELETE + draft DELETE policy（已執行） |
+| `supabase/migrations/016_admin_users_insert_event_candidates_policy.sql` | event_candidates GRANT INSERT + INSERT RLS policy（J1/J3）⚠️ 待確認 |
+| `supabase/migrations/017_event_candidates_dedupe_fields.sql` | source_hash text + raw_data jsonb + unique index（J4）⚠️ 待確認 |
 | `supabase/seed.sql` | Demo seed data（idempotent） |
+| `src/lib/crawlers/sourceHash.ts` | SHA-256 source_hash 計算（URL 優先 / fallback） |
+| `src/lib/crawlers/blackpinkOfficialTour.ts` | BLACKPINK 官方 tour 頁 HTML parser（cheerio） |
+| `src/lib/ai/parseCandidate.ts` | Claude Haiku wrapper（slug 解析、JSON 提取、enum 驗證） |
+| `src/app/api/admin/crawlers/blackpink-tour/run/route.ts` | POST 手動觸發 fetcher（admin guard + 去重 + 統計） |
+| `src/app/api/admin/ai/parse-candidate/route.ts` | POST AI 解析（admin guard + known_idols + Claude） |
+| `src/app/admin/event-candidates/CrawlerButton.tsx` | BLACKPINK fetcher 觸發按鈕（client） |
+| `src/app/admin/event-candidates/new/` | J1 手動匯入候選（page + form + actions） |
+| `src/app/admin/event-candidates/parse/` | J3 AI 解析公告（page + ParseClient + actions） |
 | `src/lib/supabase/client.ts` | Supabase client 工廠（localStorage-based，前台唯讀用） |
 | `src/lib/supabase/browserClient.ts` | cookie-based browser client（`createBrowserClient`，admin 登入 / 寫入用） |
 | `src/lib/supabase/serverClient.ts` | cookie-based server client（`createServerClient`，Server Component 讀 session） |

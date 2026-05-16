@@ -15,7 +15,7 @@
 | 本地路徑 | `~/Desktop/idol-rhythm` |
 | GitHub repo | https://github.com/davidliu260-source/idol-rhythm |
 | 技術 | Next.js 14 App Router + TypeScript + Tailwind CSS |
-| 目前階段 | 後台主幹完成；前台會員系統完整（三種登入 + 三大個人化資料持久化） |
+| 目前階段 | 後台主幹 + 前台會員完整；AI/爬蟲 pipeline J0–J4 已完成（手動匯入、BLACKPINK fetcher、AI 解析、去重）|
 
 任何 Idol Rhythm 相關任務都必須在以下目錄執行：
 
@@ -106,6 +106,11 @@ Claude Code 收到任務後應依序執行：
   - 提醒活動 `reminders`
   - 追蹤偶像 `user_follows`
 - 後台 admin：Events、Idols、Candidates 三線 CRUD + 發布 / 啟用 / 審核
+- AI/爬蟲 pipeline（J1–J4）：
+  - J1：`/admin/event-candidates/new` 手動匯入表單
+  - J2：BLACKPINK 官方 tour 頁面 fetcher + Admin 手動觸發按鈕
+  - J3：`/admin/event-candidates/parse` AI 解析公告（Claude Haiku）
+  - J4：`source_hash` SHA-256 去重（migrations 016 + 017）
 
 **仍需 GPT 工作單才能擴大的方向**：見 section 12 的待辦清單。
 
@@ -156,12 +161,18 @@ Claude Code 收到任務後應依序執行：
 
 ```bash
 npm run build
+git checkout -b feature/<phase-name>
 git status
 git add <只加相關檔案>
 git commit -m "..."
-git push origin main
+git push origin feature/<phase-name>
+gh pr create --title "..." --body "..."
+# 等 GPT 在 GitHub 上 audit → 確認後 merge to main
 git status   # 確認成功
 ```
+
+**品管流程（2026-05-17 起）**：
+所有任務完成後一律開 feature branch，推送後開 PR，等 GPT 在 GitHub 審查無誤後才 merge to main。不得直接 push to main。
 
 **不得提交：**
 
@@ -276,10 +287,16 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 | 14 | 前台 reminders 持久化 Milestone 2 | ✅ 完成（migration 014） |
 | 15 | 前台 Auth Milestone 3：Email + Password 登入 / 註冊 | ✅ 完成（不需 migration） |
 | 16 | 前台 user_follows 持久化 Milestone 4 | ✅ 完成（migration 015） |
-| 17 | 個人化首頁（用 user_follows 過濾 timeline + reminders 顯示 UI 倒數區塊） | 🔲 待辦 |
-| 18 | AI 搜尋 / 整理輔助 / 爬蟲 pipeline | 🔲 待辦 |
-| 19 | 忘記密碼 / 改密碼 / 帳號設定頁 | 🔲 待辦 |
-| 20 | Apple Sign-In（上 App Store 前再做）| 🔲 待辦 |
+| 17 | J0：AI pipeline 設計文件 | ✅ 完成（`cf1bd6a`，`AI_PIPELINE_PLAN.md`） |
+| 18 | J1：手動匯入候選表單 | ✅ 完成（`4c1baf0`，migration 016） |
+| 19 | J2：BLACKPINK 官方 tour fetcher | ✅ 完成（`acf7952`） |
+| 20 | J4：source_hash 去重強化 | ✅ 完成（`2c2ec1c`，migration 017） |
+| 21 | J3：AI 解析公告（Claude Haiku）| ✅ 完成（`3cd09f2`，ANTHROPIC_API_KEY） |
+| 22 | 個人化首頁（用 user_follows 過濾 timeline + reminders 顯示 UI 倒數區塊） | 🔲 待辦 |
+| 23 | J5：Cron 自動觸發 | 🔲 待辦（需 GPT 工作單，高風險） |
+| 24 | J6：多來源 fetcher 擴充 | 🔲 待辦（需 GPT 工作單） |
+| 25 | 忘記密碼 / 改密碼 / 帳號設定頁 | 🔲 待辦 |
+| 26 | Apple Sign-In（上 App Store 前再做）| 🔲 待辦 |
 
 **不得跳過前面階段直接做大型系統。**
 
@@ -328,7 +345,7 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 - `src/lib/supabase/adminStats.ts` — `getAdminStats()`：Dashboard 統計數字
 - `src/lib/supabase/auth.ts` — `getCurrentUser()`：取前台一般使用者（不是 admin）
 
-**資料庫 Migrations（001–015 全部已執行）**
+**資料庫 Migrations（001–017）**
 - `001_initial_schema.sql` — 完整表格 + RLS + 枚舉
 - `002_admin_users.sql` — `admin_users` 表 + SELECT policy
 - `003_admin_users_write_policy.sql` — INSERT policy（events / event_sources）+ GRANT
@@ -339,11 +356,13 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 - `008_admin_users_insert_idols_policy.sql` — GRANT INSERT ON idols + INSERT policy
 - `009_grant_anon_read_idols.sql` — GRANT SELECT ON idols TO anon（修正前台讀取）
 - `010_admin_users_update_idols_basic_policy.sql` — idols content fields GRANT UPDATE + UPDATE policy（slug / is_active 排除）
-- `011_admin_users_toggle_idol_active_policy.sql` — GRANT UPDATE (is_active) ON idols（Phase H4）
-- `012_admin_users_review_event_candidates_policy.sql` — event_candidates GRANT SELECT + GRANT UPDATE(review_status, reviewer_note, approved_event_id) + admin_users SELECT/UPDATE policy（Phase I）
-- `013_authenticated_saved_events_grants.sql` — saved_events GRANT SELECT / INSERT / DELETE TO authenticated（補 migration 001 缺的 GRANT，Milestone 1）
-- `014_authenticated_reminders_grants.sql` — reminders GRANT SELECT / INSERT / DELETE TO authenticated（補 migration 001 缺的 GRANT，提醒持久化）
-- `015_authenticated_user_follows_grants.sql` — user_follows GRANT SELECT / INSERT / DELETE TO authenticated（補 migration 001 缺的 GRANT，追蹤偶像持久化）
+- `011_admin_users_toggle_idol_active_policy.sql` — GRANT UPDATE (is_active) ON idols（Phase H4）✅ 已執行
+- `012_admin_users_review_event_candidates_policy.sql` — event_candidates GRANT SELECT + GRANT UPDATE(review_status, reviewer_note, approved_event_id) + admin_users SELECT/UPDATE policy（Phase I）✅ 已執行
+- `013_authenticated_saved_events_grants.sql` — saved_events GRANT SELECT / INSERT / DELETE TO authenticated（Milestone 1）✅ 已執行
+- `014_authenticated_reminders_grants.sql` — reminders GRANT SELECT / INSERT / DELETE TO authenticated（提醒持久化）✅ 已執行
+- `015_authenticated_user_follows_grants.sql` — user_follows GRANT SELECT / INSERT / DELETE TO authenticated（追蹤偶像持久化）✅ 已執行
+- `016_admin_users_insert_event_candidates_policy.sql` — event_candidates GRANT INSERT + INSERT RLS policy（J1 手動匯入 + J3 AI 解析寫入）⚠️ 待確認執行
+- `017_event_candidates_dedupe_fields.sql` — ADD COLUMN source_hash text + raw_data jsonb；CREATE UNIQUE INDEX WHERE source_hash IS NOT NULL（J4 去重）⚠️ 待確認執行
 
 **Admin 後台（全功能，已完成）**
 - `/admin/login` — Email 登入，session cookie
@@ -356,8 +375,20 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 - `/admin/idols/[id]` — 偶像詳情 + 啟用 / 停用按鈕 + 「編輯偶像資料」連結
 - `/admin/idols/new` — 新增偶像（INSERT idols，slug 自動生成 + 格式驗證）
 - `/admin/idols/[id]/edit` — 編輯偶像基本資料（slug 不可改）
-- `/admin/event-candidates` — 候選活動列表（pending / approved / rejected 三組統計）
-- `/admin/event-candidates/[id]` — 候選詳情 + Approve（建立草稿 event）+ Reject 按鈕
+- `/admin/event-candidates` — 候選活動列表（pending / approved / rejected 三組統計）+ 新增候選按鈕 + AI 解析按鈕 + CrawlerButton
+- `/admin/event-candidates/[id]` — 候選詳情 + Approve（建立草稿 event）+ Reject 按鈕 + source_hash 顯示
+- `/admin/event-candidates/new` — 手動匯入候選表單（J1，含偶像下拉、來源欄位、source_hash 計算）
+- `/admin/event-candidates/parse` — AI 解析公告頁（J3，貼文 → AI 預覽 → 確認寫入候選池）
+
+**AI / 爬蟲 Pipeline（J1–J4 已完成）**
+- `src/lib/crawlers/sourceHash.ts` — SHA-256 source_hash 計算（URL 優先 / fallback 欄位組合）
+- `src/lib/crawlers/blackpinkOfficialTour.ts` — BLACKPINK 官方 tour 頁 HTML parser（cheerio）
+- `src/lib/ai/parseCandidate.ts` — Claude Haiku wrapper（slug 解析、JSON 提取、enum 驗證）
+- `src/app/api/admin/crawlers/blackpink-tour/run/route.ts` — POST 手動觸發 fetcher（admin guard + 去重 + 統計回應）
+- `src/app/api/admin/ai/parse-candidate/route.ts` — POST AI 解析（admin guard + 取 known_idols + 呼叫 Claude）
+- `src/app/admin/event-candidates/CrawlerButton.tsx` — 觸發 BLACKPINK fetcher 的 client button
+- `src/app/admin/event-candidates/parse/ParseClient.tsx` — AI 解析表單 + 預覽 + 確認寫入
+- `src/app/admin/event-candidates/parse/actions.ts` — `commitAiCandidate` server action（re-validate + source_hash + redirect）
 
 **前台（已接 Supabase，全頁 fallback mock）**
 - `/`、`/schedule`、`/idols`、`/events/[id]`、`/favorites`、`/me` — 全部優先讀 Supabase，失敗時 fallback mock data
@@ -396,7 +427,8 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 
 - 個人化首頁（用 user_follows 過濾 timeline、reminders 顯示 UI 倒數）
 - 忘記密碼 / 改密碼 / 帳號設定頁 / provider 管理 UI
-- AI 自動整理 / 爬蟲 pipeline（寫入 event_candidates）
+- J5：Cron 自動觸發 fetcher（需 GPT 工作單 + CRON_SECRET）
+- J6：多來源 fetcher 擴充（第二、三來源）
 - Apple Sign-In（要 Apple Developer $99/年，上 App Store 前再考慮）
 - Google OAuth 從 Testing 切到 Production（要對外開放給陌生使用者時再做）
 - Supabase Email 改用 custom SMTP（Resend）以避開內建 rate limit
@@ -405,10 +437,10 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 
 - **真實 email / push / cron 提醒發送**：UI 倒數提醒已能涵蓋核心需求；外部通知需 cron + 付費 SMTP + 模板 + 重試邏輯，工作量是 UI 提醒的 5–10 倍，使用者開啟率低，CP 值不足。`reminders` 表保留 `is_sent` 欄位作為未來預留，但本階段不實作 dispatch 邏輯。
 
-### ⚠️ 環境設定（已完成）
+### ⚠️ 環境設定
 
-- `.env.local`：`NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY` ✅
-- Vercel env：同上 ✅
+- `.env.local`：`NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY`、`ANTHROPIC_API_KEY` ✅
+- Vercel env：Supabase keys ✅；`ANTHROPIC_API_KEY`（Production + Preview）✅；`ANTHROPIC_MODEL`（可選，預設 claude-haiku-4-5-20251001）
 - Supabase admin 帳號：已建立，已加入 `admin_users` ✅
 - Supabase Auth Google Provider：Enabled，Client ID/Secret 已設定 ✅
 - Supabase Auth Email Provider：Enabled（含 magic link + password）✅
@@ -416,6 +448,8 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 - Google Cloud OAuth Client：已建立，redirect URI 指向 Supabase callback ✅
 - Google Cloud Test users：已加入測試帳號 ✅
 - migrations 001–015：全部已執行 ✅
+- migration 016（event_candidates INSERT policy）：⚠️ 待確認是否執行
+- migration 017（source_hash + raw_data 欄位）：⚠️ 待確認是否執行
 
 ---
 
@@ -476,10 +510,19 @@ src/
 │       │       ├── NewIdolForm.tsx       # 新增偶像表單（slug 自動生成）
 │       │       └── actions.ts            # createIdol
 │       └── event-candidates/
-│           ├── page.tsx                  # 候選列表（pending 優先排序 + 三組統計）
-│           └── [id]/
-│               ├── page.tsx              # 候選詳情 + Approve / Reject 按鈕
-│               └── actions.ts            # approveCandidate / rejectCandidate（Phase I）
+│           ├── page.tsx                  # 候選列表（pending 優先排序 + 三組統計 + AI解析 + CrawlerButton）
+│           ├── CrawlerButton.tsx         # BLACKPINK fetcher 觸發按鈕（'use client'）
+│           ├── [id]/
+│           │   ├── page.tsx              # 候選詳情 + Approve / Reject 按鈕 + source_hash
+│           │   └── actions.ts            # approveCandidate / rejectCandidate（Phase I）
+│           ├── new/
+│           │   ├── page.tsx              # 手動匯入表單頁（J1）
+│           │   ├── NewCandidateForm.tsx  # 手動匯入表單（'use client'）
+│           │   └── actions.ts            # createCandidate（source_hash + raw_data）
+│           └── parse/
+│               ├── page.tsx              # AI 解析公告頁（J3，admin guard）
+│               ├── ParseClient.tsx       # 解析表單 + 預覽 + 確認寫入（'use client'）
+│               └── actions.ts            # commitAiCandidate（re-validate + redirect）
 ├── components/
 │   ├── BottomNav.tsx                     # 底部導航（admin 路由自動隱藏）
 │   ├── EventCard.tsx                     # 活動卡片（full / compact）
@@ -491,14 +534,19 @@ src/
     ├── types.ts                          # 所有核心型別
     ├── appState.tsx                      # 應用狀態：user / favorites / reminders / following 三個雙模式 controller
     ├── mockIdols.ts / mockEvents.ts      # Fallback mock 資料
-    └── supabase/
-        ├── client.ts                     # 公開 anon client
-        ├── serverClient.ts               # Server Component cookie client
-        ├── browserClient.ts              # Client Component cookie client
-        ├── events.ts                     # 前台讀取函式（published + trusted only）
-        ├── auth.ts                       # getCurrentUser()（前台使用者，Milestone 1）
-        ├── adminAuth.ts                  # getCurrentAdmin()
-        └── adminStats.ts                 # getAdminStats()
+    ├── supabase/
+    │   ├── client.ts                     # 公開 anon client
+    │   ├── serverClient.ts               # Server Component cookie client
+    │   ├── browserClient.ts              # Client Component cookie client
+    │   ├── events.ts                     # 前台讀取函式（published + trusted only）
+    │   ├── auth.ts                       # getCurrentUser()（前台使用者，Milestone 1）
+    │   ├── adminAuth.ts                  # getCurrentAdmin()
+    │   └── adminStats.ts                 # getAdminStats()
+    ├── crawlers/
+    │   ├── sourceHash.ts                 # SHA-256 source_hash（URL 優先 / fallback 組合）
+    │   └── blackpinkOfficialTour.ts      # BLACKPINK 官方 tour 頁 HTML parser（cheerio）
+    └── ai/
+        └── parseCandidate.ts             # Claude Haiku wrapper（slug 解析、JSON 提取、enum 驗證）
 
 supabase/
 ├── migrations/
@@ -512,11 +560,13 @@ supabase/
 │   ├── 008_admin_users_insert_idols_policy.sql
 │   ├── 009_grant_anon_read_idols.sql
 │   ├── 010_admin_users_update_idols_basic_policy.sql
-│   ├── 011_admin_users_toggle_idol_active_policy.sql       # Phase H4：is_active GRANT
-│   ├── 012_admin_users_review_event_candidates_policy.sql  # Phase I：candidates GRANT + policies
-│   ├── 013_authenticated_saved_events_grants.sql           # Milestone 1：補 saved_events GRANT
-│   ├── 014_authenticated_reminders_grants.sql              # Milestone 2 reminders：補 reminders GRANT
-│   └── 015_authenticated_user_follows_grants.sql           # Milestone 4：補 user_follows GRANT
+│   ├── 011_admin_users_toggle_idol_active_policy.sql       # Phase H4：is_active GRANT ✅
+│   ├── 012_admin_users_review_event_candidates_policy.sql  # Phase I：candidates GRANT + policies ✅
+│   ├── 013_authenticated_saved_events_grants.sql           # Milestone 1：補 saved_events GRANT ✅
+│   ├── 014_authenticated_reminders_grants.sql              # Milestone 2 reminders：補 reminders GRANT ✅
+│   ├── 015_authenticated_user_follows_grants.sql           # Milestone 4：補 user_follows GRANT ✅
+│   ├── 016_admin_users_insert_event_candidates_policy.sql  # J1/J3：candidates INSERT policy ⚠️ 待確認
+│   └── 017_event_candidates_dedupe_fields.sql              # J4：source_hash + raw_data + unique index ⚠️ 待確認
 └── seed.sql                              # 種子資料（已執行，含 3 筆 pending candidates）
 ```
 
