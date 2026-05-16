@@ -15,7 +15,7 @@
 | 本地路徑 | `~/Desktop/idol-rhythm` |
 | GitHub repo | https://github.com/davidliu260-source/idol-rhythm |
 | 技術 | Next.js 14 App Router + TypeScript + Tailwind CSS |
-| 目前階段 | Admin 後台主幹完成（Events / Idols / Candidates 三線皆通） |
+| 目前階段 | 後台主幹完成；前台會員系統第一步完成（Email magic link + Google OAuth + 收藏持久化） |
 
 任何 Idol Rhythm 相關任務都必須在以下目錄執行：
 
@@ -271,10 +271,12 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 | 9 | Admin Idols 管理（列表 / 詳情 / 新增 / 編輯） | ✅ 完成（migrations 008–010，Phase H1–H3） |
 | 10 | Admin Idols：啟用 / 停用（is_active toggle） | ✅ 完成（migration 011，Phase H4） |
 | 11 | event_candidates 候選池審核（approve / reject MVP） | ✅ 完成（migration 012，Phase I） |
-| 12 | 收藏 / 提醒持久化（localStorage → Supabase） | 🔲 待辦 |
-| 13 | 使用者登入（前台 Supabase Auth） | 🔲 待辦 |
-| 14 | AI 搜尋 / 整理輔助 / 爬蟲 pipeline | 🔲 待辦 |
-| 15 | 真實推播通知 / 使用者個人化 | 🔲 待辦 |
+| 12 | 前台 Auth Milestone 1：Email magic link + 收藏持久化 | ✅ 完成（migration 013） |
+| 13 | 前台 Auth Milestone 2：加入 Google OAuth 登入 | ✅ 完成（不需 migration） |
+| 14 | 提醒 / 追蹤偶像持久化（localStorage → Supabase） | 🔲 待辦 |
+| 15 | AI 搜尋 / 整理輔助 / 爬蟲 pipeline | 🔲 待辦 |
+| 16 | 真實推播通知 / 使用者個人化 | 🔲 待辦 |
+| 17 | Apple Sign-In（上 App Store 前再做）| 🔲 待辦 |
 
 **不得跳過前面階段直接做大型系統。**
 
@@ -321,8 +323,9 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 - `src/lib/supabase/events.ts` — 前台讀取：`getPublishedEvents` / `getActiveIdols` / `getEventById` / `getEventSources`
 - `src/lib/supabase/adminAuth.ts` — `getCurrentAdmin()`：查 `admin_users` 驗管理員身份
 - `src/lib/supabase/adminStats.ts` — `getAdminStats()`：Dashboard 統計數字
+- `src/lib/supabase/auth.ts` — `getCurrentUser()`：取前台一般使用者（不是 admin）
 
-**資料庫 Migrations（001–012 全部已執行）**
+**資料庫 Migrations（001–013 全部已執行）**
 - `001_initial_schema.sql` — 完整表格 + RLS + 枚舉
 - `002_admin_users.sql` — `admin_users` 表 + SELECT policy
 - `003_admin_users_write_policy.sql` — INSERT policy（events / event_sources）+ GRANT
@@ -335,6 +338,7 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 - `010_admin_users_update_idols_basic_policy.sql` — idols content fields GRANT UPDATE + UPDATE policy（slug / is_active 排除）
 - `011_admin_users_toggle_idol_active_policy.sql` — GRANT UPDATE (is_active) ON idols（Phase H4）
 - `012_admin_users_review_event_candidates_policy.sql` — event_candidates GRANT SELECT + GRANT UPDATE(review_status, reviewer_note, approved_event_id) + admin_users SELECT/UPDATE policy（Phase I）
+- `013_authenticated_saved_events_grants.sql` — saved_events GRANT SELECT / INSERT / DELETE TO authenticated（補 migration 001 缺的 GRANT，Milestone 1）
 
 **Admin 後台（全功能，已完成）**
 - `/admin/login` — Email 登入，session cookie
@@ -353,19 +357,44 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 **前台（已接 Supabase，全頁 fallback mock）**
 - `/`、`/schedule`、`/idols`、`/events/[id]`、`/favorites`、`/me` — 全部優先讀 Supabase，失敗時 fallback mock data
 
+**前台會員系統（Milestone 1 + 2 已完成）**
+- `/login` — Email magic link + Google OAuth 雙登入入口（Google 在上、Email 在下）
+- `/auth/callback` — Route Handler，magic link / OAuth 共用，`exchangeCodeForSession` 換 cookie session
+- `/me` — 兩態：未登入顯示登入提示；登入顯示 email + 登出按鈕
+- `/favorites` — 兩態：未登入顯示登入提示；登入讀取 Supabase `saved_events`
+- `src/lib/appState.tsx` — favorites 雙模式：登入用 Supabase、anon 用 localStorage；following / reminders 仍 localStorage（待後續 milestone 處理）
+- **同 email identity linking**：Supabase 預設行為，magic link user 與 Google user 共用同一個 auth.users row
+- **Open-redirect 防護**：`/login` 和 `/auth/callback` 的 `next` 參數都拒絕外部網址與 `//` 開頭
+
+**外部服務設定（人工，已完成）**
+- Supabase Auth → Providers → Google：Enabled，Client ID/Secret 已貼
+- Supabase Auth → URL Configuration：
+  - Site URL：`https://idol-rhythm.vercel.app`
+  - Redirect URLs：vercel domain + `http://localhost:3000/auth/callback`
+- Google Cloud（idol-rhythm-496505 project）：
+  - OAuth Consent Screen：External / Testing
+  - OAuth Client (Web)：Authorized redirect URI = Supabase callback
+  - Test users：手動加入
+
 ### 🔲 待實作
 
-- 收藏 / 提醒持久化（目前仍為 localStorage → Supabase user_follows / saved_events / reminders）
-- 使用者登入（前台 Supabase Auth，前台會員系統）
+- 提醒 / 追蹤偶像持久化（reminders / user_follows，仍是 localStorage）
+- 會員設定頁、provider 管理 UI
 - AI 自動整理 / 爬蟲 pipeline（寫入 event_candidates）
 - 真實推播通知 / 個人化首頁
+- Apple Sign-In（要 Apple Developer $99/年，上 App Store 前再考慮）
+- Google OAuth 從 Testing 切到 Production（要對外開放給陌生使用者時再做）
 
 ### ⚠️ 環境設定（已完成）
 
 - `.env.local`：`NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY` ✅
 - Vercel env：同上 ✅
 - Supabase admin 帳號：已建立，已加入 `admin_users` ✅
-- migrations 001–012：全部已執行 ✅
+- Supabase Auth Google Provider：Enabled，Client ID/Secret 已設定 ✅
+- Supabase Auth URL Configuration：Site URL + Redirect URLs（vercel + localhost）✅
+- Google Cloud OAuth Client：已建立，redirect URI 指向 Supabase callback ✅
+- Google Cloud Test users：已加入測試帳號 ✅
+- migrations 001–013：全部已執行 ✅
 
 ---
 
@@ -384,10 +413,16 @@ src/
 │   ├── events/[id]/page.tsx              # 活動詳情 /events/:id
 │   ├── favorites/
 │   │   ├── page.tsx
-│   │   └── FavoritesClient.tsx           # 收藏頁（'use client'）
+│   │   └── FavoritesClient.tsx           # 收藏頁（兩態：未登入提示 / 已登入讀 Supabase）
 │   ├── me/
 │   │   ├── page.tsx
-│   │   └── MeClient.tsx                  # 個人頁（'use client'）
+│   │   └── MeClient.tsx                  # 個人頁（兩態：未登入提示 / 已登入 email + 登出）
+│   ├── login/
+│   │   ├── page.tsx                      # 登入頁（Server Component，sanitize next param）
+│   │   └── LoginForm.tsx                 # 登入表單（Google 按鈕 + Email magic link）
+│   ├── auth/
+│   │   └── callback/
+│   │       └── route.ts                  # Magic link / OAuth callback，exchangeCodeForSession
 │   └── admin/
 │       ├── page.tsx                      # Dashboard /admin（auth guard + 診斷）
 │       ├── login/
@@ -433,13 +468,14 @@ src/
 │   └── SourceBadge.tsx
 └── lib/
     ├── types.ts                          # 所有核心型別
-    ├── appState.tsx                      # localStorage 狀態管理
+    ├── appState.tsx                      # 應用狀態：user / favorites（雙模式）/ following / reminders
     ├── mockIdols.ts / mockEvents.ts      # Fallback mock 資料
     └── supabase/
         ├── client.ts                     # 公開 anon client
         ├── serverClient.ts               # Server Component cookie client
         ├── browserClient.ts              # Client Component cookie client
         ├── events.ts                     # 前台讀取函式（published + trusted only）
+        ├── auth.ts                       # getCurrentUser()（前台使用者，Milestone 1）
         ├── adminAuth.ts                  # getCurrentAdmin()
         └── adminStats.ts                 # getAdminStats()
 
@@ -456,7 +492,8 @@ supabase/
 │   ├── 009_grant_anon_read_idols.sql
 │   ├── 010_admin_users_update_idols_basic_policy.sql
 │   ├── 011_admin_users_toggle_idol_active_policy.sql       # Phase H4：is_active GRANT
-│   └── 012_admin_users_review_event_candidates_policy.sql  # Phase I：candidates GRANT + policies
+│   ├── 012_admin_users_review_event_candidates_policy.sql  # Phase I：candidates GRANT + policies
+│   └── 013_authenticated_saved_events_grants.sql           # Milestone 1：補 saved_events GRANT
 └── seed.sql                              # 種子資料（已執行，含 3 筆 pending candidates）
 ```
 
