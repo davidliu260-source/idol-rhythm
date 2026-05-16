@@ -359,13 +359,178 @@ function useReminders(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Following controller (idols followed by the user)
+//
+//   mode = 'cloud' when logged in  → reads/writes Supabase user_follows
+//   mode = 'local' when anonymous  → reads/writes localStorage
+//
+// IMPORTANT — slug vs UUID translation:
+//   The frontend uses `idol.slug` as the user-facing identifier everywhere
+//   (e.g. EventCard, IdolsClient, MeClient all call following.has(idol.id)
+//   where idol.id is actually the slug — see rowToIdol in lib/supabase/events.ts).
+//   But user_follows.idol_id stores idols.id which is a UUID.
+//
+//   This hook therefore maintains a slug ↔ UUID map for the active idols and
+//   translates internally:
+//     - reads from user_follows (UUIDs)  → expose as slugs
+//     - writes to   user_follows         → translate slug → UUID before insert
+//   Consumer API stays slug-based; the rest of the app sees no difference.
+//
+//   If a slug cannot be mapped to a UUID (e.g. inactive idol, mock-only slug),
+//   the toggle is rejected with console.error and UI rolls back.
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface FollowingController {
+  ids: string[]  // slugs
+  has: (slug: string) => boolean
+  toggle: (slug: string) => Promise<void> | void
+  mode: 'cloud' | 'local'
+  isLoading: boolean
+}
+
+function useFollowing(
+  user: AuthUser | null,
+  isUserLoading: boolean,
+): FollowingController {
+  const local = useStoredSet('idol-rhythm:following', DEFAULT_FOLLOWING)
+  const [cloudSlugs, setCloudSlugs] = useState<string[]>([])
+  const [slugToUuid, setSlugToUuid] = useState<Record<string, string>>({})
+  const [isCloudLoading, setIsCloudLoading] = useState(false)
+
+  // Fetch idols mapping + user_follows whenever auth user changes.
+  useEffect(() => {
+    if (!user) {
+      setCloudSlugs([])
+      setSlugToUuid({})
+      setIsCloudLoading(false)
+      return
+    }
+
+    const supabase = getBrowserSupabaseClient()
+    if (!supabase) return
+
+    let cancelled = false
+    setIsCloudLoading(true)
+
+    Promise.all([
+      // Only active idols — matches what the frontend ever displays. Rows in
+      // user_follows that point to disabled idols are silently dropped on
+      // read; the underlying DB row is preserved.
+      supabase.from('idols').select('id, slug').eq('is_active', true),
+      supabase.from('user_follows').select('idol_id').eq('user_id', user.id),
+    ]).then(([idolsRes, followsRes]) => {
+      if (cancelled) return
+
+      if (idolsRes.error) {
+        console.error('Failed to load idols slug map:', idolsRes.error)
+      }
+      if (followsRes.error) {
+        console.error('Failed to load user_follows:', followsRes.error)
+      }
+
+      const idols = (idolsRes.data ?? []) as Array<{ id: string; slug: string }>
+      const slugMap: Record<string, string> = {} // slug → uuid
+      const uuidMap: Record<string, string> = {} // uuid → slug
+      for (const i of idols) {
+        slugMap[i.slug] = i.id
+        uuidMap[i.id] = i.slug
+      }
+
+      const followRows = (followsRes.data ?? []) as Array<{ idol_id: string }>
+      const slugs = followRows
+        .map((r) => uuidMap[r.idol_id])
+        // Drop rows whose UUID isn't in the active idols map.
+        .filter((s): s is string => Boolean(s))
+
+      setSlugToUuid(slugMap)
+      setCloudSlugs(slugs)
+      setIsCloudLoading(false)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [user])
+
+  const cloudHas = useCallback(
+    (slug: string) => cloudSlugs.includes(slug),
+    [cloudSlugs],
+  )
+
+  const cloudToggle = useCallback(
+    async (slug: string) => {
+      if (!user) return
+      const supabase = getBrowserSupabaseClient()
+      if (!supabase) return
+
+      const uuid = slugToUuid[slug]
+      if (!uuid) {
+        console.error(
+          `useFollowing: cannot map slug "${slug}" to idol UUID — skip write. ` +
+            'This usually means the idol is inactive or only exists in mock data.',
+        )
+        return
+      }
+
+      const isFollowing = cloudSlugs.includes(slug)
+
+      // Optimistic update
+      setCloudSlugs((prev) =>
+        isFollowing ? prev.filter((x) => x !== slug) : [...prev, slug],
+      )
+
+      if (isFollowing) {
+        const { error } = await supabase
+          .from('user_follows')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('idol_id', uuid)
+        if (error) {
+          setCloudSlugs((prev) => (prev.includes(slug) ? prev : [...prev, slug]))
+          console.error('Failed to delete user_follow:', error)
+        }
+      } else {
+        const { error } = await supabase
+          .from('user_follows')
+          .insert({ user_id: user.id, idol_id: uuid })
+        if (error) {
+          setCloudSlugs((prev) => prev.filter((x) => x !== slug))
+          console.error('Failed to insert user_follow:', error)
+        }
+      }
+    },
+    [user, cloudSlugs, slugToUuid],
+  )
+
+  const mode: 'cloud' | 'local' = user ? 'cloud' : 'local'
+
+  if (mode === 'local') {
+    return {
+      ids: local.ids,
+      has: local.has,
+      toggle: local.toggle,
+      mode,
+      isLoading: isUserLoading,
+    }
+  }
+
+  return {
+    ids: cloudSlugs,
+    has: cloudHas,
+    toggle: cloudToggle,
+    mode,
+    isLoading: isUserLoading || isCloudLoading,
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Context
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface AppState {
   user: AuthUser | null
   isUserLoading: boolean
-  following: StoredSet
+  following: FollowingController
   favorites: FavoritesController
   reminders: RemindersController
 }
@@ -374,7 +539,7 @@ const AppStateContext = createContext<AppState | null>(null)
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const { user, isLoading: isUserLoading } = useAuthUser()
-  const following = useStoredSet('idol-rhythm:following', DEFAULT_FOLLOWING)
+  const following = useFollowing(user, isUserLoading)
   const favorites = useFavorites(user, isUserLoading)
   const reminders = useReminders(user, isUserLoading)
 
