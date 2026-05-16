@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
-import { ArrowLeft, FileSearch, ChevronRight } from 'lucide-react'
+import { ArrowLeft, FileSearch, ChevronRight, Plus } from 'lucide-react'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
 
@@ -84,6 +84,15 @@ export default async function AdminCandidatesPage() {
         <div className="flex items-center gap-2">
           <FileSearch className="h-5 w-5 text-violet" />
           <h1 className="text-xl font-bold text-text-base">候選活動審核</h1>
+          {isAdmin && (
+            <Link
+              href="/admin/event-candidates/new"
+              className="ml-auto inline-flex items-center gap-1 rounded-lg bg-violet px-2.5 py-1.5 text-[11px] font-semibold text-white active:opacity-80 transition-opacity"
+            >
+              <Plus className="h-3 w-3" />
+              新增候選
+            </Link>
+          )}
         </div>
         <p className="text-xs text-muted mt-1">
           共 {candidates.length} 筆候選

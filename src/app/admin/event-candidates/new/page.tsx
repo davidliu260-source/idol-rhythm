@@ -1,0 +1,131 @@
+export const dynamic = 'force-dynamic'
+
+import Link from 'next/link'
+import { ArrowLeft, FilePlus, Lock } from 'lucide-react'
+import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
+import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
+import NewCandidateForm from './NewCandidateForm'
+
+async function getIdolsForForm(): Promise<{
+  idols: { id: string; name: string }[]
+  idolsError: string | null
+}> {
+  const supabase = getSupabaseServerClient()
+  if (!supabase) {
+    return {
+      idols: [],
+      idolsError:
+        'Supabase 環境變數未設定（NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY）',
+    }
+  }
+
+  const { data, error } = await supabase
+    .from('idols')
+    .select('id, name')
+    .eq('is_active', true)
+    .order('name')
+
+  if (error) {
+    return {
+      idols: [],
+      idolsError: `查詢偶像失敗：${error.code ? `[${error.code}] ` : ''}${error.message}`,
+    }
+  }
+
+  return {
+    idols: (data ?? []) as { id: string; name: string }[],
+    idolsError: null,
+  }
+}
+
+export default async function AdminNewCandidatePage() {
+  const [{ isAdmin }, { idols, idolsError }] = await Promise.all([
+    getCurrentAdmin(),
+    getIdolsForForm(),
+  ])
+
+  if (!isAdmin) {
+    return (
+      <div className="flex flex-col pt-12 pb-6 px-4 gap-4">
+        <Link
+          href="/admin/event-candidates"
+          className="inline-flex items-center gap-1 text-xs text-muted hover:text-text-base"
+        >
+          <ArrowLeft className="h-3 w-3" />
+          候選活動列表
+        </Link>
+        <div className="rounded-xl bg-amber-500/10 border border-amber-500/25 px-4 py-4 flex items-start gap-3">
+          <Lock className="h-4 w-4 text-amber-400 flex-shrink-0 mt-0.5" />
+          <div className="flex flex-col gap-1.5">
+            <p className="text-sm font-semibold text-amber-300">需要管理員登入</p>
+            <p className="text-xs text-amber-300/70">此頁面僅限已驗證管理員使用。</p>
+            <Link
+              href="/admin/login"
+              className="self-start text-xs font-semibold text-amber-300 underline underline-offset-2"
+            >
+              前往管理員登入 →
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-0 pt-12 pb-6">
+      {/* Header */}
+      <div className="px-4 mb-4">
+        <Link
+          href="/admin/event-candidates"
+          className="inline-flex items-center gap-1 text-xs text-muted hover:text-text-base mb-3"
+        >
+          <ArrowLeft className="h-3 w-3" />
+          候選活動列表
+        </Link>
+        <div className="flex items-center gap-2">
+          <FilePlus className="h-5 w-5 text-violet" />
+          <h1 className="text-xl font-bold text-text-base">新增候選活動</h1>
+        </div>
+        <p className="text-xs text-muted mt-1">
+          手動把外部看到的活動消息放進候選池，後續走既有 Approve / Reject 流程
+        </p>
+      </div>
+
+      {/* Info banner */}
+      <div className="px-4 mb-4">
+        <div className="rounded-xl bg-violet/10 border border-violet/25 px-3 py-2.5">
+          <p className="text-xs text-muted leading-snug">
+            送出後 <span className="font-semibold text-text-base">review_status = pending</span>，
+            不會建立 event、不會發布到前台。Approve 才會產生 draft event，仍須手動 publish。
+          </p>
+        </div>
+      </div>
+
+      {/* Idol query error / empty hint */}
+      {idolsError && (
+        <div className="px-4 mb-4">
+          <div className="rounded-xl bg-red-500/10 border border-red-500/25 px-3 py-3">
+            <p className="text-xs font-semibold text-red-400 mb-1">偶像清單載入失敗</p>
+            <p className="text-xs text-red-400/80 break-all leading-relaxed">{idolsError}</p>
+          </div>
+        </div>
+      )}
+
+      {!idolsError && idols.length === 0 && (
+        <div className="px-4 mb-4">
+          <div className="rounded-xl bg-amber-500/10 border border-amber-500/25 px-3 py-3">
+            <p className="text-xs font-semibold text-amber-300 mb-1">資料庫尚無 active 偶像</p>
+            <p className="text-xs text-amber-300/70 leading-relaxed">
+              下方下拉選單將為空。仍可送出候選，但需事後補對應偶像才能 Approve。
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Form */}
+      <div className="px-4">
+        <NewCandidateForm idols={idols} />
+      </div>
+    </div>
+  )
+}
