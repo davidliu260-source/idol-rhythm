@@ -15,7 +15,7 @@
 | 本地路徑 | `~/Desktop/idol-rhythm` |
 | GitHub repo | https://github.com/davidliu260-source/idol-rhythm |
 | 技術 | Next.js 14 App Router + TypeScript + Tailwind CSS |
-| 目前階段 | Admin 後台寫入功能進行中 |
+| 目前階段 | Admin 後台主幹完成（Events / Idols / Candidates 三線皆通） |
 
 任何 Idol Rhythm 相關任務都必須在以下目錄執行：
 
@@ -269,10 +269,12 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 | 7 | Admin Events 管理（新增 / 編輯 / 發布 / 下架） | ✅ 完成（migrations 003–007） |
 | 8 | 前台讀 Supabase（全頁接真實資料，fallback mock） | ✅ 完成 |
 | 9 | Admin Idols 管理（列表 / 詳情 / 新增 / 編輯） | ✅ 完成（migrations 008–010，Phase H1–H3） |
-| 10 | Admin Idols：啟用 / 停用（is_active toggle） | 🔲 Phase H4（下一步） |
-| 11 | event_candidates 候選池管理（Phase I） | 🔲 待辦 |
-| 12 | AI 搜尋 / 整理輔助 | 🔲 待辦 |
-| 13 | 真實通知 / 使用者個人化 | 🔲 待辦 |
+| 10 | Admin Idols：啟用 / 停用（is_active toggle） | ✅ 完成（migration 011，Phase H4） |
+| 11 | event_candidates 候選池審核（approve / reject MVP） | ✅ 完成（migration 012，Phase I） |
+| 12 | 收藏 / 提醒持久化（localStorage → Supabase） | 🔲 待辦 |
+| 13 | 使用者登入（前台 Supabase Auth） | 🔲 待辦 |
+| 14 | AI 搜尋 / 整理輔助 / 爬蟲 pipeline | 🔲 待辦 |
+| 15 | 真實推播通知 / 使用者個人化 | 🔲 待辦 |
 
 **不得跳過前面階段直接做大型系統。**
 
@@ -320,7 +322,7 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 - `src/lib/supabase/adminAuth.ts` — `getCurrentAdmin()`：查 `admin_users` 驗管理員身份
 - `src/lib/supabase/adminStats.ts` — `getAdminStats()`：Dashboard 統計數字
 
-**資料庫 Migrations（001–010 全部已執行）**
+**資料庫 Migrations（001–012 全部已執行）**
 - `001_initial_schema.sql` — 完整表格 + RLS + 枚舉
 - `002_admin_users.sql` — `admin_users` 表 + SELECT policy
 - `003_admin_users_write_policy.sql` — INSERT policy（events / event_sources）+ GRANT
@@ -331,6 +333,8 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 - `008_admin_users_insert_idols_policy.sql` — GRANT INSERT ON idols + INSERT policy
 - `009_grant_anon_read_idols.sql` — GRANT SELECT ON idols TO anon（修正前台讀取）
 - `010_admin_users_update_idols_basic_policy.sql` — idols content fields GRANT UPDATE + UPDATE policy（slug / is_active 排除）
+- `011_admin_users_toggle_idol_active_policy.sql` — GRANT UPDATE (is_active) ON idols（Phase H4）
+- `012_admin_users_review_event_candidates_policy.sql` — event_candidates GRANT SELECT + GRANT UPDATE(review_status, reviewer_note, approved_event_id) + admin_users SELECT/UPDATE policy（Phase I）
 
 **Admin 後台（全功能，已完成）**
 - `/admin/login` — Email 登入，session cookie
@@ -340,27 +344,28 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 - `/admin/events/new` — 新增草稿活動（INSERT events + event_sources）
 - `/admin/events/[id]/edit` — 草稿編輯（UPDATE events + DELETE/INSERT sources）
 - `/admin/idols` — 偶像列表（含 is_active 狀態）
-- `/admin/idols/[id]` — 偶像詳情（只讀）+ 「編輯偶像資料」連結
+- `/admin/idols/[id]` — 偶像詳情 + 啟用 / 停用按鈕 + 「編輯偶像資料」連結
 - `/admin/idols/new` — 新增偶像（INSERT idols，slug 自動生成 + 格式驗證）
-- `/admin/idols/[id]/edit` — 編輯偶像基本資料（slug 不可改，is_active 保留 H4）
+- `/admin/idols/[id]/edit` — 編輯偶像基本資料（slug 不可改）
+- `/admin/event-candidates` — 候選活動列表（pending / approved / rejected 三組統計）
+- `/admin/event-candidates/[id]` — 候選詳情 + Approve（建立草稿 event）+ Reject 按鈕
 
 **前台（已接 Supabase，全頁 fallback mock）**
 - `/`、`/schedule`、`/idols`、`/events/[id]`、`/favorites`、`/me` — 全部優先讀 Supabase，失敗時 fallback mock data
 
 ### 🔲 待實作
 
-- Phase H4：Admin Idols is_active toggle（啟用 / 停用按鈕）
-- Phase I：event_candidates 候選池審核（approve / reject）
-- 收藏 / 提醒持久化（目前仍為 localStorage）
-- 使用者登入（前台 Supabase Auth）
-- AI 自動整理 / 爬蟲 pipeline
+- 收藏 / 提醒持久化（目前仍為 localStorage → Supabase user_follows / saved_events / reminders）
+- 使用者登入（前台 Supabase Auth，前台會員系統）
+- AI 自動整理 / 爬蟲 pipeline（寫入 event_candidates）
+- 真實推播通知 / 個人化首頁
 
 ### ⚠️ 環境設定（已完成）
 
 - `.env.local`：`NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY` ✅
 - Vercel env：同上 ✅
 - Supabase admin 帳號：已建立，已加入 `admin_users` ✅
-- migrations 001–010：全部已執行 ✅
+- migrations 001–012：全部已執行 ✅
 
 ---
 
@@ -401,18 +406,24 @@ src/
 │       │       ├── page.tsx
 │       │       ├── NewEventForm.tsx      # 新增草稿表單（'use client'）
 │       │       └── actions.ts            # createEvent
-│       └── idols/
-│           ├── page.tsx                  # 偶像列表（含 is_active 狀態）
-│           ├── [id]/
-│           │   ├── page.tsx              # 偶像詳情（只讀 + 編輯連結）
-│           │   └── edit/
-│           │       ├── page.tsx          # 偶像編輯（admin guard + 預填）
-│           │       ├── EditIdolForm.tsx  # 偶像編輯表單（slug disabled）
-│           │       └── actions.ts        # updateIdol
-│           └── new/
-│               ├── page.tsx
-│               ├── NewIdolForm.tsx       # 新增偶像表單（slug 自動生成）
-│               └── actions.ts            # createIdol
+│       ├── idols/
+│       │   ├── page.tsx                  # 偶像列表（含 is_active 狀態）
+│       │   ├── [id]/
+│       │   │   ├── page.tsx              # 偶像詳情 + 啟用/停用 + 編輯連結
+│       │   │   ├── actions.ts            # activateIdol / deactivateIdol（Phase H4）
+│       │   │   └── edit/
+│       │   │       ├── page.tsx          # 偶像編輯（admin guard + 預填）
+│       │   │       ├── EditIdolForm.tsx  # 偶像編輯表單（slug disabled）
+│       │   │       └── actions.ts        # updateIdol
+│       │   └── new/
+│       │       ├── page.tsx
+│       │       ├── NewIdolForm.tsx       # 新增偶像表單（slug 自動生成）
+│       │       └── actions.ts            # createIdol
+│       └── event-candidates/
+│           ├── page.tsx                  # 候選列表（pending 優先排序 + 三組統計）
+│           └── [id]/
+│               ├── page.tsx              # 候選詳情 + Approve / Reject 按鈕
+│               └── actions.ts            # approveCandidate / rejectCandidate（Phase I）
 ├── components/
 │   ├── BottomNav.tsx                     # 底部導航（admin 路由自動隱藏）
 │   ├── EventCard.tsx                     # 活動卡片（full / compact）
@@ -443,8 +454,10 @@ supabase/
 │   ├── 007_admin_users_edit_draft_events_policy.sql
 │   ├── 008_admin_users_insert_idols_policy.sql
 │   ├── 009_grant_anon_read_idols.sql
-│   └── 010_admin_users_update_idols_basic_policy.sql
-└── seed.sql                              # 種子資料（已執行）
+│   ├── 010_admin_users_update_idols_basic_policy.sql
+│   ├── 011_admin_users_toggle_idol_active_policy.sql       # Phase H4：is_active GRANT
+│   └── 012_admin_users_review_event_candidates_policy.sql  # Phase I：candidates GRANT + policies
+└── seed.sql                              # 種子資料（已執行，含 3 筆 pending candidates）
 ```
 
 ---
