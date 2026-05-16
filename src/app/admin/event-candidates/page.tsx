@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
-import { ArrowLeft, FileSearch, ChevronRight, Plus } from 'lucide-react'
+import { ArrowLeft, FileSearch, ChevronRight, Plus, Sparkles } from 'lucide-react'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
 import CrawlerButton from './CrawlerButton'
@@ -124,6 +124,19 @@ export default async function AdminCandidatesPage() {
             <p className="text-xs font-semibold text-red-400 mb-1">候選清單載入失敗</p>
             <p className="text-xs text-red-400/80 break-all leading-relaxed">{error}</p>
           </div>
+        </div>
+      )}
+
+      {/* AI parse entry — admin only */}
+      {isAdmin && (
+        <div className="px-4 mb-3">
+          <Link
+            href="/admin/event-candidates/parse"
+            className="inline-flex items-center gap-2 rounded-xl border border-violet/40 bg-violet/10 px-3 py-2.5 text-xs font-semibold text-violet-200 active:opacity-80 transition-opacity"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            AI 解析公告
+          </Link>
         </div>
       )}
 
