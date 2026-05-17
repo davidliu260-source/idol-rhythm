@@ -1,6 +1,6 @@
 # Idol Rhythm — 專案進度備份與交接文件
 
-> 最後更新：2026-05-17（J5 + J5b 完成；Vercel Cron 安全寫入 event_candidates 上線）
+> 最後更新：2026-05-17（J0–J7a 完成；jyp_schedule 平台化 + Stray Kids 種子上線；J7b/J7c/J7d 規劃中）
 > 本文件紀錄目前 Idol Rhythm 的完成進度、Supabase 狀態與下一步建議。
 
 ---
@@ -79,7 +79,7 @@
 
 ## 3. Supabase 目前狀態
 
-### Tables（10 張）
+### Tables（11 張）
 
 | Table | 說明 |
 |---|---|
@@ -93,6 +93,7 @@
 | `event_clicks` | 活動點擊紀錄（匿名可寫） |
 | `source_clicks` | 來源點擊紀錄（匿名可寫） |
 | `user_activity_logs` | 使用者行為紀錄（需登入） |
+| `crawler_sources` | 爬蟲來源設定（J6a），含 parser_type、config jsonb、last_run_at / last_status / last_error |
 
 ### Seed data 筆數（已確認匯入）
 
@@ -176,6 +177,13 @@
 | J5b Production 驗收 | ✅ 通過（2026-05-17，三組 curl 測試全通過：乾跑、重複資料跳過、真實寫入）|
 | Migration 018：service_role GRANT | ✅ 完成（`63ab060`，`018_grant_service_role_event_candidates.sql`；GRANT SELECT/INSERT/UPDATE，idempotent）|
 | 品管流程：feature branch + PR → GPT audit → merge | ✅ 2026-05-17 起採用 |
+| J6a：crawler_sources table + admin UI | ✅ 完成（`3490082`，migration 019，PR #9；`/admin/sources` 列表 + 詳情頁）|
+| J6b：crawler_sources RLS + Blackpink 整合 | ✅ 完成（`811a473`，migration 020，PR #10；通用 `RunSourceButton`）|
+| J6c：TWICE JYP 行程 fetcher（HTML）| ✅ 完成（`5c624d5`，migration 021，PR #11）→ J6d 平台化取代 |
+| J6d：JYP 平台化 fetcher（jyp_schedule）| ✅ 完成（`452d995`，migration 022，PR #13 merged）|
+| J6e：Cron fan-out 跨所有 active sources | ✅ 完成（`4449cc7`，PR #14 merged）|
+| J6f：JYP 12 個月視窗 + 過去日期過濾 | ✅ 完成（`46f197f`，PR #15 merged）|
+| J7a：Stray Kids 種子（第二 JYP 藝人）| ✅ 完成（`e058de0`，migration 023，PR #16 open；零程式碼驗證平台設計）|
 
 ---
 
@@ -223,15 +231,16 @@
 > ✅ 所有前台頁面均已接 Supabase，mock fallback 完整保留。
 > ✅ Admin 後台完成：Dashboard、登入、Events、Idols、Candidates 全線 CRUD + 發布 / 啟用 / 審核。
 > ✅ 前台會員系統：三種登入 + 三大個人化資料 Supabase 持久化。
-> ✅ AI/爬蟲 pipeline J0–J5b 完成：手動匯入 + BLACKPINK fetcher + AI 解析 + source_hash 去重 + Vercel Cron 安全寫入。
+> ✅ AI/爬蟲 pipeline J0–J7a 完成：手動匯入 + BLACKPINK + JYP 平台 fetcher（TWICE + Stray Kids）+ AI 解析 + source_hash 去重 + Vercel Cron fan-out 安全寫入。
 
 | 優先 | 目標 | 說明 |
 |---|---|---|
-| **第一** | 個人化首頁 | user_follows 過濾 timeline；reminders 倒數 UI（需 GPT 工作單）|
-| **第二** | J6：多來源 fetcher 擴充 | 需 GPT 工作單 |
-| **之後** | 忘記密碼、Email 設定、Apple Sign-In | 各需獨立工作單 |
+| **第一** | J7b：批量審核 UI | `/admin/event-candidates` checkbox + 批量 Approve / Reject（需 GPT 工作單）|
+| **第二** | J7c：過期候選清理 | pending + detected_date < today → batch reject（需 GPT 工作單）|
+| **第三** | J7d：內容變更偵測 | content_hash + needs_recheck（需 migration + GPT 工作單）|
+| **之後** | 個人化首頁、忘記密碼、Apple Sign-In | 各需獨立工作單 |
 
-> ⛔ 明確禁止（未被工作單授權前不得實作）：草稿刪除、批量操作、AI auto-publish、直接 push to main（需開 PR）。
+> ⛔ 明確禁止（未被工作單授權前不得實作）：草稿刪除、AI auto-publish、直接 push to main（需開 PR）。
 
 ### 本地開發 CSS 問題
 
@@ -248,6 +257,14 @@ Next.js 14 App Router 在長時間使用或切換 branch 後，`.next` 快取可
 
 | Commit | 說明 |
 |---|---|
+| `e058de0` | Seed Stray Kids idol + JYP schedule source（J7a：migration 023，PR #16）|
+| `46f197f` | JYP fetcher: extend window to 12 months and skip past dates（J6f）|
+| `4449cc7` | Fan out cron across all active crawler_sources（J6e）|
+| `452d995` | Platformize JYP schedule fetcher（J6d：jypSchedule.ts + runJypScheduleFetcher.ts + migration 022）|
+| `d33846f` | Switch TWICE crawler from HTML scraping to JYP JSON API（J6c fix，PR #12）|
+| `5c624d5` | Add TWICE official schedule fetcher（J6c：migration 021，PR #11）|
+| `811a473` | Connect Blackpink fetcher to crawler source（J6b：migration 020，PR #10）|
+| `3490082` | Add crawler sources admin foundation（J6a：migration 019，PR #9）|
 | `63ab060` | Document service_role grants for event_candidates（migration 018，J5b follow-up）|
 | `19ed919` | Upgrade cron route to service_role secure insert（J5b：serviceClient.ts + SUPABASE_SERVICE_ROLE_KEY）|
 | `4c911e7` | Add Vercel Cron dry-run trigger（J5：vercel.json + CRON_SECRET）|
@@ -325,11 +342,24 @@ Next.js 14 App Router 在長時間使用或切換 branch 後，`.next` 快取可
 | `supabase/migrations/016_admin_users_insert_event_candidates_policy.sql` | event_candidates GRANT INSERT + INSERT RLS policy（J1/J3）✅ 已執行 |
 | `supabase/migrations/017_event_candidates_dedupe_fields.sql` | source_hash text + raw_data jsonb + unique index（J4）✅ 已執行 |
 | `supabase/migrations/018_grant_service_role_event_candidates.sql` | GRANT SELECT / INSERT / UPDATE ON event_candidates TO service_role（J5b，idempotent）✅ 已執行 |
+| `supabase/migrations/019_crawler_sources.sql` | crawler_sources table + indexes（J6a）✅ 已執行 |
+| `supabase/migrations/020_crawler_sources_run_status_policy.sql` | GRANT SELECT/UPDATE ON crawler_sources TO service_role + admin SELECT policy（J6b）✅ 已執行 |
+| `supabase/migrations/021_seed_twice_jyp_schedule_source.sql` | Seed TWICE idol + JYP schedule source（J6c）✅ 已執行 |
+| `supabase/migrations/022_platformize_jyp_schedule_sources.sql` | ADD COLUMN config jsonb + UPDATE TWICE row → parser_type='jyp_schedule'（J6d）✅ 已執行 |
+| `supabase/migrations/023_seed_stray_kids_jyp_source.sql` | Seed Stray Kids idol + JYP schedule source（J7a）⏳ 待人工執行 |
 | `supabase/seed.sql` | Demo seed data（idempotent） |
 | `src/lib/supabase/serviceClient.ts` | server-only service_role client（J5b；`import 'server-only'`；CRON_SECRET-gated 路由專用）|
-| `src/app/api/cron/sync-candidates/route.ts` | GET Vercel Cron route（J5b；auth guard + service_role client + runBlackpinkFetcher）|
+| `src/app/api/cron/sync-candidates/route.ts` | GET Vercel Cron route（J6e fan-out；auth guard + service_role client；dispatch by parser_type；sequential foreach sources）|
 | `src/lib/crawlers/sourceHash.ts` | SHA-256 source_hash 計算（URL 優先 / fallback） |
 | `src/lib/crawlers/blackpinkOfficialTour.ts` | BLACKPINK 官方 tour 頁 HTML parser（cheerio） |
+| `src/lib/crawlers/jypSchedule.ts` | JYP JSON API 通用 parser（parseJypScheduleApiItems、entryToCandidatePayload、JypSourceContext）|
+| `src/lib/crawlers/runJypScheduleFetcher.ts` | JYP schedule fetcher（EXPECTED_PARSER_TYPE='jyp_schedule'，12 個月視窗，過去日期過濾，config.groupId 驅動）|
+| `src/lib/crawlers/crawlerSource.ts` | `getCrawlerSourceByKey()`、`updateRunStatus()`、`CrawlerSourceRow`（含 config）|
+| `src/app/api/admin/crawlers/jyp-schedule/run/route.ts` | POST 通用 JYP 手動觸發（body: {sourceKey}）|
+| `src/app/api/admin/crawlers/twice-schedule/run/route.ts` | POST 相容 shim → 呼叫 runJypScheduleFetcher('twice-jyp-schedule')）|
+| `src/app/admin/sources/page.tsx` | 爬蟲來源列表（J6a）|
+| `src/app/admin/sources/[id]/page.tsx` | 爬蟲來源詳情 + config 區塊（J6b）|
+| `src/app/admin/sources/[id]/RunSourceButton.tsx` | 通用手動觸發按鈕（dispatch by parserType + sourceKey）|
 | `src/lib/ai/parseCandidate.ts` | Claude Haiku wrapper（slug 解析、JSON 提取、enum 驗證） |
 | `src/app/api/admin/crawlers/blackpink-tour/run/route.ts` | POST 手動觸發 fetcher（admin guard + 去重 + 統計） |
 | `src/app/api/admin/ai/parse-candidate/route.ts` | POST AI 解析（admin guard + known_idols + Claude） |

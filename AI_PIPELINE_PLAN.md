@@ -1,6 +1,6 @@
 # AI / Crawler Pipeline Plan — Phase J0
 
-**Status:** J0–J4 完成（2026-05-17）。J5 Cron 自動觸發、J6 多來源為下一階段。
+**Status:** J0–J7a 完成（2026-05-17）。J7b 批量審核 UI、J7c 過期清理、J7d 內容變更偵測為下一階段。
 **Goal:** Establish a safe, staged roadmap for ingesting idol activity data via crawlers / AI parsing into the existing `event_candidates` staging pool.
 
 | Phase | 說明 | 狀態 |
@@ -10,8 +10,18 @@
 | J2 | BLACKPINK 官方 tour fetcher | ✅ 完成（`acf7952`） |
 | J3 | AI 解析公告（Claude Haiku） | ✅ 完成（`3cd09f2`） |
 | J4 | source_hash 去重強化 | ✅ 完成（`2c2ec1c`，migration 017） |
-| J5 | Cron 自動觸發 | 🔒 待 GPT 工作單 |
-| J6 | 多來源 fetcher 擴充 | 🔒 待 J5 穩定 |
+| J5 | Vercel Cron dry-run 觸發 | ✅ 完成（`4c911e7`，`vercel.json`，`CRON_SECRET`） |
+| J5b | Cron 安全寫入 event_candidates | ✅ 完成（`19ed919`，migration 018，Production 驗收通過） |
+| J6a | crawler_sources table 基礎 | ✅ 完成（`3490082`，migration 019） |
+| J6b | crawler_sources RLS + admin UI | ✅ 完成（`811a473`，migration 020） |
+| J6c | TWICE 官方行程 fetcher | ✅ 完成（`5c624d5`，migration 021）→ 已由 J6d 平台化取代 |
+| J6d | JYP 平台化 fetcher（jyp_schedule） | ✅ 完成（`452d995`，migration 022，PR #13 merged） |
+| J6e | Cron fan-out 跨所有 active sources | ✅ 完成（`4449cc7`，PR #14 merged） |
+| J6f | JYP fetcher 12 個月視窗 + 過去日期過濾 | ✅ 完成（`46f197f`，PR #15 merged） |
+| J7a | Stray Kids 資料種子（第二 JYP 藝人） | ✅ 完成（`e058de0`，migration 023，PR #16 open）|
+| J7b | 批量審核 UI（approve / reject） | 🔒 待實作 |
+| J7c | 過期候選清理（expired pending cleanup） | 🔒 待實作 |
+| J7d | 內容變更偵測（content_hash + needs_recheck） | 🔒 待實作 |
 
 ---
 
@@ -120,15 +130,63 @@ Indexes: `review_status`, `detected_idol_id`.
 - `migration 017`：ADD COLUMN source_hash text + raw_data jsonb；CREATE UNIQUE INDEX WHERE source_hash IS NOT NULL（partial）。
 - 所有寫入路徑（手動 / fetcher / AI）均計算 source_hash；23505 → 中文友善提示。
 
-### 🔒 J5 — Cron / 自動觸發（待實作）
-- 改為 Vercel Cron 定期觸發 J2/J3 流程，搭配 `CRON_SECRET` header 驗證。
-- 需 GPT 工作單；高風險。
+### ✅ J5 — Cron / 自動觸發（完成，`4c911e7`）
+- `vercel.json`：`"0 1 * * *"`（09:00 Asia/Taipei）。
+- `GET /api/cron/sync-candidates`：`Authorization: Bearer ${CRON_SECRET}` header 驗證。
+- `?dryRun=1` 保留乾跑模式。
 
-### 🔒 J6 — 多來源擴充（待實作）
-- 加入第二、第三來源 fetcher。每個來源獨立模組，獨立失敗。
-- 前置：J5 cron 穩定。
+### ✅ J5b — Cron 安全寫入（完成，`19ed919`）
+- `src/lib/supabase/serviceClient.ts`：`import 'server-only'`，`SUPABASE_SERVICE_ROLE_KEY`。
+- `migration 018`：`GRANT SELECT / INSERT / UPDATE ON event_candidates TO service_role`（idempotent）。
+- Production 驗收通過（curl 三組測試）。
 
-**不要一口氣做 J5–J6。**
+### ✅ J6a — crawler_sources table（完成，`3490082`）
+- `migration 019`：`crawler_sources` table（id, name, source_key, idol_id FK, source_url, source_type, parser_type, is_active, last_run_at, last_status, last_error, created_at, updated_at）。
+- `/admin/sources` 列表頁 + `/admin/sources/[id]` 詳情頁。
+- `getCrawlerSourceByKey()` + `updateRunStatus()` helper functions。
+
+### ✅ J6b — crawler_sources RLS（完成，`811a473`）
+- `migration 020`：GRANT SELECT/UPDATE(last_run_at, last_status, last_error, updated_at) TO service_role + admin SELECT policy。
+- Blackpink fetcher 改由 `crawler_sources` 行驅動（`getCrawlerSourceByKey('blackpink-official-tour')`）。
+- `/admin/sources/[id]/RunSourceButton.tsx`：通用手動觸發按鈕。
+
+### ✅ J6c → J6d — JYP 平台化 fetcher（完成，`452d995`）
+- J6c 建立 TWICE 行程 fetcher（`5c624d5`，migration 021）。
+- J6d 將其重構為通用 `jyp_schedule` parser：
+  - `src/lib/crawlers/jypSchedule.ts`：`parseJypScheduleApiItems`、`entryToCandidatePayload`、`JypSourceContext`。
+  - `src/lib/crawlers/runJypScheduleFetcher.ts`：`EXPECTED_PARSER_TYPE='jyp_schedule'`，讀 `config.groupId` 驅動 API。
+  - `migration 022`：`ALTER TABLE crawler_sources ADD COLUMN IF NOT EXISTS config jsonb DEFAULT '{}'`；UPDATE TWICE row `parser_type='jyp_schedule'`, `config={groupId:'9', artistSlug:'twice'}`。
+  - `src/app/api/admin/crawlers/jyp-schedule/run/route.ts`：通用 POST 手動觸發。
+- 新增 JYP 藝人只需一行 DB row，零程式碼改動。
+
+### ✅ J6e — Cron fan-out（完成，`4449cc7`）
+- `GET /api/cron/sync-candidates` 改為列出所有 `is_active=true` crawler_sources，依 `parser_type` dispatch。
+- Switch table：`blackpink_official_tour` → `runBlackpinkFetcher`；`jyp_schedule` → `runJypScheduleFetcher`。
+- 逐條執行（sequential），每條獨立 try/catch，全失敗 → 502，部分失敗 → 200 with errorCount。
+- Response：`{ok, trigger, mode, summary, results[]}`。
+
+### ✅ J6f — JYP 12 個月視窗（完成，`46f197f`）
+- `MONTHS_AHEAD = 12`（原為 3），`MAX_ENTRIES_PER_RUN = 200`（原為 50）。
+- 過去日期過濾：`entries.filter(e => e.detectedDate >= todayIso)`（只對新 INSERT 生效，不影響已存 DB 的候選）。
+
+### ✅ J7a — Stray Kids 資料種子（完成，`e058de0`）
+- `migration 023`：INSERT idols（slug='stray-kids'，ON CONFLICT DO NOTHING）+ INSERT crawler_sources（source_key='stray-kids-jyp-schedule', config={groupId:'10', artistSlug:'stray-kids'}，ON CONFLICT DO UPDATE 只更新 parser_type/source_url/config/updated_at）。
+- 零程式碼改動 — 驗證了 J6d 的「加新 JYP 藝人 = 一行 SQL」設計契約。
+- PR #16 open；migration 023 需在 Supabase SQL Editor 執行。
+
+### 🔒 J7b — 批量審核 UI（待實作）
+- `/admin/event-candidates` 列表頁加 checkbox + 全選 + 頂端工具列。
+- `POST /api/admin/event-candidates/bulk-review`：`{ids: string[], action: 'approve'|'reject'}`。
+
+### 🔒 J7c — 過期候選清理（待實作）
+- 過濾 `review_status='pending'` + `detected_date < today` 的候選。
+- 批量設 `review_status='rejected'`，`reviewer_note='auto-expired'`（不 DELETE，保留記錄）。
+
+### 🔒 J7d — 內容變更偵測（待實作）
+- `event_candidates` 新增 `content_hash text` 欄位（SHA-256 of title+date+type+location）。
+- Fetcher：source_hash 命中（已存在）但 content_hash 不同 → 標記 `needs_recheck=true`。
+- Admin UI：候選列表顯示「內容已更新」badge。
+- 需 migration（獨立工作單）。
 
 ---
 
