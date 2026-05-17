@@ -10,10 +10,29 @@ const FETCH_TIMEOUT_MS = 15_000
 const USER_AGENT =
   'IdolRhythm-Bot/0.1 (+https://idol-rhythm.vercel.app)'
 
+export interface FetcherOptions {
+  /**
+   * When true, skip the INSERT loop entirely and report how many rows *would*
+   * have been written. Used by the Vercel Cron route, which has no admin
+   * session and therefore can't satisfy the event_candidates INSERT RLS
+   * policy (admin_users-based). When false, INSERT is performed as normal.
+   *
+   * Default: false (real insert).
+   */
+  dryRun?: boolean
+}
+
 export interface FetcherResult {
   source: 'blackpink-official-tour'
+  mode: 'insert' | 'dry-run'
   fetched: number
+  /** Rows actually inserted. Always 0 in dry-run mode. */
   inserted: number
+  /**
+   * Rows that *would* be inserted if we ran in insert mode.
+   * Equals `inserted` in insert mode; computed from dedup in dry-run mode.
+   */
+  wouldInsert: number
   skipped: number
   errors: string[]
   /** HTTP-ish status hint for the caller's response code. 200/502/500. */
@@ -23,16 +42,21 @@ export interface FetcherResult {
 /**
  * Shared BLACKPINK fetcher logic, callable from either:
  *   - Admin manual route (POST /api/admin/crawlers/blackpink-tour/run)
+ *     → real insert; auth = getCurrentAdmin() session cookie
  *   - Vercel Cron route (GET /api/cron/sync-candidates)
+ *     → dry-run only; auth = CRON_SECRET Bearer header
  *
  * Pure data layer: caller handles auth (admin session vs CRON_SECRET) and
  * HTTP response shaping. This function never writes to events, never
- * approves candidates, never publishes. All writes go to event_candidates
- * with review_status = 'pending' (DB default).
+ * approves candidates, never publishes. In insert mode, writes go to
+ * event_candidates with review_status = 'pending' (DB default).
  */
 export async function runBlackpinkFetcher(
   supabase: SupabaseClient,
+  options: FetcherOptions = {},
 ): Promise<FetcherResult> {
+  const dryRun = options.dryRun === true
+  const mode: 'insert' | 'dry-run' = dryRun ? 'dry-run' : 'insert'
   // ── Fetch source page ────────────────────────────────────────────────────
   let html: string
   try {
@@ -51,8 +75,10 @@ export async function runBlackpinkFetcher(
       if (!res.ok) {
         return {
           source: 'blackpink-official-tour',
+          mode,
           fetched: 0,
           inserted: 0,
+          wouldInsert: 0,
           skipped: 0,
           errors: [`來源頁回應 ${res.status} ${res.statusText}`],
           status: 502,
@@ -66,8 +92,10 @@ export async function runBlackpinkFetcher(
     const msg = e instanceof Error ? e.message : String(e)
     return {
       source: 'blackpink-official-tour',
+      mode,
       fetched: 0,
       inserted: 0,
+      wouldInsert: 0,
       skipped: 0,
       errors: [`抓取來源頁失敗：${msg}`],
       status: 502,
@@ -82,8 +110,10 @@ export async function runBlackpinkFetcher(
     const msg = e instanceof Error ? e.message : String(e)
     return {
       source: 'blackpink-official-tour',
+      mode,
       fetched: 0,
       inserted: 0,
+      wouldInsert: 0,
       skipped: 0,
       errors: [`解析來源頁失敗：${msg}`],
       status: 500,
@@ -93,8 +123,10 @@ export async function runBlackpinkFetcher(
   if (entries.length === 0) {
     return {
       source: 'blackpink-official-tour',
+      mode,
       fetched: 0,
       inserted: 0,
+      wouldInsert: 0,
       skipped: 0,
       errors: ['沒有解析到行程（頁面結構可能已變更）'],
       status: 200,
@@ -149,8 +181,10 @@ export async function runBlackpinkFetcher(
       const err = hashRes.error ?? urlRes.error
       return {
         source: 'blackpink-official-tour',
+        mode,
         fetched: limited.length,
         inserted: 0,
+        wouldInsert: 0,
         skipped: 0,
         errors: [
           `去重查詢失敗：${err?.code ? `[${err.code}] ` : ''}${err?.message ?? '未知錯誤'}`,
@@ -168,8 +202,9 @@ export async function runBlackpinkFetcher(
     }
   }
 
-  // ── INSERT loop ──────────────────────────────────────────────────────────
+  // ── INSERT (or dry-run count) loop ───────────────────────────────────────
   let inserted = 0
+  let wouldInsert = 0
   let skipped = 0
   const errors: string[] = []
 
@@ -185,6 +220,13 @@ export async function runBlackpinkFetcher(
       skipped += 1
       continue
     }
+
+    // Dry-run: count as "would insert", do NOT touch the database.
+    if (dryRun) {
+      wouldInsert += 1
+      continue
+    }
+
     const { error } = await supabase.from('event_candidates').insert(payload)
     if (error) {
       // 23505 = unique_violation → treat as skipped, not error.
@@ -201,10 +243,15 @@ export async function runBlackpinkFetcher(
     inserted += 1
   }
 
+  // In insert mode, `wouldInsert` mirrors `inserted` for consistency.
+  if (!dryRun) wouldInsert = inserted
+
   return {
     source: 'blackpink-official-tour',
+    mode,
     fetched: limited.length,
     inserted,
+    wouldInsert,
     skipped,
     errors,
     status: 200,

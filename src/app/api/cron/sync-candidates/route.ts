@@ -7,10 +7,12 @@ export const dynamic = 'force-dynamic'
 interface CronOkResponse {
   ok: true
   trigger: 'vercel-cron'
+  mode: 'dry-run'
   result: {
     source: 'blackpink-official-tour'
     fetched: number
-    inserted: number
+    /** How many new rows would be inserted if cron had write permission. */
+    wouldInsert: number
     skipped: number
     errors: string[]
   }
@@ -19,11 +21,12 @@ interface CronOkResponse {
 interface CronErrResponse {
   ok: false
   trigger: 'vercel-cron'
+  mode: 'dry-run'
   error: string
   result?: {
     source: 'blackpink-official-tour'
     fetched: number
-    inserted: number
+    wouldInsert: number
     skipped: number
     errors: string[]
   }
@@ -41,11 +44,20 @@ type CronResponse = CronOkResponse | CronErrResponse
  * fires on the Production deployment; Preview deployments will not run cron
  * automatically, but the route can still be invoked manually for testing.
  *
- * Auth: `Authorization: Bearer ${CRON_SECRET}` header. No admin session.
- * Vercel Cron automatically sends this header when CRON_SECRET is configured
- * as an env var on the project.
+ * Auth: `Authorization: Bearer ${CRON_SECRET}` header. No admin session,
+ * no service_role. Vercel Cron automatically sends this header when
+ * CRON_SECRET is configured as an env var on the project.
  *
- * Scope: ONLY fetch → dedup → INSERT into event_candidates (pending).
+ * Scope (J5 — dry-run only):
+ *   - Fetch the BLACKPINK tour page
+ *   - Parse + compute payloads + check dedup against event_candidates
+ *   - Report `wouldInsert / skipped / errors`
+ *   - Does NOT call .insert(): the cron has no admin session and would be
+ *     blocked by the event_candidates INSERT RLS policy (admin_users-based).
+ *     Real auto-insert is deferred to a future phase (J5b) where the auth
+ *     boundary (service_role vs RPC vs security-definer function) gets its
+ *     own review.
+ *
  * Does NOT call AI parse, does NOT approve, does NOT write events,
  * does NOT publish.
  */
@@ -59,6 +71,7 @@ export async function GET(
       {
         ok: false,
         trigger: 'vercel-cron',
+        mode: 'dry-run',
         error: 'CRON_SECRET 未設定（請在 Vercel Project Settings 加入）',
       },
       { status: 500 },
@@ -71,6 +84,7 @@ export async function GET(
       {
         ok: false,
         trigger: 'vercel-cron',
+        mode: 'dry-run',
         error: '未授權：Authorization header 無效',
       },
       { status: 401 },
@@ -84,19 +98,20 @@ export async function GET(
       {
         ok: false,
         trigger: 'vercel-cron',
+        mode: 'dry-run',
         error: 'Supabase 未設定',
       },
       { status: 500 },
     )
   }
 
-  // ── Run shared fetcher ───────────────────────────────────────────────────
-  const result = await runBlackpinkFetcher(supabase)
+  // ── Run shared fetcher in DRY-RUN mode ───────────────────────────────────
+  const result = await runBlackpinkFetcher(supabase, { dryRun: true })
 
   const payload = {
     source: result.source,
     fetched: result.fetched,
-    inserted: result.inserted,
+    wouldInsert: result.wouldInsert,
     skipped: result.skipped,
     errors: result.errors,
   }
@@ -107,6 +122,7 @@ export async function GET(
       {
         ok: false,
         trigger: 'vercel-cron',
+        mode: 'dry-run',
         error: result.errors[0] ?? '抓取失敗',
         result: payload,
       },
@@ -118,6 +134,7 @@ export async function GET(
     {
       ok: true,
       trigger: 'vercel-cron',
+      mode: 'dry-run',
       result: payload,
     },
     { status: 200 },
