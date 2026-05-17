@@ -1,0 +1,226 @@
+'use client'
+
+import { useState, useTransition } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { ChevronRight, Check, X, CheckSquare } from 'lucide-react'
+
+interface Candidate {
+  id: string
+  rawTitle: string
+  idolName: string | null
+  detectedDate: string | null
+  sourceName: string | null
+  reviewStatus: 'pending' | 'approved' | 'rejected'
+  aiConfidence: number | null
+  hasIdol: boolean
+}
+
+interface Props {
+  candidates: Candidate[]
+  isAdmin: boolean
+}
+
+const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  pending:  { label: '待審核', color: 'text-amber-400',   bg: 'bg-amber-500/10 border-amber-500/20' },
+  approved: { label: '已核准', color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
+  rejected: { label: '已拒絕', color: 'text-muted',       bg: 'bg-card border-card-border' },
+}
+
+export default function CandidatesClient({ candidates, isAdmin }: Props) {
+  const router = useRouter()
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [isPending, startTransition] = useTransition()
+  const [resultMsg, setResultMsg] = useState<{ type: 'ok' | 'error'; text: string } | null>(null)
+
+  const pendingCandidates = candidates.filter((c) => c.reviewStatus === 'pending')
+  const allPendingSelected =
+    pendingCandidates.length > 0 && pendingCandidates.every((c) => selected.has(c.id))
+
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  function toggleAllPending() {
+    if (allPendingSelected) {
+      setSelected(new Set())
+    } else {
+      setSelected(new Set(pendingCandidates.map((c) => c.id)))
+    }
+  }
+
+  async function bulkAction(action: 'approve' | 'reject') {
+    const ids = Array.from(selected)
+    if (ids.length === 0) return
+    setResultMsg(null)
+
+    startTransition(async () => {
+      try {
+        const res = await fetch('/api/admin/event-candidates/bulk-review', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids, action }),
+        })
+        const data = await res.json()
+        if (!res.ok || !data.ok) {
+          const errText =
+            data.errors?.length > 0
+              ? data.errors.map((e: { id: string; message: string }) => e.message).join('；')
+              : data.error ?? '操作失敗'
+          setResultMsg({ type: 'error', text: errText })
+        } else {
+          const label = action === 'approve' ? '核准' : '拒絕'
+          setResultMsg({ type: 'ok', text: `已${label} ${data.succeeded} 筆` })
+          setSelected(new Set())
+          router.refresh()
+        }
+      } catch (e) {
+        setResultMsg({ type: 'error', text: e instanceof Error ? e.message : '網路錯誤' })
+      }
+    })
+  }
+
+  const hasSelected = selected.size > 0
+  const selectedHaveNoIdol = Array.from(selected).some(
+    (id) => !candidates.find((c) => c.id === id)?.hasIdol,
+  )
+
+  return (
+    <>
+      {/* Result message */}
+      {resultMsg && (
+        <div className="px-4 mb-3">
+          <div
+            className={`rounded-xl px-3 py-2.5 text-xs ${
+              resultMsg.type === 'ok'
+                ? 'bg-emerald-500/10 border border-emerald-500/25 text-emerald-400'
+                : 'bg-red-500/10 border border-red-500/25 text-red-400'
+            }`}
+          >
+            {resultMsg.text}
+          </div>
+        </div>
+      )}
+
+      {/* Select-all pending button */}
+      {isAdmin && pendingCandidates.length > 0 && (
+        <div className="px-4 mb-2">
+          <button
+            onClick={toggleAllPending}
+            className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-text-base transition-colors"
+          >
+            <CheckSquare className="h-3.5 w-3.5" />
+            {allPendingSelected ? '取消全選' : `全選待審核（${pendingCandidates.length} 筆）`}
+          </button>
+        </div>
+      )}
+
+      {/* Candidates list */}
+      <div className="px-4 flex flex-col gap-2 pb-32">
+        {candidates.length === 0 && (
+          <div className="rounded-xl bg-card border border-card-border px-4 py-8 text-center">
+            <p className="text-sm text-muted">尚無候選活動</p>
+          </div>
+        )}
+        {candidates.map((c) => {
+          const statusCfg = STATUS_CONFIG[c.reviewStatus] ?? STATUS_CONFIG.pending
+          const isChecked = selected.has(c.id)
+          const isPending = c.reviewStatus === 'pending'
+
+          return (
+            <div key={c.id} className="relative flex items-stretch gap-2">
+              {/* Checkbox zone — only for pending + admin */}
+              {isAdmin && isPending && (
+                <button
+                  onClick={() => toggleOne(c.id)}
+                  className="flex-shrink-0 flex items-center justify-center w-8 rounded-xl bg-card border border-card-border active:opacity-70 transition-opacity"
+                  aria-label={isChecked ? '取消選取' : '選取'}
+                >
+                  <div
+                    className={`h-4 w-4 rounded border flex items-center justify-center transition-colors ${
+                      isChecked
+                        ? 'bg-violet border-violet'
+                        : 'border-card-border bg-transparent'
+                    }`}
+                  >
+                    {isChecked && <Check className="h-2.5 w-2.5 text-white" />}
+                  </div>
+                </button>
+              )}
+
+              {/* Card */}
+              <Link
+                href={`/admin/event-candidates/${c.id}`}
+                className={`flex-1 rounded-xl bg-card border px-4 py-3 flex flex-col gap-1.5 active:opacity-70 transition-opacity ${
+                  isChecked ? 'border-violet/50' : 'border-card-border'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${statusCfg.bg} ${statusCfg.color}`}
+                  >
+                    {statusCfg.label}
+                  </span>
+                  {c.detectedDate && (
+                    <span className="text-[10px] text-muted tabular-nums ml-auto">
+                      {c.detectedDate.slice(0, 10)}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-semibold text-text-base leading-snug">{c.rawTitle}</p>
+                  <ChevronRight className="h-4 w-4 text-muted flex-shrink-0 mt-0.5" />
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-muted flex-wrap">
+                  {c.idolName && <span>{c.idolName}</span>}
+                  {c.idolName && c.sourceName && <span>·</span>}
+                  {c.sourceName && <span>{c.sourceName}</span>}
+                  {!c.hasIdol && isPending && (
+                    <span className="ml-auto text-[10px] text-amber-500/80">無偶像對應</span>
+                  )}
+                  {c.aiConfidence !== null && c.hasIdol && (
+                    <span className="ml-auto text-[10px] text-muted/60 flex-shrink-0">
+                      信心 {Math.round(c.aiConfidence * 100)}%
+                    </span>
+                  )}
+                </div>
+              </Link>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Bulk action toolbar — appears when items selected */}
+      {isAdmin && hasSelected && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-6 pt-3 bg-gradient-to-t from-bg via-bg/95 to-transparent">
+          <div className="max-w-md mx-auto flex items-center gap-2 rounded-2xl bg-card border border-card-border px-4 py-3 shadow-xl">
+            <span className="text-xs text-muted flex-1">
+              已選 <span className="text-text-base font-semibold">{selected.size}</span> 筆
+            </span>
+            <button
+              onClick={() => bulkAction('reject')}
+              disabled={isPending}
+              className="inline-flex items-center gap-1 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-400 disabled:opacity-50 active:opacity-70 transition-opacity"
+            >
+              <X className="h-3 w-3" />
+              批量拒絕
+            </button>
+            <button
+              onClick={() => bulkAction('approve')}
+              disabled={isPending || selectedHaveNoIdol}
+              title={selectedHaveNoIdol ? '部分候選缺少偶像對應，無法批量核准' : undefined}
+              className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40 active:opacity-70 transition-opacity"
+            >
+              <Check className="h-3 w-3" />
+              批量核准
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
