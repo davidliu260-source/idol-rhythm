@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft, Database, ExternalLink } from 'lucide-react'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
+import RunSourceButton from './RunSourceButton'
 
 interface SourceDetail {
   id: string
@@ -99,6 +100,15 @@ export default async function AdminSourceDetailPage({
               </Link>
             </p>
           </div>
+        </div>
+      )}
+
+      {isAdmin && source.isActive && (
+        <div className="px-4 mb-4">
+          <RunSourceButton
+            parserType={source.parserType}
+            sourceName={source.name}
+          />
         </div>
       )}
 

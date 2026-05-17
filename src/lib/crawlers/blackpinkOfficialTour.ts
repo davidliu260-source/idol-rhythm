@@ -37,6 +37,7 @@
 
 import * as cheerio from 'cheerio'
 import { computeSourceHash } from './sourceHash'
+import type { SourceTypeEnum } from './crawlerSource'
 
 /** Bump when the parser output shape changes meaningfully. */
 export const BLACKPINK_PARSER_VERSION = 2
@@ -129,13 +130,7 @@ export interface BlackpinkSourceContext {
   crawlerSourceId: string
   sourceKey: string
   sourceName: string
-  sourceType:
-    | 'official_sns'
-    | 'official_website'
-    | 'media_outlet'
-    | 'fan_account'
-    | 'community'
-    | 'unknown'
+  sourceType: SourceTypeEnum
   parserType: string
   pageUrl: string
   idolId: string | null
@@ -149,7 +144,7 @@ export interface BlackpinkCandidatePayload {
   detected_date: string | null
   source_url: string
   source_name: string
-  source_type: BlackpinkSourceContext['sourceType']
+  source_type: SourceTypeEnum
   ai_confidence: null
   reviewer_note: string
   /** SHA-256 hex; required field for J4 dedupe. */
