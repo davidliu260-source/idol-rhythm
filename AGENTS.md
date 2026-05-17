@@ -15,7 +15,7 @@
 | 本地路徑 | `~/Desktop/idol-rhythm` |
 | GitHub repo | https://github.com/davidliu260-source/idol-rhythm |
 | 技術 | Next.js 14 App Router + TypeScript + Tailwind CSS |
-| 目前階段 | 後台主幹 + 前台會員完整；AI/爬蟲 pipeline J0–J5b 已完成（手動匯入、BLACKPINK fetcher、AI 解析、去重、Vercel Cron 自動寫入）|
+| 目前階段 | 後台主幹 + 前台會員完整；AI/爬蟲 pipeline J0–J7a 已完成（手動匯入、BLACKPINK + JYP 平台 fetcher、AI 解析、去重、Vercel Cron fan-out 寫入、Stray Kids 種子）|
 
 任何 Idol Rhythm 相關任務都必須在以下目錄執行：
 
@@ -106,11 +106,14 @@ Claude Code 收到任務後應依序執行：
   - 提醒活動 `reminders`
   - 追蹤偶像 `user_follows`
 - 後台 admin：Events、Idols、Candidates 三線 CRUD + 發布 / 啟用 / 審核
-- AI/爬蟲 pipeline（J1–J4）：
+- AI/爬蟲 pipeline（J1–J7a）：
   - J1：`/admin/event-candidates/new` 手動匯入表單
   - J2：BLACKPINK 官方 tour 頁面 fetcher + Admin 手動觸發按鈕
   - J3：`/admin/event-candidates/parse` AI 解析公告（Claude Haiku）
   - J4：`source_hash` SHA-256 去重（migrations 016 + 017）
+  - J5/J5b：Vercel Cron 自動觸發 + service_role 安全寫入（migration 018）
+  - J6a–J6f：`crawler_sources` 平台、JYP JSON API 通用 fetcher（TWICE + 任意 JYP 藝人）、Cron fan-out、12 個月視窗（migrations 019–022）
+  - J7a：Stray Kids 種子資料（migration 023，驗證零程式碼加藝人設計）
 
 **仍需 GPT 工作單才能擴大的方向**：見 section 12 的待辦清單。
 
@@ -311,10 +314,18 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 | 21 | J3：AI 解析公告（Claude Haiku）| ✅ 完成（`3cd09f2`，ANTHROPIC_API_KEY） |
 | 22 | J5：Vercel Cron dry-run 觸發 | ✅ 完成（`4c911e7`，`vercel.json`，`CRON_SECRET`） |
 | 23 | J5b：Cron 安全寫入 event_candidates | ✅ 完成（`19ed919`，`serviceClient.ts`，`SUPABASE_SERVICE_ROLE_KEY`） |
-| 24 | 個人化首頁（用 user_follows 過濾 timeline + reminders 顯示 UI 倒數區塊） | 🔲 待辦 |
-| 25 | J6：多來源 fetcher 擴充 | 🔲 待辦（需 GPT 工作單） |
-| 25 | 忘記密碼 / 改密碼 / 帳號設定頁 | 🔲 待辦 |
-| 26 | Apple Sign-In（上 App Store 前再做）| 🔲 待辦 |
+| 24 | J6a：crawler_sources table + admin UI | ✅ 完成（`3490082`，migration 019） |
+| 25 | J6b：crawler_sources RLS + Blackpink 整合 | ✅ 完成（`811a473`，migration 020） |
+| 26 | J6c→J6d：JYP 平台化 fetcher（jyp_schedule）| ✅ 完成（`452d995`，migration 021/022，PR #13）|
+| 27 | J6e：Cron fan-out 跨所有 active sources | ✅ 完成（`4449cc7`，PR #14）|
+| 28 | J6f：12 個月視窗 + 過去日期過濾 | ✅ 完成（`46f197f`，PR #15）|
+| 29 | J7a：Stray Kids 種子（第二 JYP 藝人）| ✅ 完成（`e058de0`，migration 023，PR #16 open）|
+| 30 | J7b：批量審核 UI | 🔲 待辦（需 GPT 工作單）|
+| 31 | J7c：過期候選清理 | 🔲 待辦（需 GPT 工作單）|
+| 32 | J7d：內容變更偵測（content_hash）| 🔲 待辦（需 migration + GPT 工作單）|
+| 33 | 個人化首頁（user_follows 過濾 timeline + reminders 倒數 UI） | 🔲 待辦 |
+| 34 | 忘記密碼 / 改密碼 / 帳號設定頁 | 🔲 待辦 |
+| 35 | Apple Sign-In（上 App Store 前再做）| 🔲 待辦 |
 
 **不得跳過前面階段直接做大型系統。**
 
@@ -444,9 +455,11 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 
 ### 🔲 待實作
 
+- J7b：批量審核 UI（`/admin/event-candidates` checkbox + 批量 Approve / Reject）
+- J7c：過期候選清理（pending + detected_date < today → batch reject）
+- J7d：內容變更偵測（content_hash + needs_recheck，需 migration）
 - 個人化首頁（用 user_follows 過濾 timeline、reminders 顯示 UI 倒數）
 - 忘記密碼 / 改密碼 / 帳號設定頁 / provider 管理 UI
-- J6：多來源 fetcher 擴充（第二、三來源）
 - Apple Sign-In（要 Apple Developer $99/年，上 App Store 前再考慮）
 - Google OAuth 從 Testing 切到 Production（要對外開放給陌生使用者時再做）
 - Supabase Email 改用 custom SMTP（Resend）以避開內建 rate limit
@@ -470,6 +483,11 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 - migration 016（event_candidates INSERT policy）：✅ 已執行
 - migration 017（source_hash + raw_data 欄位）：✅ 已執行
 - migration 018（service_role GRANT SELECT / INSERT / UPDATE on event_candidates）：✅ 已執行（2026-05-17，J5b Production 驗收）
+- migration 019（crawler_sources table）：✅ 已執行（J6a）
+- migration 020（crawler_sources RLS + service_role GRANT）：✅ 已執行（J6b）
+- migration 021（seed TWICE idol + JYP schedule source）：✅ 已執行（J6c）
+- migration 022（config jsonb 欄位 + TWICE row → parser_type='jyp_schedule'）：✅ 已執行（J6d）
+- migration 023（seed Stray Kids idol + JYP schedule source）：⏳ 待人工執行（J7a，PR #16）
 
 ---
 
@@ -529,6 +547,11 @@ src/
 │       │       ├── page.tsx
 │       │       ├── NewIdolForm.tsx       # 新增偶像表單（slug 自動生成）
 │       │       └── actions.ts            # createIdol
+│       ├── sources/
+│       │   ├── page.tsx                  # 爬蟲來源列表（J6a）
+│       │   └── [id]/
+│       │       ├── page.tsx              # 爬蟲來源詳情 + config 區塊（J6b）
+│       │       └── RunSourceButton.tsx   # 通用手動觸發按鈕（by parser_type + sourceKey）
 │       └── event-candidates/
 │           ├── page.tsx                  # 候選列表（pending 優先排序 + 三組統計 + AI解析 + CrawlerButton）
 │           ├── CrawlerButton.tsx         # BLACKPINK fetcher 觸發按鈕（'use client'）
@@ -565,7 +588,10 @@ src/
     │   └── adminStats.ts                 # getAdminStats()
     ├── crawlers/
     │   ├── sourceHash.ts                 # SHA-256 source_hash（URL 優先 / fallback 組合）
-    │   └── blackpinkOfficialTour.ts      # BLACKPINK 官方 tour 頁 HTML parser（cheerio）
+    │   ├── blackpinkOfficialTour.ts      # BLACKPINK 官方 tour 頁 HTML parser（cheerio）
+    │   ├── jypSchedule.ts               # JYP JSON API 通用 parser（parseJypScheduleApiItems、entryToCandidatePayload）
+    │   ├── runJypScheduleFetcher.ts      # JYP schedule fetcher（jyp_schedule，12 個月，config.groupId 驅動）
+    │   └── crawlerSource.ts              # getCrawlerSourceByKey()、updateRunStatus()（J6a）
     └── ai/
         └── parseCandidate.ts             # Claude Haiku wrapper（slug 解析、JSON 提取、enum 驗證）
 
@@ -588,7 +614,12 @@ supabase/
 │   ├── 015_authenticated_user_follows_grants.sql           # Milestone 4：補 user_follows GRANT ✅
 │   ├── 016_admin_users_insert_event_candidates_policy.sql  # J1/J3：candidates INSERT policy ✅ 已執行
 │   ├── 017_event_candidates_dedupe_fields.sql              # J4：source_hash + raw_data + unique index ✅ 已執行
-│   └── 018_grant_service_role_event_candidates.sql         # J5b：service_role GRANT SELECT/INSERT/UPDATE ✅ 已執行
+│   ├── 018_grant_service_role_event_candidates.sql         # J5b：service_role GRANT SELECT/INSERT/UPDATE ✅ 已執行
+│   ├── 019_crawler_sources.sql                             # J6a：crawler_sources table ✅ 已執行
+│   ├── 020_crawler_sources_run_status_policy.sql           # J6b：crawler_sources RLS + service_role GRANT ✅ 已執行
+│   ├── 021_seed_twice_jyp_schedule_source.sql              # J6c：TWICE idol + JYP source 種子 ✅ 已執行
+│   ├── 022_platformize_jyp_schedule_sources.sql            # J6d：config jsonb + TWICE → jyp_schedule ✅ 已執行
+│   └── 023_seed_stray_kids_jyp_source.sql                  # J7a：Stray Kids 種子 ⏳ 待執行（PR #16）
 └── seed.sql                              # 種子資料（已執行，含 3 筆 pending candidates）
 ```
 
