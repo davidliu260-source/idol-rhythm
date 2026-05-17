@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronRight, Check, X, CheckSquare } from 'lucide-react'
+import { ChevronRight, Check, X, CheckSquare, Trash2 } from 'lucide-react'
 
 interface Candidate {
   id: string
@@ -36,6 +36,11 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
   const pendingCandidates = candidates.filter((c) => c.reviewStatus === 'pending')
   const allPendingSelected =
     pendingCandidates.length > 0 && pendingCandidates.every((c) => selected.has(c.id))
+
+  const todayIso = new Date().toISOString().slice(0, 10)
+  const expiredPendingCount = pendingCandidates.filter(
+    (c) => c.detectedDate !== null && c.detectedDate < todayIso,
+  ).length
 
   function toggleOne(id: string) {
     setSelected((prev) => {
@@ -84,6 +89,31 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
     })
   }
 
+  async function cleanupExpired() {
+    if (expiredPendingCount === 0) return
+    if (!confirm(`將 ${expiredPendingCount} 筆過期待審核候選標記為已拒絕（reviewer_note=auto-expired）？資料保留，可隨時查詢。`)) {
+      return
+    }
+    setResultMsg(null)
+
+    startTransition(async () => {
+      try {
+        const res = await fetch('/api/admin/event-candidates/cleanup-expired', {
+          method: 'POST',
+        })
+        const data = await res.json()
+        if (!res.ok || !data.ok) {
+          setResultMsg({ type: 'error', text: data.error ?? '清理失敗' })
+        } else {
+          setResultMsg({ type: 'ok', text: `已清理 ${data.affected} 筆過期候選` })
+          router.refresh()
+        }
+      } catch (e) {
+        setResultMsg({ type: 'error', text: e instanceof Error ? e.message : '網路錯誤' })
+      }
+    })
+  }
+
   const hasSelected = selected.size > 0
   const selectedHaveNoIdol = Array.from(selected).some(
     (id) => !candidates.find((c) => c.id === id)?.hasIdol,
@@ -103,6 +133,20 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
           >
             {resultMsg.text}
           </div>
+        </div>
+      )}
+
+      {/* Cleanup expired pending button */}
+      {isAdmin && expiredPendingCount > 0 && (
+        <div className="px-4 mb-3">
+          <button
+            onClick={cleanupExpired}
+            disabled={isPending}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-400 disabled:opacity-50 active:opacity-70 transition-opacity"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            清理過期候選（{expiredPendingCount} 筆 detected_date 已過）
+          </button>
         </div>
       )}
 
