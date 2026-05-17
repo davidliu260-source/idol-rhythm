@@ -361,8 +361,8 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 - `013_authenticated_saved_events_grants.sql` — saved_events GRANT SELECT / INSERT / DELETE TO authenticated（Milestone 1）✅ 已執行
 - `014_authenticated_reminders_grants.sql` — reminders GRANT SELECT / INSERT / DELETE TO authenticated（提醒持久化）✅ 已執行
 - `015_authenticated_user_follows_grants.sql` — user_follows GRANT SELECT / INSERT / DELETE TO authenticated（追蹤偶像持久化）✅ 已執行
-- `016_admin_users_insert_event_candidates_policy.sql` — event_candidates GRANT INSERT + INSERT RLS policy（J1 手動匯入 + J3 AI 解析寫入）⚠️ 待確認執行
-- `017_event_candidates_dedupe_fields.sql` — ADD COLUMN source_hash text + raw_data jsonb；CREATE UNIQUE INDEX WHERE source_hash IS NOT NULL（J4 去重）⚠️ 待確認執行
+- `016_admin_users_insert_event_candidates_policy.sql` — event_candidates GRANT INSERT + INSERT RLS policy（J1 手動匯入 + J3 AI 解析寫入）✅ 已執行
+- `017_event_candidates_dedupe_fields.sql` — ADD COLUMN source_hash text + raw_data jsonb；CREATE UNIQUE INDEX WHERE source_hash IS NOT NULL（J4 去重）✅ 已執行
 
 **Admin 後台（全功能，已完成）**
 - `/admin/login` — Email 登入，session cookie
@@ -448,8 +448,8 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 - Google Cloud OAuth Client：已建立，redirect URI 指向 Supabase callback ✅
 - Google Cloud Test users：已加入測試帳號 ✅
 - migrations 001–015：全部已執行 ✅
-- migration 016（event_candidates INSERT policy）：⚠️ 待確認是否執行
-- migration 017（source_hash + raw_data 欄位）：⚠️ 待確認是否執行
+- migration 016（event_candidates INSERT policy）：✅ 已執行
+- migration 017（source_hash + raw_data 欄位）：✅ 已執行
 
 ---
 

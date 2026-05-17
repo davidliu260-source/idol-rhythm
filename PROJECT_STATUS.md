@@ -154,8 +154,8 @@
 | Auth saved_events（migration 013） | ✅ 已執行 |
 | Auth reminders（migration 014） | ✅ 已執行 |
 | Auth user_follows（migration 015） | ✅ 已執行 |
-| J1 candidates INSERT policy（migration 016） | ⚠️ 待確認執行 |
-| J4 source_hash + raw_data（migration 017） | ⚠️ 待確認執行 |
+| J1 candidates INSERT policy（migration 016） | ✅ 已執行 |
+| J4 source_hash + raw_data（migration 017） | ✅ 已執行 |
 | Phase H4：Toggle is_active（migration 011） | ✅ 完成 |
 | Phase I：event_candidates 審核（migration 012） | ✅ 完成 |
 | Auth Milestone 1：Email magic link + saved_events（migration 013） | ✅ 完成 |
@@ -312,8 +312,8 @@ Next.js 14 App Router 在長時間使用或切換 branch 後，`.next` 快取可
 | `supabase/migrations/005_admin_users_read_drafts_policy.sql` | events + event_sources SELECT policy（已執行） |
 | `supabase/migrations/006_admin_users_publish_events_policy.sql` | events UPDATE policy + column-level GRANT（已執行） |
 | `supabase/migrations/007_admin_users_edit_draft_events_policy.sql` | events content GRANT UPDATE + draft UPDATE policy；event_sources GRANT DELETE + draft DELETE policy（已執行） |
-| `supabase/migrations/016_admin_users_insert_event_candidates_policy.sql` | event_candidates GRANT INSERT + INSERT RLS policy（J1/J3）⚠️ 待確認 |
-| `supabase/migrations/017_event_candidates_dedupe_fields.sql` | source_hash text + raw_data jsonb + unique index（J4）⚠️ 待確認 |
+| `supabase/migrations/016_admin_users_insert_event_candidates_policy.sql` | event_candidates GRANT INSERT + INSERT RLS policy（J1/J3）✅ 已執行 |
+| `supabase/migrations/017_event_candidates_dedupe_fields.sql` | source_hash text + raw_data jsonb + unique index（J4）✅ 已執行 |
 | `supabase/seed.sql` | Demo seed data（idempotent） |
 | `src/lib/crawlers/sourceHash.ts` | SHA-256 source_hash 計算（URL 優先 / fallback） |
 | `src/lib/crawlers/blackpinkOfficialTour.ts` | BLACKPINK 官方 tour 頁 HTML parser（cheerio） |
