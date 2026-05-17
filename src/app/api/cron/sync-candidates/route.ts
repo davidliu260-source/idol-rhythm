@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getSupabaseServiceClient } from '@/lib/supabase/serviceClient'
 import { runBlackpinkFetcher } from '@/lib/crawlers/runBlackpinkFetcher'
 
@@ -99,29 +98,16 @@ export async function GET(
     )
   }
 
-  // ── Pick Supabase client per mode ────────────────────────────────────────
-  // Dry-run: anon server client (read-only). Insert: service_role client
-  // (server-only, bypasses RLS). Service client construction may throw if
-  // SUPABASE_SERVICE_ROLE_KEY is missing — surface that as a 500.
+  // ── Supabase client: always service_role ─────────────────────────────────
+  // Both dry-run and insert modes use the service_role client. The dedup
+  // SELECT query on event_candidates requires bypassing RLS (the anon key is
+  // blocked by the admin-only SELECT policy). The CRON_SECRET guard above is
+  // the security boundary — no additional client downgrade is needed.
+  // Service client construction may throw if SUPABASE_SERVICE_ROLE_KEY is
+  // missing — surface that as a 500.
   let supabase
   try {
-    if (dryRun) {
-      const anon = getSupabaseServerClient()
-      if (!anon) {
-        return NextResponse.json(
-          {
-            ok: false,
-            trigger: 'vercel-cron',
-            mode,
-            error: 'Supabase 未設定',
-          },
-          { status: 500 },
-        )
-      }
-      supabase = anon
-    } else {
-      supabase = getSupabaseServiceClient()
-    }
+    supabase = getSupabaseServiceClient()
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     return NextResponse.json(
