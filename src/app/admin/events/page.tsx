@@ -2,13 +2,13 @@ export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
 import {
-  ArrowLeft, CalendarCheck, ShieldCheck, Newspaper,
-  Clock, ChevronRight, FilePlus, FileEdit, CheckCircle2,
+  ArrowLeft, CalendarCheck, ShieldCheck,
+  Clock, FilePlus, FileEdit, CheckCircle2,
 } from 'lucide-react'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
-import { EVENT_TYPE_LABELS, SOURCE_CONFIG } from '@/lib/mockEvents'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
 import type { TrustLevel } from '@/lib/types'
+import EventsClient from './EventsClient'
 
 // ── Admin-only event shape (includes draft fields) ────────────────────────────
 
@@ -145,20 +145,8 @@ export default async function AdminEventsPage() {
         <MiniStat icon={<Clock className="h-3.5 w-3.5" />} label="即將到來" value={upcomingCount} color="text-primary" />
       </div>
 
-      {/* Events list */}
-      <div className="px-4 flex flex-col gap-2">
-        {events.length === 0 && !error && (
-          <div className="rounded-xl bg-card border border-card-border px-4 py-8 text-center">
-            <p className="text-sm text-muted">尚無活動資料</p>
-            <p className="text-xs text-muted/60 mt-1">
-              {isAdmin ? '請使用上方「新增草稿活動」建立第一筆活動。' : '請先以管理員身份登入。'}
-            </p>
-          </div>
-        )}
-        {events.map((event) => (
-          <EventRow key={event.id} event={event} now={now} />
-        ))}
-      </div>
+      {/* Events list with checkbox + bulk publish actions */}
+      <EventsClient events={events} isAdmin={isAdmin} />
     </div>
   )
 }
@@ -187,62 +175,3 @@ function MiniStat({
   )
 }
 
-function EventRow({ event, now }: { event: AdminEvent; now: Date }) {
-  const isPast = new Date(event.date) < now
-  const trustConfig = SOURCE_CONFIG[event.trustLevel] ?? SOURCE_CONFIG['official']
-  const typeLabel = EVENT_TYPE_LABELS[event.type as keyof typeof EVENT_TYPE_LABELS] ?? event.type
-
-  const statusColors: Record<string, string> = {
-    confirmed: 'text-emerald-400',
-    tentative: 'text-amber-400',
-    postponed: 'text-orange-400',
-    cancelled: 'text-red-400 line-through',
-  }
-
-  const publishedLabel = event.isPublished
-    ? event.publishedAt
-      ? `已發布 ${event.publishedAt.slice(0, 10)}`
-      : '已發布'
-    : '尚未發布'
-
-  const publishedBadgeCls = event.isPublished
-    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-    : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-
-  return (
-    <Link
-      href={`/admin/events/${event.id}`}
-      className={`rounded-xl bg-card border border-card-border px-4 py-3 flex flex-col gap-1.5 active:opacity-70 transition-opacity ${isPast && event.isPublished ? 'opacity-50' : ''}`}
-    >
-      {/* Top row: trust badge + type + date */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className={`text-[10px] font-semibold ${trustConfig.color}`}>
-          {trustConfig.label}
-        </span>
-        <span className="text-[10px] text-muted border border-card-border rounded px-1.5 py-0.5">
-          {typeLabel}
-        </span>
-        <span className="ml-auto text-[10px] text-muted tabular-nums">
-          {event.countryFlag} {event.date.slice(0, 10)}
-        </span>
-      </div>
-
-      {/* Title + chevron */}
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-semibold text-text-base leading-snug">{event.title}</p>
-        <ChevronRight className="h-4 w-4 text-muted flex-shrink-0 mt-0.5" />
-      </div>
-
-      {/* Bottom row: idol + status + publish badge */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-muted">{event.idolName}</span>
-        <span className={`text-[10px] font-medium ${statusColors[event.status] ?? 'text-muted'}`}>
-          {event.status}
-        </span>
-        <span className={`ml-auto text-[10px] rounded px-1.5 py-0.5 border ${publishedBadgeCls}`}>
-          {publishedLabel}
-        </span>
-      </div>
-    </Link>
-  )
-}
