@@ -381,6 +381,7 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 - `015_authenticated_user_follows_grants.sql` — user_follows GRANT SELECT / INSERT / DELETE TO authenticated（追蹤偶像持久化）✅ 已執行
 - `016_admin_users_insert_event_candidates_policy.sql` — event_candidates GRANT INSERT + INSERT RLS policy（J1 手動匯入 + J3 AI 解析寫入）✅ 已執行
 - `017_event_candidates_dedupe_fields.sql` — ADD COLUMN source_hash text + raw_data jsonb；CREATE UNIQUE INDEX WHERE source_hash IS NOT NULL（J4 去重）✅ 已執行
+- `018_grant_service_role_event_candidates.sql` — GRANT SELECT / INSERT / UPDATE ON event_candidates TO service_role（J5b cron 寫入需要；BYPASSRLS 不等於 table GRANT；idempotent）✅ 已執行
 
 **Admin 後台（全功能，已完成）**
 - `/admin/login` — Email 登入，session cookie
@@ -445,7 +446,6 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 
 - 個人化首頁（用 user_follows 過濾 timeline、reminders 顯示 UI 倒數）
 - 忘記密碼 / 改密碼 / 帳號設定頁 / provider 管理 UI
-- J5：Cron 自動觸發 fetcher（需 GPT 工作單 + CRON_SECRET）
 - J6：多來源 fetcher 擴充（第二、三來源）
 - Apple Sign-In（要 Apple Developer $99/年，上 App Store 前再考慮）
 - Google OAuth 從 Testing 切到 Production（要對外開放給陌生使用者時再做）
@@ -457,8 +457,9 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 
 ### ⚠️ 環境設定
 
-- `.env.local`：`NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY`、`ANTHROPIC_API_KEY` ✅
-- Vercel env：Supabase keys ✅；`ANTHROPIC_API_KEY`（Production + Preview）✅；`ANTHROPIC_MODEL`（可選，預設 claude-haiku-4-5-20251001）
+- `.env.local`：`NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY`、`ANTHROPIC_API_KEY`、`CRON_SECRET`（本地測試用）、`SUPABASE_SERVICE_ROLE_KEY`（本地測試用）✅
+- Vercel env：Supabase keys ✅；`ANTHROPIC_API_KEY`（Production + Preview）✅；`CRON_SECRET`（Production only）✅；`SUPABASE_SERVICE_ROLE_KEY`（Production only，禁止 Preview）✅；`ANTHROPIC_MODEL`（可選，預設 claude-haiku-4-5-20251001）
+- ⚠️ `SUPABASE_SERVICE_ROLE_KEY` 必須是 Supabase → Settings → API → Project API keys → `service_role` 的真實 JWT（`eyJ...`），**不是** "Create new secret API key" 建立的 `sb_secret_...` custom key
 - Supabase admin 帳號：已建立，已加入 `admin_users` ✅
 - Supabase Auth Google Provider：Enabled，Client ID/Secret 已設定 ✅
 - Supabase Auth Email Provider：Enabled（含 magic link + password）✅
@@ -468,6 +469,7 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 - migrations 001–015：全部已執行 ✅
 - migration 016（event_candidates INSERT policy）：✅ 已執行
 - migration 017（source_hash + raw_data 欄位）：✅ 已執行
+- migration 018（service_role GRANT SELECT / INSERT / UPDATE on event_candidates）：✅ 已執行（2026-05-17，J5b Production 驗收）
 
 ---
 
@@ -556,6 +558,7 @@ src/
     │   ├── client.ts                     # 公開 anon client
     │   ├── serverClient.ts               # Server Component cookie client
     │   ├── browserClient.ts              # Client Component cookie client
+    │   ├── serviceClient.ts              # server-only service_role client（CRON_SECRET-gated 路由專用，J5b）
     │   ├── events.ts                     # 前台讀取函式（published + trusted only）
     │   ├── auth.ts                       # getCurrentUser()（前台使用者，Milestone 1）
     │   ├── adminAuth.ts                  # getCurrentAdmin()
@@ -583,8 +586,9 @@ supabase/
 │   ├── 013_authenticated_saved_events_grants.sql           # Milestone 1：補 saved_events GRANT ✅
 │   ├── 014_authenticated_reminders_grants.sql              # Milestone 2 reminders：補 reminders GRANT ✅
 │   ├── 015_authenticated_user_follows_grants.sql           # Milestone 4：補 user_follows GRANT ✅
-│   ├── 016_admin_users_insert_event_candidates_policy.sql  # J1/J3：candidates INSERT policy ⚠️ 待確認
-│   └── 017_event_candidates_dedupe_fields.sql              # J4：source_hash + raw_data + unique index ⚠️ 待確認
+│   ├── 016_admin_users_insert_event_candidates_policy.sql  # J1/J3：candidates INSERT policy ✅ 已執行
+│   ├── 017_event_candidates_dedupe_fields.sql              # J4：source_hash + raw_data + unique index ✅ 已執行
+│   └── 018_grant_service_role_event_candidates.sql         # J5b：service_role GRANT SELECT/INSERT/UPDATE ✅ 已執行
 └── seed.sql                              # 種子資料（已執行，含 3 筆 pending candidates）
 ```
 

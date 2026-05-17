@@ -159,6 +159,7 @@
 | Auth user_follows（migration 015） | ✅ 已執行 |
 | J1 candidates INSERT policy（migration 016） | ✅ 已執行 |
 | J4 source_hash + raw_data（migration 017） | ✅ 已執行 |
+| service_role GRANT（migration 018） | ✅ 已執行（2026-05-17，J5b Production 驗收）|
 | Phase H4：Toggle is_active（migration 011） | ✅ 完成 |
 | Phase I：event_candidates 審核（migration 012） | ✅ 完成 |
 | Auth Milestone 1：Email magic link + saved_events（migration 013） | ✅ 完成 |
@@ -172,6 +173,8 @@
 | J3：AI 解析公告 — Claude Haiku + parse UI | ✅ 完成（`3cd09f2`） |
 | J5：Vercel Cron dry-run 觸發 | ✅ 完成（`4c911e7`，`vercel.json`，`0 1 * * *`，`CRON_SECRET`） |
 | J5b：Cron 安全寫入 event_candidates | ✅ 完成（`19ed919`，`serviceClient.ts`，`SUPABASE_SERVICE_ROLE_KEY`，`?dryRun=1` 保留） |
+| J5b Production 驗收 | ✅ 通過（2026-05-17，三組 curl 測試全通過：乾跑、重複資料跳過、真實寫入）|
+| Migration 018：service_role GRANT | ✅ 完成（`63ab060`，`018_grant_service_role_event_candidates.sql`；GRANT SELECT/INSERT/UPDATE，idempotent）|
 | 品管流程：feature branch + PR → GPT audit → merge | ✅ 2026-05-17 起採用 |
 
 ---
@@ -224,9 +227,8 @@
 
 | 優先 | 目標 | 說明 |
 |---|---|---|
-| **第一** | J5b 人工驗收 | 設定好 env 後，curl 測 cron route；確認 event_candidates 有新 pending 列 |
-| **第二** | 個人化首頁 | user_follows 過濾 timeline；reminders 倒數 UI |
-| **第三** | J6：多來源 fetcher 擴充 | 需 GPT 工作單 |
+| **第一** | 個人化首頁 | user_follows 過濾 timeline；reminders 倒數 UI（需 GPT 工作單）|
+| **第二** | J6：多來源 fetcher 擴充 | 需 GPT 工作單 |
 | **之後** | 忘記密碼、Email 設定、Apple Sign-In | 各需獨立工作單 |
 
 > ⛔ 明確禁止（未被工作單授權前不得實作）：草稿刪除、批量操作、AI auto-publish、直接 push to main（需開 PR）。
@@ -246,6 +248,9 @@ Next.js 14 App Router 在長時間使用或切換 branch 後，`.next` 快取可
 
 | Commit | 說明 |
 |---|---|
+| `63ab060` | Document service_role grants for event_candidates（migration 018，J5b follow-up）|
+| `19ed919` | Upgrade cron route to service_role secure insert（J5b：serviceClient.ts + SUPABASE_SERVICE_ROLE_KEY）|
+| `4c911e7` | Add Vercel Cron dry-run trigger（J5：vercel.json + CRON_SECRET）|
 | `3cd09f2` | Add AI candidate parser（J3：Claude Haiku + parse UI + commitAiCandidate） |
 | `2c2ec1c` | Add candidate source hash dedupe（J4：migrations 016/017 + sourceHash.ts） |
 | `acf7952` | Add Blackpink official tour fetcher prototype（J2：cheerio + route handler + CrawlerButton） |
@@ -319,7 +324,10 @@ Next.js 14 App Router 在長時間使用或切換 branch 後，`.next` 快取可
 | `supabase/migrations/007_admin_users_edit_draft_events_policy.sql` | events content GRANT UPDATE + draft UPDATE policy；event_sources GRANT DELETE + draft DELETE policy（已執行） |
 | `supabase/migrations/016_admin_users_insert_event_candidates_policy.sql` | event_candidates GRANT INSERT + INSERT RLS policy（J1/J3）✅ 已執行 |
 | `supabase/migrations/017_event_candidates_dedupe_fields.sql` | source_hash text + raw_data jsonb + unique index（J4）✅ 已執行 |
+| `supabase/migrations/018_grant_service_role_event_candidates.sql` | GRANT SELECT / INSERT / UPDATE ON event_candidates TO service_role（J5b，idempotent）✅ 已執行 |
 | `supabase/seed.sql` | Demo seed data（idempotent） |
+| `src/lib/supabase/serviceClient.ts` | server-only service_role client（J5b；`import 'server-only'`；CRON_SECRET-gated 路由專用）|
+| `src/app/api/cron/sync-candidates/route.ts` | GET Vercel Cron route（J5b；auth guard + service_role client + runBlackpinkFetcher）|
 | `src/lib/crawlers/sourceHash.ts` | SHA-256 source_hash 計算（URL 優先 / fallback） |
 | `src/lib/crawlers/blackpinkOfficialTour.ts` | BLACKPINK 官方 tour 頁 HTML parser（cheerio） |
 | `src/lib/ai/parseCandidate.ts` | Claude Haiku wrapper（slug 解析、JSON 提取、enum 驗證） |
