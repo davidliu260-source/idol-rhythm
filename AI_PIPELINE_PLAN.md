@@ -1,9 +1,17 @@
 # AI / Crawler Pipeline Plan — Phase J0
 
-**Status:** Design document only. No implementation, no migrations, no API calls.
+**Status:** J0–J4 完成（2026-05-17）。J5 Cron 自動觸發、J6 多來源為下一階段。
 **Goal:** Establish a safe, staged roadmap for ingesting idol activity data via crawlers / AI parsing into the existing `event_candidates` staging pool.
 
-This document is the gating deliverable for Phase J0. Subsequent phases (J1..J6) each require their own GPT work order before any implementation.
+| Phase | 說明 | 狀態 |
+|---|---|---|
+| J0 | 設計文件 | ✅ 完成（`cf1bd6a`） |
+| J1 | 手動匯入候選表單 | ✅ 完成（`4c1baf0`，migration 016） |
+| J2 | BLACKPINK 官方 tour fetcher | ✅ 完成（`acf7952`） |
+| J3 | AI 解析公告（Claude Haiku） | ✅ 完成（`3cd09f2`） |
+| J4 | source_hash 去重強化 | ✅ 完成（`2c2ec1c`，migration 017） |
+| J5 | Cron 自動觸發 | 🔒 待 GPT 工作單 |
+| J6 | 多來源 fetcher 擴充 | 🔒 待 J5 穩定 |
 
 ---
 
@@ -87,38 +95,40 @@ Indexes: `review_status`, `detected_idol_id`.
 
 每個 milestone 都是獨立工作單。**順序不可跳。**
 
-### J1 — 手動匯入候選資料（最低風險）
-- 新增 `/admin/event-candidates/new` 表單頁。
-- Admin 手動貼上 raw_title / raw_content / source_url，選 idol 與 event_type。
-- INSERT into `event_candidates`，`review_status='pending'`, `ai_confidence=null`。
-- 用途：驗證候選池 → approve 流程，並提供「沒有爬蟲也能新增候選」的後備手段。
-- 風險：無新外部依賴。
+### ✅ J1 — 手動匯入候選資料（已完成，`4c1baf0`）
+- `/admin/event-candidates/new`：表單頁 + `createCandidate` server action。
+- 欄位：raw_title（必填）、raw_content、source_url、detected_idol_id（下拉）、detected_event_type、detected_date、source_name、source_type、ai_confidence、reviewer_note。
+- `source_hash` SHA-256 計算（migration 017 後）；`raw_data: { source: 'manual' }`。
+- 23505 unique_violation → 中文友善提示。
 
-### J2 — 單一來源 fetcher prototype（單一官方來源）
-- 選一個結構穩定的來源（建議：某偶像官方網站公告頁 HTML 或 RSS）。
-- 寫 server-only fetcher，從 admin route handler **手動觸發**。
-- 輸出 raw_title / raw_content / source_url，不做 AI 解析；`detected_idol_id` 由觸發時帶入（or null）。
-- INSERT 為 `pending` candidate。
-- 風險：網路請求 + HTML parsing；不串 LLM、不 cron。
+### ✅ J2 — BLACKPINK 官方 tour fetcher（已完成，`acf7952`）
+- `src/lib/crawlers/blackpinkOfficialTour.ts`：cheerio HTML parser，BLACKPINK_PARSER_VERSION = 1。
+- `src/app/api/admin/crawlers/blackpink-tour/run/route.ts`：POST 手動觸發（admin guard + 雙 `.in()` 去重）。
+- `CrawlerButton.tsx`：Admin UI 觸發按鈕，顯示中文結果摘要，router.refresh() 於 insert > 0。
+- source_url = `BLACKPINK_TOUR_URL + '#' + cityId`（城市唯一）。
 
-### J3 — AI 解析 raw → candidate 欄位
-- 在 J2 之後加入 LLM 解析層：raw_content → `detected_event_type` / `detected_date` / `detected_idol_slug` / `ai_confidence`。
-- 仍寫入 `event_candidates` pending。
-- 風險：API key 管理 + AI 幻覺；必須保留 raw 全文供 admin 核對。
+### ✅ J3 — AI 解析公告（已完成，`3cd09f2`）
+- `src/lib/ai/parseCandidate.ts`：Claude Haiku wrapper，`resolveAnthropicModel()`（env ANTHROPIC_MODEL，預設 claude-haiku-4-5-20251001）。
+- JSON fence 提取（`\`\`\`json` / 直接 JSON 均支援），enum 白名單驗證，slug → UUID 解析（LLM 不見 UUID）。
+- `POST /api/admin/ai/parse-candidate`：admin guard + known_idols 查詢 → 呼叫 Claude → 回傳 `{ ok, parsed, idol_name }`。
+- `/admin/event-candidates/parse`：Server Component（admin guard）+ `ParseClient.tsx`（預覽卡，信心顏色：≥70% 綠 / ≥40% 琥珀 / 其他紅）。
+- `commitAiCandidate` server action：re-validate server-side（enum + date + confidence）+ re-resolve slug → UUID + source_hash fallback + `raw_data: { source: 'ai-parse', model, confidence, reason, input_text, parsed }`。
 
-### J4 — 去重 / hash / source_url 檢查
-- 寫入前檢查 `source_url` 是否已存在於 `event_candidates` 或 `event_sources`。
-- 若 source_url 缺失，用 `raw_title + detected_date + detected_idol_id` 比對。
-- 此時可能需要 migration（見 §8）。
+### ✅ J4 — 去重 / hash 強化（已完成，`2c2ec1c`）
+- `src/lib/crawlers/sourceHash.ts`：SHA-256。URL branch = `sha256("source_url:" + normalized)`；fallback = `sha256([title, date, idolId, sourceName, sourceType].join("|"))`。
+- `migration 016`：GRANT INSERT ON event_candidates + INSERT RLS policy（admin_users-based）。
+- `migration 017`：ADD COLUMN source_hash text + raw_data jsonb；CREATE UNIQUE INDEX WHERE source_hash IS NOT NULL（partial）。
+- 所有寫入路徑（手動 / fetcher / AI）均計算 source_hash；23505 → 中文友善提示。
 
-### J5 — Cron / 自動觸發
+### 🔒 J5 — Cron / 自動觸發（待實作）
 - 改為 Vercel Cron 定期觸發 J2/J3 流程，搭配 `CRON_SECRET` header 驗證。
-- 在這之前所有觸發都是人工。
+- 需 GPT 工作單；高風險。
 
-### J6 — 多來源擴充
+### 🔒 J6 — 多來源擴充（待實作）
 - 加入第二、第三來源 fetcher。每個來源獨立模組，獨立失敗。
+- 前置：J5 cron 穩定。
 
-**不要一口氣做 J1–J6。**
+**不要一口氣做 J5–J6。**
 
 ---
 

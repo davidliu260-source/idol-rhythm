@@ -65,8 +65,16 @@
 2. `git add` 只加本輪相關檔案，**不得提交**：`.claude/`、`node_modules/`、`.next/`、`.env.local`、其他 repo 的檔案
 3. `package-lock.json` 應該提交
 4. Commit message 簡短清楚，反映變更核心目的；禁止 `update / fix / changes / wip`
-5. `git push origin main`
-6. 回報：修改檔案、build 結果、commit hash、push 狀態
+5. **開 feature branch + PR（品管流程）**：
+   ```bash
+   git checkout -b feature/<phase-name>
+   git add <相關檔案>
+   git commit -m "..."
+   git push origin feature/<phase-name>
+   gh pr create --title "..." --body "..."
+   ```
+   PR 開出後，等 GPT 在 GitHub 上 audit 確認無誤後再 merge to main。
+6. 回報：修改檔案、build 結果、feature branch 名稱、commit hash、PR 連結
 
 ---
 
