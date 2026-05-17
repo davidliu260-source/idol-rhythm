@@ -160,19 +160,35 @@ Claude Code 收到任務後應依序執行：
 每次任務完成後必須依序執行：
 
 ```bash
-npm run build
+npm run build                                # build 失敗不得繼續
 git checkout -b feature/<phase-name>
 git status
 git add <只加相關檔案>
-git commit -m "..."
+git commit -m "簡短說明本輪變更目的"
 git push origin feature/<phase-name>
-gh pr create --title "..." --body "..."
+
+# gh CLI 已安裝（brew install gh）並以 davidliu260-source 認證完成
+# 執行完畢後終端機會輸出 PR 網址，將此連結回報給使用者
+gh pr create \
+  --base main \
+  --head feature/<phase-name> \
+  --title "<phase-name>: 簡短說明" \
+  --body "$(cat <<'EOF'
+## 本輪變更
+- <bullet>
+
+## 測試方式
+- <bullet>
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+EOF
+)"
+
 # 等 GPT 在 GitHub 上 audit → 確認後 merge to main
-git status   # 確認成功
 ```
 
 **品管流程（2026-05-17 起）**：
-所有任務完成後一律開 feature branch，推送後開 PR，等 GPT 在 GitHub 審查無誤後才 merge to main。不得直接 push to main。
+所有任務完成後一律開 feature branch，推送後用 `gh pr create` 開 PR，等 GPT 在 GitHub 審查無誤後才 merge to main。不得直接 push to main。
 
 **不得提交：**
 
@@ -226,6 +242,7 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 9. 是否有任何 UI / 行為改變
 10. 需要人工測試的項目
 11. 下一步建議
+12. **PR 連結**（`gh pr create` 輸出的 GitHub URL，格式：`https://github.com/davidliu260-source/idol-rhythm/pull/<N>`）
 
 如果 push 失敗，必須明確說明原因，**不得假裝成功**。
 
