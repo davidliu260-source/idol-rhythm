@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
-import { ArrowLeft, FileSearch, ChevronRight, Plus, Sparkles } from 'lucide-react'
+import { ArrowLeft, FileSearch, ChevronRight, Plus, Sparkles, Database } from 'lucide-react'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
 import CrawlerButton from './CrawlerButton'
@@ -144,6 +144,19 @@ export default async function AdminCandidatesPage() {
       {isAdmin && (
         <div className="px-4 mb-4">
           <CrawlerButton />
+        </div>
+      )}
+
+      {/* Crawler sources management entry — admin only */}
+      {isAdmin && (
+        <div className="px-4 mb-4">
+          <Link
+            href="/admin/sources"
+            className="inline-flex items-center gap-2 rounded-xl border border-card-border bg-card px-3 py-2.5 text-xs font-semibold text-text-base active:opacity-80 transition-opacity"
+          >
+            <Database className="h-3.5 w-3.5 text-violet" />
+            資料來源管理
+          </Link>
         </div>
       )}
 
