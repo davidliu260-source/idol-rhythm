@@ -12,11 +12,18 @@ import {
 } from './crawlerSource'
 
 const EXPECTED_PARSER_TYPE = 'jyp_schedule'
-const MAX_ENTRIES_PER_RUN = 60
+// Per-run cap on rows considered for INSERT. Sized for MONTHS_AHEAD = 12
+// against a busy JYP artist (ITZY shows ~150 forward-looking items in a
+// year). The slice is taken AFTER the past-event filter and BEFORE the
+// dedup query, so a too-low cap would mean later events never reach the
+// candidate pool even on subsequent cron runs.
+const MAX_ENTRIES_PER_RUN = 200
 const FETCH_TIMEOUT_MS = 15_000
 const USER_AGENT = 'IdolRhythm-Bot/0.1 (+https://idol-rhythm.vercel.app)'
-// Fetch this many months starting from the current month.
-const MONTHS_AHEAD = 3
+// Fetch this many months starting from the current month. 12 = roughly one
+// year forward, which is enough to catch tours / fanmeets announced ahead.
+// Past-dated rows inside the first month are filtered out at parse time.
+const MONTHS_AHEAD = 12
 
 export interface FetcherOptions {
   /** crawler_sources.source_key — required. Picks which JYP source to run. */
@@ -257,7 +264,17 @@ export async function runJypScheduleFetcher(
   }
 
   // ── Parse ────────────────────────────────────────────────────────────────
-  const entries = parseJypScheduleApiItems(allItems, pageUrl)
+  // Only keep events whose scheduledDate is today or later. JYP's monthly
+  // window can include past-dated items (anniversaries, releases, etc.),
+  // and the candidate pool is forward-looking by design — past rows would
+  // just be noise for the admin reviewer. Already-stored candidates and
+  // approved events are NOT touched; this filter only gates new INSERTs.
+  const today = new Date()
+  const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  const allEntries = parseJypScheduleApiItems(allItems, pageUrl)
+  const entries = allEntries.filter(
+    (e) => e.detectedDate !== null && e.detectedDate >= todayIso,
+  )
   const limited = entries.slice(0, MAX_ENTRIES_PER_RUN)
 
   // ── Resolve idol id ──────────────────────────────────────────────────────
