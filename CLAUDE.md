@@ -13,7 +13,7 @@
 | 本地路徑 | `~/Desktop/idol-rhythm` |
 | GitHub | `davidliu260-source/idol-rhythm` |
 | 技術棧 | Next.js 14 App Router + TypeScript + Tailwind CSS + Supabase |
-| 目前階段 | J0–J7e 完成、J7c 進行中（過期候選清理）|
+| 目前階段 | J0–J7e + J7c 完成；J7d 待 GPT 工作單（需 migration）|
 | 輔助參考 | `ADMIN_ROADMAP.md`（後台分階段開發路線）、`AI_PIPELINE_PLAN.md`（爬蟲架構設計文件）|
 
 ---
@@ -149,9 +149,9 @@
 | 28 | J7a | Stray Kids 種子（migration 023，PR #16）| ✅ |
 | 29 | J7b | 批量審核 UI（approve / reject）| ✅ PR #17 merged |
 | 30 | J7e | 批量發布 + trust_level 切換 | ✅ PR #18 merged |
-| 31 | J7c | 過期候選清理 | ✅ 本輪 |
-| 32 | J7d | 內容變更偵測（content_hash）| 🔲 待辦 |
-| 33 | 個人化首頁 | user_follows 過濾 timeline | 🔲 待辦 |
+| 31 | J7c | 過期候選清理 | ✅ PR #19 merged |
+| 32 | 個人化首頁 | user_follows 過濾 timeline + 倒數 UI | ✅ 早期完成（PR #8 `42e0d42`）|
+| 33 | J7d | 內容變更偵測（content_hash）| 🔒 待 GPT 工作單（需 migration）|
 | 34 | 忘記密碼 / 帳號設定 | — | 🔲 待辦 |
 | 35 | Apple Sign-In | 上 App Store 前再做 | 🔲 待辦 |
 
