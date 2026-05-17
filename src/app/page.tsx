@@ -1,30 +1,11 @@
 export const dynamic = 'force-dynamic'
 
-import Link from 'next/link'
-import { Bell, ChevronRight, Zap, Star, Play, Newspaper } from 'lucide-react'
+import { Bell } from 'lucide-react'
 import { getVisibleEvents, type Event } from '@/lib/mockEvents'
 import { MOCK_IDOLS } from '@/lib/mockIdols'
 import { getPublishedEvents, getActiveIdols } from '@/lib/supabase/events'
-import EventCard from '@/components/EventCard'
 import HomePersonalized from '@/components/HomePersonalized'
-
-function isToday(dateStr: string): boolean {
-  const d = new Date(dateStr)
-  const now = new Date()
-  return (
-    d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate()
-  )
-}
-
-function isUpcomingWithin(dateStr: string, days: number): boolean {
-  const d = new Date(dateStr)
-  const now = new Date()
-  const cutoff = new Date(now)
-  cutoff.setDate(cutoff.getDate() + days)
-  return d >= now && d <= cutoff
-}
+import HomeTimeline from '@/components/HomeTimeline'
 
 export default async function HomePage() {
   const [supabaseEvents, supabaseIdols] = await Promise.all([
@@ -38,17 +19,6 @@ export default async function HomePage() {
   const today = new Date()
   const weekdays = ['日', '一', '二', '三', '四', '五', '六']
   const dateStr = `${today.getMonth() + 1}月${today.getDate()}日 週${weekdays[today.getDay()]}`
-
-  const todayEvents = events.filter((e) => isToday(e.date))
-  const weekHighlights = events.filter(
-    (e) => ['concert', 'brand'].includes(e.type) && isUpcomingWithin(e.date, 7),
-  )
-  const streamableEvents = events.filter(
-    (e) => ['livestream', 'streaming'].includes(e.type) && isUpcomingWithin(e.date, 14),
-  )
-  const newsEvents = events.filter(
-    (e) => ['official', 'media'].includes(e.type) && isUpcomingWithin(e.date, 14),
-  )
 
   return (
     <div className="flex flex-col gap-6 px-4 pt-12 pb-6">
@@ -76,108 +46,11 @@ export default async function HomePage() {
         </p>
       </div>
 
-      {/* Personalized: following strip + my countdown (client, localStorage) */}
+      {/* Personalized: following strip + my countdown (client, localStorage / cloud) */}
       <HomePersonalized events={events} idols={idols} />
 
-      {/* Section 1: 今日不能錯過 */}
-      <section>
-        <SectionHeader
-          icon={<Zap className="h-4 w-4 text-primary" />}
-          title="今日不能錯過"
-          count={todayEvents.length}
-          href="/schedule"
-        />
-        {todayEvents.length > 0 ? (
-          <div className="flex flex-col gap-2">
-            {todayEvents.map((event) => (
-              <EventCard key={event.id} event={event} />
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-card-border bg-card px-4 py-5 text-center">
-            <p className="text-sm text-muted">今天沒有公開確認的活動</p>
-            <Link href="/schedule" className="mt-1 inline-block text-xs text-primary">
-              查看完整行程 →
-            </Link>
-          </div>
-        )}
-      </section>
-
-      {/* Section 2: 本週重點 */}
-      {weekHighlights.length > 0 && (
-        <section>
-          <SectionHeader
-            icon={<Star className="h-4 w-4 text-yellow-400" />}
-            title="本週重點"
-            count={weekHighlights.length}
-            href="/schedule"
-          />
-          <div className="flex flex-col gap-2">
-            {weekHighlights.slice(0, 3).map((event) => (
-              <EventCard key={event.id} event={event} compact />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Section 3: 最近可看 */}
-      {streamableEvents.length > 0 && (
-        <section>
-          <SectionHeader
-            icon={<Play className="h-4 w-4 text-red-400" />}
-            title="最近可看"
-            count={streamableEvents.length}
-            href="/schedule"
-          />
-          <div className="flex flex-col gap-2">
-            {streamableEvents.slice(0, 3).map((event) => (
-              <EventCard key={event.id} event={event} compact />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Section 4: 最新情報 */}
-      {newsEvents.length > 0 && (
-        <section>
-          <SectionHeader
-            icon={<Newspaper className="h-4 w-4 text-sky-400" />}
-            title="最新情報"
-            count={newsEvents.length}
-            href="/schedule"
-          />
-          <div className="flex flex-col gap-2">
-            {newsEvents.slice(0, 3).map((event) => (
-              <EventCard key={event.id} event={event} compact />
-            ))}
-          </div>
-        </section>
-      )}
-    </div>
-  )
-}
-
-function SectionHeader({
-  icon,
-  title,
-  count,
-  href,
-}: {
-  icon: React.ReactNode
-  title: string
-  count?: number
-  href: string
-}) {
-  return (
-    <div className="flex items-center gap-2 mb-3">
-      {icon}
-      <h2 className="text-sm font-semibold text-text-base">{title}</h2>
-      {count !== undefined && count > 0 && (
-        <span className="text-xs text-primary font-medium">{count} 場</span>
-      )}
-      <Link href={href} className="ml-auto flex items-center gap-0.5 text-xs text-muted">
-        全部 <ChevronRight className="h-3 w-3" />
-      </Link>
+      {/* Timeline: followed-idol-aware sections (client) */}
+      <HomeTimeline events={events} idols={idols} />
     </div>
   )
 }
