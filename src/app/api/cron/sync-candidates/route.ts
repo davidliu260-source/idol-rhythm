@@ -1,23 +1,48 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { getSupabaseServiceClient } from '@/lib/supabase/serviceClient'
 import { runBlackpinkFetcher } from '@/lib/crawlers/runBlackpinkFetcher'
+import { runJypScheduleFetcher } from '@/lib/crawlers/runJypScheduleFetcher'
 
 export const dynamic = 'force-dynamic'
+
+// ── Per-source result shape (uniform across parser types) ─────────────────────
+
+interface SourceRunResult {
+  /** parser_type → 'blackpink-official-tour' | 'jyp-schedule' */
+  source: string
+  /** crawler_sources.source_key */
+  sourceKey: string | null
+  /** crawler_sources.name (for human-readable logs) */
+  sourceName: string | null
+  /** crawler_sources.parser_type, echoed for dispatch transparency */
+  parserType: string
+  mode: 'insert' | 'dry-run'
+  fetched: number
+  inserted: number
+  wouldInsert: number
+  skipped: number
+  errors: string[]
+  /** Internal HTTP status from the fetcher (200 = ok, 5xx = hard failure). */
+  status: number
+}
+
+interface CronSummary {
+  totalSources: number
+  successCount: number
+  errorCount: number
+  totalFetched: number
+  totalInserted: number
+  totalWouldInsert: number
+  totalSkipped: number
+}
 
 interface CronOkResponse {
   ok: true
   trigger: 'vercel-cron'
   mode: 'insert' | 'dry-run'
-  result: {
-    source: 'blackpink-official-tour'
-    fetched: number
-    /** Rows actually inserted. 0 in dry-run mode. */
-    inserted: number
-    /** Rows that would be inserted if run in insert mode. */
-    wouldInsert: number
-    skipped: number
-    errors: string[]
-  }
+  summary: CronSummary
+  results: SourceRunResult[]
 }
 
 interface CronErrResponse {
@@ -25,17 +50,100 @@ interface CronErrResponse {
   trigger: 'vercel-cron'
   mode: 'insert' | 'dry-run'
   error: string
-  result?: {
-    source: 'blackpink-official-tour'
-    fetched: number
-    inserted: number
-    wouldInsert: number
-    skipped: number
-    errors: string[]
-  }
+  summary?: CronSummary
+  results?: SourceRunResult[]
 }
 
 type CronResponse = CronOkResponse | CronErrResponse
+
+// ── Dispatch table: parser_type → fetcher ────────────────────────────────────
+
+interface ActiveSourceRow {
+  id: string
+  source_key: string
+  name: string
+  parser_type: string
+}
+
+/**
+ * Run a single source by its parser_type. Returns a uniform SourceRunResult
+ * even when the parser_type is unknown — the cron must continue to the next
+ * source rather than aborting the whole run.
+ */
+async function runSource(
+  supabase: SupabaseClient,
+  source: ActiveSourceRow,
+  dryRun: boolean,
+): Promise<SourceRunResult> {
+  const mode: 'insert' | 'dry-run' = dryRun ? 'dry-run' : 'insert'
+
+  switch (source.parser_type) {
+    case 'blackpink_official_tour': {
+      const r = await runBlackpinkFetcher(supabase, { dryRun })
+      return {
+        source: r.source,
+        sourceKey: source.source_key,
+        sourceName: r.sourceName ?? source.name,
+        parserType: source.parser_type,
+        mode: r.mode,
+        fetched: r.fetched,
+        inserted: r.inserted,
+        wouldInsert: r.wouldInsert,
+        skipped: r.skipped,
+        errors: r.errors,
+        status: r.status,
+      }
+    }
+    case 'jyp_schedule': {
+      const r = await runJypScheduleFetcher(supabase, {
+        sourceKey: source.source_key,
+        dryRun,
+      })
+      return {
+        source: r.source,
+        sourceKey: r.sourceKey,
+        sourceName: r.sourceName ?? source.name,
+        parserType: source.parser_type,
+        mode: r.mode,
+        fetched: r.fetched,
+        inserted: r.inserted,
+        wouldInsert: r.wouldInsert,
+        skipped: r.skipped,
+        errors: r.errors,
+        status: r.status,
+      }
+    }
+    default:
+      // Unknown parser_type: do not fail the whole cron. Surface as a soft
+      // error on this single source so admin can see it in the response and
+      // wire up the dispatch table when adding a new parser.
+      return {
+        source: 'unknown',
+        sourceKey: source.source_key,
+        sourceName: source.name,
+        parserType: source.parser_type,
+        mode,
+        fetched: 0,
+        inserted: 0,
+        wouldInsert: 0,
+        skipped: 0,
+        errors: [`未知 parser_type：${source.parser_type}（dispatch table 未註冊）`],
+        status: 200,
+      }
+  }
+}
+
+function summarise(results: SourceRunResult[]): CronSummary {
+  return {
+    totalSources: results.length,
+    successCount: results.filter((r) => r.errors.length === 0).length,
+    errorCount: results.filter((r) => r.errors.length > 0).length,
+    totalFetched: results.reduce((s, r) => s + r.fetched, 0),
+    totalInserted: results.reduce((s, r) => s + r.inserted, 0),
+    totalWouldInsert: results.reduce((s, r) => s + r.wouldInsert, 0),
+    totalSkipped: results.reduce((s, r) => s + r.skipped, 0),
+  }
+}
 
 /**
  * GET /api/cron/sync-candidates
@@ -43,23 +151,25 @@ type CronResponse = CronOkResponse | CronErrResponse
  * Vercel Cron entry. Triggered by the schedule in vercel.json:
  *   "0 1 * * *"  → 09:00 Asia/Taipei (UTC+8) daily.
  *
- * Hobby plan limit: cron may run at most once per day. Vercel Cron also only
- * fires on the Production deployment; Preview deployments will not run cron
- * automatically, but the route can still be invoked manually for testing.
+ * J6e fan-out: instead of running a single hard-coded fetcher, this route
+ * now lists every `crawler_sources.is_active = true` row and dispatches to
+ * the right fetcher by `parser_type`. Each fetcher already writes back its
+ * own `last_run_at / last_status / last_error`, so this loop only needs to
+ * collect their results.
+ *
+ * Sources are executed sequentially (not in parallel) — the dataset is tiny
+ * (<10 sources for the foreseeable future), serial keeps logs readable and
+ * avoids hammering JYP / YG from one IP simultaneously.
  *
  * Auth: `Authorization: Bearer ${CRON_SECRET}` header. Vercel Cron sends
  * this header automatically when CRON_SECRET is configured on the project.
  *
  * Modes:
- *   - Default (insert): uses the service_role client to bypass the
- *     event_candidates INSERT RLS policy and write new rows with
- *     review_status = 'pending' (DB default). Service role usage is
- *     confined to this CRON_SECRET-gated route.
- *   - ?dryRun=1: uses the anon server client, fetches + dedups but does
- *     NOT call .insert(). Returns `wouldInsert` instead of `inserted`.
- *     Safe to call without affecting the DB.
+ *   - Default (insert): writes event_candidates with review_status='pending'.
+ *   - ?dryRun=1: per-source fetcher skips INSERT but still updates the
+ *     source's run status (it's still a real availability check).
  *
- * Scope (J5b):
+ * Scope (unchanged):
  *   - Writes to event_candidates only.
  *   - Never writes to events. Never approves. Never publishes.
  *   - Never calls AI parse.
@@ -67,7 +177,6 @@ type CronResponse = CronOkResponse | CronErrResponse
 export async function GET(
   request: NextRequest,
 ): Promise<NextResponse<CronResponse>> {
-  // ── Decide mode from query string ────────────────────────────────────────
   const dryRun = request.nextUrl.searchParams.get('dryRun') === '1'
   const mode: 'insert' | 'dry-run' = dryRun ? 'dry-run' : 'insert'
 
@@ -98,52 +207,102 @@ export async function GET(
     )
   }
 
-  // ── Supabase client: always service_role ─────────────────────────────────
-  // Both dry-run and insert modes use the service_role client. The dedup
-  // SELECT query on event_candidates requires bypassing RLS (the anon key is
-  // blocked by the admin-only SELECT policy). The CRON_SECRET guard above is
-  // the security boundary — no additional client downgrade is needed.
-  // Service client construction may throw if SUPABASE_SERVICE_ROLE_KEY is
-  // missing — surface that as a 500.
-  let supabase
+  // ── Supabase service client (bypasses RLS for INSERT + dedup SELECT) ─────
+  let supabase: SupabaseClient
   try {
     supabase = getSupabaseServiceClient()
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e)
     return NextResponse.json(
       {
         ok: false,
         trigger: 'vercel-cron',
         mode,
-        error: msg,
+        error: e instanceof Error ? e.message : String(e),
       },
       { status: 500 },
     )
   }
 
-  // ── Run shared fetcher ───────────────────────────────────────────────────
-  const result = await runBlackpinkFetcher(supabase, { dryRun })
+  // ── List active sources ──────────────────────────────────────────────────
+  const { data: rows, error: listError } = await supabase
+    .from('crawler_sources')
+    .select('id, source_key, name, parser_type')
+    .eq('is_active', true)
+    .order('source_key', { ascending: true })
 
-  const payload = {
-    source: result.source,
-    fetched: result.fetched,
-    inserted: result.inserted,
-    wouldInsert: result.wouldInsert,
-    skipped: result.skipped,
-    errors: result.errors,
-  }
-
-  // Surface fetcher failure as 5xx so Vercel Cron logs flag the run as failed.
-  if (result.errors.length > 0 && result.status >= 500) {
+  if (listError) {
     return NextResponse.json(
       {
         ok: false,
         trigger: 'vercel-cron',
         mode,
-        error: result.errors[0] ?? '抓取失敗',
-        result: payload,
+        error: `讀取 crawler_sources 失敗 [${listError.code ?? '?'}] ${listError.message}`,
       },
-      { status: result.status },
+      { status: 500 },
+    )
+  }
+
+  const sources = (rows ?? []) as ActiveSourceRow[]
+
+  // No active sources → not an error; nothing to do.
+  if (sources.length === 0) {
+    return NextResponse.json(
+      {
+        ok: true,
+        trigger: 'vercel-cron',
+        mode,
+        summary: summarise([]),
+        results: [],
+      },
+      { status: 200 },
+    )
+  }
+
+  // ── Fan out sequentially ─────────────────────────────────────────────────
+  const results: SourceRunResult[] = []
+  for (const source of sources) {
+    try {
+      const r = await runSource(supabase, source, dryRun)
+      results.push(r)
+    } catch (e) {
+      // Defensive: any unexpected throw inside a fetcher should not abort
+      // remaining sources. Per-fetcher contracts already guarantee they
+      // return cleanly, but we belt-and-brace here.
+      results.push({
+        source: 'unknown',
+        sourceKey: source.source_key,
+        sourceName: source.name,
+        parserType: source.parser_type,
+        mode,
+        fetched: 0,
+        inserted: 0,
+        wouldInsert: 0,
+        skipped: 0,
+        errors: [
+          `fetcher 拋出例外：${e instanceof Error ? e.message : String(e)}`,
+        ],
+        status: 500,
+      })
+    }
+  }
+
+  const summary = summarise(results)
+
+  // Surface as 500 only if EVERY source failed; otherwise return 200 with
+  // partial errors so Vercel Cron logs distinguish "down" vs "noisy day".
+  const allFailed =
+    results.length > 0 && results.every((r) => r.errors.length > 0)
+  if (allFailed) {
+    return NextResponse.json(
+      {
+        ok: false,
+        trigger: 'vercel-cron',
+        mode,
+        error: '所有來源皆失敗',
+        summary,
+        results,
+      },
+      { status: 502 },
     )
   }
 
@@ -152,7 +311,8 @@ export async function GET(
       ok: true,
       trigger: 'vercel-cron',
       mode,
-      result: payload,
+      summary,
+      results,
     },
     { status: 200 },
   )
