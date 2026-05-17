@@ -1,30 +1,35 @@
 /**
- * TWICE official JYP Schedule parser.
+ * JYP Schedule platform parser.
  *
- * Source: registered in crawler_sources where source_key = 'twice-jyp-schedule'.
+ * Sources that use this parser are registered in crawler_sources with
+ * parser_type = 'jyp_schedule'. Each source row carries:
+ *   - source_url: the public Mobile/Schedule page for that artist
+ *   - config.groupId: the JYP internal group id used by the JSON API
+ *   - config.artistSlug: subdomain slug, used only as fallback to resolve
+ *     groupId via /api/groups/{slug} when config.groupId is missing
+ *   - idol_id: links the source back to an Idol Rhythm idol row
  *
- * The JYP site is a Next.js SPA — the Mobile/Schedule page renders client-side
- * and has no useful static HTML. Schedule data comes from a JSON API:
+ * Same parser can be reused for any JYP-managed group (TWICE, Stray Kids,
+ * ITZY, NMIXX …) — adding a new artist only requires inserting a new
+ * crawler_sources row with the right groupId.
  *
- *   GET /api/groups/twice
- *     → { groupId: "9", fansKey: "twice" }
+ * Schedule items come from the JYP JSON API (not HTML):
  *
- *   GET /api/schedules?groupId=9&startDate=<ISO8601>&endDate=<ISO8601>
+ *   GET {origin}/api/schedules?groupId=<id>&startDate=<ISO8601>&endDate=<ISO8601>
  *     → { schedules: JypApiScheduleItem[] }
  *
- * Each item carries a stable `slug` (used as per-entry URL anchor), a
- * `scheduledDate` (YYYY-MM-DD), and a `category` string
- * (ANNIVERSARY | SHOW | EVENT | RELEASE | ETC).
+ *   (fallback) GET {origin}/api/groups/{artistSlug} → { groupId, fansKey }
  *
- * No HTML parsing. No cheerio. No new dependencies.
+ * Each item carries a stable `slug` (used as per-entry URL anchor) and
+ * `scheduledDate` (YYYY-MM-DD). No HTML parsing, no cheerio, no new deps.
  */
 
 import { computeSourceHash } from './sourceHash'
 import type { SourceTypeEnum } from './crawlerSource'
 
-export const TWICE_PARSER_VERSION = 2
+export const JYP_PARSER_VERSION = 1
 
-// ── Raw API shapes ────────────────────────────────────────────────────────────
+// ── Raw API shapes ───────────────────────────────────────────────────────────
 
 export interface JypApiScheduleItem {
   id: string
@@ -39,9 +44,9 @@ export interface JypApiScheduleItem {
   artists: { name: string; __typename?: string }[]
 }
 
-// ── Parsed entry (normalised, used by fetcher) ────────────────────────────────
+// ── Parsed entry (normalised, used by fetcher) ───────────────────────────────
 
-export interface ParsedTwiceEntry {
+export interface ParsedJypEntry {
   title: string
   /** scheduledDate from API: always YYYY-MM-DD. */
   rawDateText: string
@@ -49,7 +54,7 @@ export interface ParsedTwiceEntry {
   detectedDate: string | null
   /** API category string: ANNIVERSARY | SHOW | EVENT | RELEASE | ETC */
   rawTypeText: string
-  /** https://{pageUrl}#{slug} — stable, unique per item. */
+  /** `{pageUrl}#{slug}` — stable, unique per item. */
   sourceUrl: string
   hasOwnUrl: boolean
   location: string | null
@@ -57,14 +62,14 @@ export interface ParsedTwiceEntry {
 }
 
 /**
- * Convert raw JYP API schedule items to ParsedTwiceEntry[].
+ * Convert raw JYP API schedule items to ParsedJypEntry[].
  * `pageUrl` is the display URL from crawler_sources (used as anchor base).
  */
-export function parseTwiceScheduleApiItems(
+export function parseJypScheduleApiItems(
   items: JypApiScheduleItem[],
   pageUrl: string,
-): ParsedTwiceEntry[] {
-  const entries: ParsedTwiceEntry[] = []
+): ParsedJypEntry[] {
+  const entries: ParsedJypEntry[] = []
   const seenSlugs = new Set<string>()
 
   for (const item of items) {
@@ -112,9 +117,9 @@ export function mapCategoryToEventType(raw: string): EventTypeEnum | null {
   }
 }
 
-// ── Payload builder ───────────────────────────────────────────────────────────
+// ── Payload builder ──────────────────────────────────────────────────────────
 
-export interface TwiceSourceContext {
+export interface JypSourceContext {
   crawlerSourceId: string
   sourceKey: string
   sourceName: string
@@ -122,9 +127,11 @@ export interface TwiceSourceContext {
   parserType: string
   pageUrl: string
   idolId: string | null
+  groupId: string
+  artistSlug: string | null
 }
 
-export interface TwiceCandidatePayload {
+export interface JypCandidatePayload {
   raw_title: string
   raw_content: string
   detected_idol_id: string | null
@@ -137,7 +144,7 @@ export interface TwiceCandidatePayload {
   reviewer_note: string
   source_hash: string
   raw_data: {
-    source: 'twice-jyp-schedule'
+    source: 'jyp-schedule'
     crawler_source_id: string
     source_key: string
     parser_type: string
@@ -149,14 +156,16 @@ export interface TwiceCandidatePayload {
     own_url: boolean
     location: string | null
     artists: string[]
+    group_id: string
+    artist_slug: string | null
   }
 }
 
 export function entryToCandidatePayload(
-  entry: ParsedTwiceEntry,
-  source: TwiceSourceContext,
-): TwiceCandidatePayload {
-  const raw_title = `TWICE 官方行程 - ${entry.title}`
+  entry: ParsedJypEntry,
+  source: JypSourceContext,
+): JypCandidatePayload {
+  const raw_title = `${source.sourceName} - ${entry.title}`
 
   const lines: string[] = [
     `Title: ${entry.title}`,
@@ -165,6 +174,7 @@ export function entryToCandidatePayload(
     entry.location ? `Location: ${entry.location}` : null,
     entry.artists.length > 0 ? `Artists: ${entry.artists.join(', ')}` : null,
     `Source: ${source.pageUrl}`,
+    `JYP groupId: ${source.groupId}`,
   ].filter((x): x is string => x !== null)
 
   const source_hash = computeSourceHash({ sourceUrl: entry.sourceUrl })!
@@ -182,11 +192,11 @@ export function entryToCandidatePayload(
     reviewer_note: `auto-crawled from crawler source: ${source.sourceName}`,
     source_hash,
     raw_data: {
-      source: 'twice-jyp-schedule',
+      source: 'jyp-schedule',
       crawler_source_id: source.crawlerSourceId,
       source_key: source.sourceKey,
       parser_type: source.parserType,
-      parser_version: TWICE_PARSER_VERSION,
+      parser_version: JYP_PARSER_VERSION,
       title: entry.title,
       original_date_text: entry.rawDateText,
       original_type_text: entry.rawTypeText,
@@ -194,6 +204,8 @@ export function entryToCandidatePayload(
       own_url: entry.hasOwnUrl,
       location: entry.location,
       artists: entry.artists,
+      group_id: source.groupId,
+      artist_slug: source.artistSlug,
     },
   }
 }

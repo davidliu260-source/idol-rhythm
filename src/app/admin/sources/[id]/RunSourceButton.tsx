@@ -13,16 +13,35 @@ interface CrawlerResponse {
   errors: string[]
 }
 
+interface RunPlan {
+  endpoint: string
+  /** Optional JSON body for the POST (used by platform-level runners). */
+  body?: Record<string, unknown>
+}
+
 /**
- * Resolves a parser_type to its admin run endpoint. Returning null means
- * the source has no manual runner wired up — the button hides itself.
+ * Maps a source row to the API endpoint + body used to run it.
+ *
+ * Platform-level parsers (jyp_schedule, …) share one route and pass the
+ * source_key in the body — adding a new artist on an existing platform
+ * never needs a new endpoint. Artist-specific parsers
+ * (blackpink_official_tour, …) still have their own route until they get
+ * platformised.
+ *
+ * Returning null hides the run button entirely.
  */
-function endpointForParser(parserType: string): string | null {
+function planForSource(
+  parserType: string,
+  sourceKey: string,
+): RunPlan | null {
   switch (parserType) {
+    case 'jyp_schedule':
+      return {
+        endpoint: '/api/admin/crawlers/jyp-schedule/run',
+        body: { sourceKey },
+      }
     case 'blackpink_official_tour':
-      return '/api/admin/crawlers/blackpink-tour/run'
-    case 'twice_jyp_schedule':
-      return '/api/admin/crawlers/twice-schedule/run'
+      return { endpoint: '/api/admin/crawlers/blackpink-tour/run' }
     default:
       return null
   }
@@ -31,35 +50,41 @@ function endpointForParser(parserType: string): string | null {
 /**
  * Admin-only manual-run trigger on /admin/sources/[id].
  *
- * Picks the route by parser_type so we don't need a separate button per
- * source on /admin/event-candidates. Hidden entirely for parser types
- * without a wired runner.
+ * Dispatches to a per-platform run endpoint based on `parserType` and
+ * forwards `sourceKey` for platform-level runners. Hidden when the parser
+ * has no wired runner.
  */
 export default function RunSourceButton({
   parserType,
+  sourceKey,
   sourceName,
 }: {
   parserType: string
+  sourceKey: string
   sourceName: string
 }) {
-  const endpoint = endpointForParser(parserType)
+  const plan = planForSource(parserType, sourceKey)
   const router = useRouter()
   const [running, setRunning] = useState(false)
   const [result, setResult] = useState<CrawlerResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  if (!endpoint) return null
+  if (!plan) return null
 
   async function handleRun() {
-    if (!endpoint) return
+    if (!plan) return
     setRunning(true)
     setError(null)
     setResult(null)
     try {
-      const res = await fetch(endpoint, { method: 'POST' })
+      const init: RequestInit = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      }
+      if (plan.body) init.body = JSON.stringify(plan.body)
+      const res = await fetch(plan.endpoint, init)
       const body = (await res.json()) as CrawlerResponse
       setResult(body)
-      // Refresh server component so last_run_at / last_status update.
       router.refresh()
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))

@@ -1,9 +1,20 @@
 import { NextResponse } from 'next/server'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
-import { runTwiceScheduleFetcher } from '@/lib/crawlers/runTwiceScheduleFetcher'
+import { runJypScheduleFetcher } from '@/lib/crawlers/runJypScheduleFetcher'
 
 export const dynamic = 'force-dynamic'
+
+/**
+ * Legacy compatibility route from J6c.
+ *
+ * The new generic route is /api/admin/crawlers/jyp-schedule/run (J6d).
+ * This shim forwards to the generic fetcher with the hard-coded TWICE
+ * source_key so any already-deployed UI keeps working until callers
+ * migrate to the generic route.
+ *
+ * New JYP artists must NOT use this route; add them via the generic one.
+ */
 
 interface CrawlerResponse {
   ok: boolean
@@ -14,6 +25,8 @@ interface CrawlerResponse {
   errors: string[]
 }
 
+const TWICE_SOURCE_KEY = 'twice-jyp-schedule'
+
 function buildResponse(
   body: CrawlerResponse,
   status: number,
@@ -21,16 +34,6 @@ function buildResponse(
   return NextResponse.json(body, { status })
 }
 
-/**
- * POST /api/admin/crawlers/twice-schedule/run
- *
- * Admin-only. Fetches the TWICE JYP Schedule page, parses items, and
- * writes new rows into event_candidates with review_status = 'pending'.
- *
- * Auth: getCurrentAdmin() session cookie.
- * Logic: delegates to runTwiceScheduleFetcher (J6c, mirrors BLACKPINK).
- * Never writes events. Never publishes. Never approves.
- */
 export async function POST(): Promise<NextResponse<CrawlerResponse>> {
   const { isAdmin } = await getCurrentAdmin()
   if (!isAdmin) {
@@ -62,12 +65,14 @@ export async function POST(): Promise<NextResponse<CrawlerResponse>> {
     )
   }
 
-  const result = await runTwiceScheduleFetcher(supabase)
+  const result = await runJypScheduleFetcher(supabase, {
+    sourceKey: TWICE_SOURCE_KEY,
+  })
 
   return buildResponse(
     {
       ok: result.errors.length === 0,
-      source: result.source,
+      source: 'twice-jyp-schedule',
       fetched: result.fetched,
       inserted: result.inserted,
       skipped: result.skipped,
