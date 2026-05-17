@@ -120,7 +120,7 @@ export default async function AdminSourceDetailPage({
             label="上次執行"
             value={source.lastRunAt ? formatDateTime(source.lastRunAt) : '尚未執行'}
           />
-          <Row label="上次狀態" value={source.lastStatus ?? '—'} />
+          <Row label="上次狀態" value={formatLastStatus(source.lastStatus)} />
           {source.lastError && (
             <Row
               label="上次錯誤"
@@ -188,6 +188,22 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
       <span className="text-xs text-text-base flex-1">{value}</span>
     </div>
   )
+}
+
+function formatLastStatus(status: string | null): React.ReactNode {
+  if (!status) return '尚未執行'
+  switch (status) {
+    case 'success':
+      return <span className="text-emerald-400">成功</span>
+    case 'partial_error':
+      return <span className="text-amber-400">部分錯誤</span>
+    case 'error':
+      return <span className="text-red-400">失敗</span>
+    case 'skipped':
+      return <span className="text-muted">略過（來源停用）</span>
+    default:
+      return <span className="font-mono">{status}</span>
+  }
 }
 
 function formatDateTime(iso: string): string {

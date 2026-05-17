@@ -1,7 +1,10 @@
 /**
  * BLACKPINK official tour page parser.
  *
- * Source: https://blackpinkofficial.com/concert/2025TOUR/index.html
+ * Source: registered in crawler_sources where source_key =
+ *         'blackpink-official-tour'. As of J6b, the URL is read from
+ *         crawler_sources.source_url and passed in — no longer hard-coded
+ *         in this module.
  *
  * The page is a static HTML document with a highly regular structure:
  *
@@ -25,8 +28,8 @@
  *   - Skip a row if either city name or date raw text is missing.
  *   - "more info" hrefs are NOT used as source_url because multiple cities
  *     share the same Weverse notice URL — that breaks dedup. Instead we
- *     synthesize a per-row source_url from page URL + #cityslug, which is
- *     stable across runs and unique per row.
+ *     synthesize a per-row source_url from the page URL + #cityslug, which
+ *     is stable across runs and unique per row.
  *   - Date parsing extracts the FIRST `YYYY. MM. DD` token only; if it
  *     can't be parsed, detected_date stays null and raw text is kept in
  *     raw_content for the admin to read.
@@ -36,12 +39,7 @@ import * as cheerio from 'cheerio'
 import { computeSourceHash } from './sourceHash'
 
 /** Bump when the parser output shape changes meaningfully. */
-export const BLACKPINK_PARSER_VERSION = 1
-
-export const BLACKPINK_TOUR_URL =
-  'https://blackpinkofficial.com/concert/2025TOUR/index.html'
-
-export const BLACKPINK_SOURCE_NAME = 'BLACKPINK Official'
+export const BLACKPINK_PARSER_VERSION = 2
 
 export interface ParsedTourEntry {
   cityId: string // div id (e.g. 'goyang') — used for #fragment
@@ -51,12 +49,19 @@ export interface ParsedTourEntry {
   rawDateText: string | null // '2025. 07. 05. SAT 8PM / 2025. 07. 06. SUN 7PM'
   /** First parsed calendar date in YYYY-MM-DD, or null if not parseable. */
   detectedDate: string | null
-  /** Synthesized stable URL: BLACKPINK_TOUR_URL + '#' + cityId. */
+  /** Synthesized stable URL: pageUrl + '#' + cityId. */
   sourceUrl: string
 }
 
-/** Parse the BLACKPINK tour page HTML into structured entries. */
-export function parseBlackpinkTourHtml(html: string): ParsedTourEntry[] {
+/**
+ * Parse the BLACKPINK tour page HTML into structured entries.
+ * `pageUrl` is the URL used to fetch the HTML (from crawler_sources.source_url)
+ * and is used to synthesize a stable per-row source URL.
+ */
+export function parseBlackpinkTourHtml(
+  html: string,
+  pageUrl: string,
+): ParsedTourEntry[] {
   const $ = cheerio.load(html)
   const entries: ParsedTourEntry[] = []
 
@@ -83,7 +88,7 @@ export function parseBlackpinkTourHtml(html: string): ParsedTourEntry[] {
       moreInfoUrl,
       rawDateText,
       detectedDate: extractFirstIsoDate(rawDateText),
-      sourceUrl: `${BLACKPINK_TOUR_URL}#${cityId}`,
+      sourceUrl: `${pageUrl}#${cityId}`,
     })
   })
 
@@ -117,9 +122,25 @@ export function extractFirstIsoDate(text: string): string | null {
 }
 
 /**
- * Builds the candidate row payload from a parsed entry.
- * Shared by the route handler so the mapping is single-sourced.
+ * Source context resolved from crawler_sources, passed through to the payload
+ * builder so the fetcher controls the mapping in one place.
  */
+export interface BlackpinkSourceContext {
+  crawlerSourceId: string
+  sourceKey: string
+  sourceName: string
+  sourceType:
+    | 'official_sns'
+    | 'official_website'
+    | 'media_outlet'
+    | 'fan_account'
+    | 'community'
+    | 'unknown'
+  parserType: string
+  pageUrl: string
+  idolId: string | null
+}
+
 export interface BlackpinkCandidatePayload {
   raw_title: string
   raw_content: string
@@ -128,7 +149,7 @@ export interface BlackpinkCandidatePayload {
   detected_date: string | null
   source_url: string
   source_name: string
-  source_type: 'official_website'
+  source_type: BlackpinkSourceContext['sourceType']
   ai_confidence: null
   reviewer_note: string
   /** SHA-256 hex; required field for J4 dedupe. */
@@ -136,6 +157,9 @@ export interface BlackpinkCandidatePayload {
   /** Structured parsed payload, kept for future J3 / J6 re-processing. */
   raw_data: {
     source: 'blackpink-official-tour'
+    crawler_source_id: string
+    source_key: string
+    parser_type: string
     parser_version: number
     city: string
     city_id: string
@@ -148,7 +172,7 @@ export interface BlackpinkCandidatePayload {
 
 export function entryToCandidatePayload(
   entry: ParsedTourEntry,
-  blackpinkIdolId: string | null,
+  source: BlackpinkSourceContext,
 ): BlackpinkCandidatePayload {
   const titleSuffix = entry.place ? ` @ ${entry.place}` : ''
   const raw_title = `BLACKPINK 2025 WORLD TOUR — ${entry.city}${titleSuffix}`
@@ -158,7 +182,7 @@ export function entryToCandidatePayload(
     entry.place ? `Venue: ${entry.place}` : null,
     entry.rawDateText ? `Date (raw): ${entry.rawDateText}` : null,
     entry.moreInfoUrl ? `More info: ${entry.moreInfoUrl}` : null,
-    `Source: ${BLACKPINK_TOUR_URL}`,
+    `Source: ${source.pageUrl}`,
   ].filter((x): x is string => x !== null)
 
   // entry.sourceUrl is always present (page URL + #cityId), so the URL branch
@@ -168,24 +192,27 @@ export function entryToCandidatePayload(
   return {
     raw_title,
     raw_content: lines.join('\n'),
-    detected_idol_id: blackpinkIdolId,
+    detected_idol_id: source.idolId,
     detected_event_type: 'concert',
     detected_date: entry.detectedDate,
     source_url: entry.sourceUrl,
-    source_name: BLACKPINK_SOURCE_NAME,
-    source_type: 'official_website',
+    source_name: source.sourceName,
+    source_type: source.sourceType,
     ai_confidence: null,
-    reviewer_note: 'auto-crawled from BLACKPINK official tour page',
+    reviewer_note: `auto-crawled from crawler source: ${source.sourceName}`,
     source_hash,
     raw_data: {
       source: 'blackpink-official-tour',
+      crawler_source_id: source.crawlerSourceId,
+      source_key: source.sourceKey,
+      parser_type: source.parserType,
       parser_version: BLACKPINK_PARSER_VERSION,
       city: entry.city,
       city_id: entry.cityId,
       venue: entry.place,
       original_date_text: entry.rawDateText,
       more_info_url: entry.moreInfoUrl,
-      page_url: BLACKPINK_TOUR_URL,
+      page_url: source.pageUrl,
     },
   }
 }
