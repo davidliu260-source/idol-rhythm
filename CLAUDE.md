@@ -147,12 +147,13 @@
 | 26 | J6e | Cron fan-out 跨所有 active sources | ✅ |
 | 27 | J6f | 12 個月視窗 + 過去日期過濾 | ✅ |
 | 28 | J7a | Stray Kids 種子（migration 023，PR #16）| ✅ |
-| 29 | J7b | 批量審核 UI（approve / reject）| 🔲 待辦 |
+| 29 | J7b | 批量審核 UI（approve / reject）| ✅ PR #17 open |
 | 30 | J7c | 過期候選清理 | 🔲 待辦 |
 | 31 | J7d | 內容變更偵測（content_hash）| 🔲 待辦 |
-| 32 | 個人化首頁 | user_follows 過濾 timeline | 🔲 待辦 |
-| 33 | 忘記密碼 / 帳號設定 | — | 🔲 待辦 |
-| 34 | Apple Sign-In | 上 App Store 前再做 | 🔲 待辦 |
+| 32 | J7e | 批量發布 + trust_level 切換（J7b 暴露的設計負債）| 🔲 待辦 |
+| 33 | 個人化首頁 | user_follows 過濾 timeline | 🔲 待辦 |
+| 34 | 忘記密碼 / 帳號設定 | — | 🔲 待辦 |
+| 35 | Apple Sign-In | 上 App Store 前再做 | 🔲 待辦 |
 
 ---
 
