@@ -1,6 +1,6 @@
 # Idol Rhythm — 專案進度備份與交接文件
 
-> 最後更新：2026-05-17（J0–J4 AI pipeline 完成；PR 品管流程上線）
+> 最後更新：2026-05-17（J5 + J5b 完成；Vercel Cron 安全寫入 event_candidates 上線）
 > 本文件紀錄目前 Idol Rhythm 的完成進度、Supabase 狀態與下一步建議。
 
 ---
@@ -107,14 +107,17 @@
 
 ### Env 設定狀態
 
-| 環境 | Supabase keys | ANTHROPIC_API_KEY |
-|---|---|---|
-| 本地 `.env.local` | ✅ 已設定 | ✅ 已設定 |
-| Vercel（Production + Preview） | ✅ 已設定 | ✅ 已設定 |
+| 環境變數 | 本地 `.env.local` | Vercel Production | Vercel Preview |
+|---|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | ✅ | ✅ | ✅ |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | ✅ | ✅ |
+| `ANTHROPIC_API_KEY` | ✅ | ✅ | ✅ |
+| `CRON_SECRET` | ✅（本地測試用） | ✅ | — |
+| `SUPABASE_SERVICE_ROLE_KEY` | ✅（本地測試用） | ✅ | ❌ 不可設 |
 
 可選：`ANTHROPIC_MODEL`（預設 `claude-haiku-4-5-20251001`，可 override 到其他模型）
 
-> ⚠️ `.env.local` 不可提交版控。service role key / secret key / ANTHROPIC_API_KEY 絕對不可進版控或貼入任何程式碼。
+> ⚠️ `.env.local` 不可提交版控。`SUPABASE_SERVICE_ROLE_KEY` 絕對不可加 `NEXT_PUBLIC_` 前綴，不可進版控，不可設在 Preview 環境。
 
 ### RLS
 
@@ -167,6 +170,8 @@
 | J2：BLACKPINK 官方 tour fetcher + CrawlerButton | ✅ 完成（`acf7952`） |
 | J4：source_hash 去重（migration 017）| ✅ 完成（`2c2ec1c`） |
 | J3：AI 解析公告 — Claude Haiku + parse UI | ✅ 完成（`3cd09f2`） |
+| J5：Vercel Cron dry-run 觸發 | ✅ 完成（`4c911e7`，`vercel.json`，`0 1 * * *`，`CRON_SECRET`） |
+| J5b：Cron 安全寫入 event_candidates | ✅ 完成（`19ed919`，`serviceClient.ts`，`SUPABASE_SERVICE_ROLE_KEY`，`?dryRun=1` 保留） |
 | 品管流程：feature branch + PR → GPT audit → merge | ✅ 2026-05-17 起採用 |
 
 ---
@@ -215,14 +220,14 @@
 > ✅ 所有前台頁面均已接 Supabase，mock fallback 完整保留。
 > ✅ Admin 後台完成：Dashboard、登入、Events、Idols、Candidates 全線 CRUD + 發布 / 啟用 / 審核。
 > ✅ 前台會員系統：三種登入 + 三大個人化資料 Supabase 持久化。
-> ✅ AI/爬蟲 pipeline J0–J4 完成：手動匯入 + BLACKPINK fetcher + AI 解析 + source_hash 去重。
+> ✅ AI/爬蟲 pipeline J0–J5b 完成：手動匯入 + BLACKPINK fetcher + AI 解析 + source_hash 去重 + Vercel Cron 安全寫入。
 
 | 優先 | 目標 | 說明 |
 |---|---|---|
-| **第一** | J3 人工驗收 | 測試 `/admin/event-candidates/parse` AI 解析流程 |
-| **第二** | Migration 016 + 017 確認 | 確認在 Supabase SQL Editor 已執行 |
-| **第三** | J5 Cron 自動觸發 | 需 GPT 工作單；高風險 |
-| **之後** | 個人化首頁、忘記密碼、J6 多來源 | 各需獨立工作單 |
+| **第一** | J5b 人工驗收 | 設定好 env 後，curl 測 cron route；確認 event_candidates 有新 pending 列 |
+| **第二** | 個人化首頁 | user_follows 過濾 timeline；reminders 倒數 UI |
+| **第三** | J6：多來源 fetcher 擴充 | 需 GPT 工作單 |
+| **之後** | 忘記密碼、Email 設定、Apple Sign-In | 各需獨立工作單 |
 
 > ⛔ 明確禁止（未被工作單授權前不得實作）：草稿刪除、批量操作、AI auto-publish、直接 push to main（需開 PR）。
 

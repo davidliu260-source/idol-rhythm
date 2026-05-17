@@ -15,7 +15,7 @@
 | 本地路徑 | `~/Desktop/idol-rhythm` |
 | GitHub repo | https://github.com/davidliu260-source/idol-rhythm |
 | 技術 | Next.js 14 App Router + TypeScript + Tailwind CSS |
-| 目前階段 | 後台主幹 + 前台會員完整；AI/爬蟲 pipeline J0–J4 已完成（手動匯入、BLACKPINK fetcher、AI 解析、去重）|
+| 目前階段 | 後台主幹 + 前台會員完整；AI/爬蟲 pipeline J0–J5b 已完成（手動匯入、BLACKPINK fetcher、AI 解析、去重、Vercel Cron 自動寫入）|
 
 任何 Idol Rhythm 相關任務都必須在以下目錄執行：
 
@@ -309,9 +309,10 @@ Claude Code 每次完成任務後，**必須回報以下所有項目**：
 | 19 | J2：BLACKPINK 官方 tour fetcher | ✅ 完成（`acf7952`） |
 | 20 | J4：source_hash 去重強化 | ✅ 完成（`2c2ec1c`，migration 017） |
 | 21 | J3：AI 解析公告（Claude Haiku）| ✅ 完成（`3cd09f2`，ANTHROPIC_API_KEY） |
-| 22 | 個人化首頁（用 user_follows 過濾 timeline + reminders 顯示 UI 倒數區塊） | 🔲 待辦 |
-| 23 | J5：Cron 自動觸發 | 🔲 待辦（需 GPT 工作單，高風險） |
-| 24 | J6：多來源 fetcher 擴充 | 🔲 待辦（需 GPT 工作單） |
+| 22 | J5：Vercel Cron dry-run 觸發 | ✅ 完成（`4c911e7`，`vercel.json`，`CRON_SECRET`） |
+| 23 | J5b：Cron 安全寫入 event_candidates | ✅ 完成（`19ed919`，`serviceClient.ts`，`SUPABASE_SERVICE_ROLE_KEY`） |
+| 24 | 個人化首頁（用 user_follows 過濾 timeline + reminders 顯示 UI 倒數區塊） | 🔲 待辦 |
+| 25 | J6：多來源 fetcher 擴充 | 🔲 待辦（需 GPT 工作單） |
 | 25 | 忘記密碼 / 改密碼 / 帳號設定頁 | 🔲 待辦 |
 | 26 | Apple Sign-In（上 App Store 前再做）| 🔲 待辦 |
 
