@@ -66,15 +66,29 @@
 3. `package-lock.json` 應該提交
 4. Commit message 簡短清楚，反映變更核心目的；禁止 `update / fix / changes / wip`
 5. **開 feature branch + PR（品管流程）**：
+   `gh` CLI 已安裝（`brew install gh`）並以 `davidliu260-source` 帳號認證完成，每次任務完成後自動執行：
    ```bash
    git checkout -b feature/<phase-name>
    git add <相關檔案>
-   git commit -m "..."
+   git commit -m "簡短說明本輪變更目的"
    git push origin feature/<phase-name>
-   gh pr create --title "..." --body "..."
+   gh pr create \
+     --base main \
+     --head feature/<phase-name> \
+     --title "<phase-name>: 簡短說明" \
+     --body "$(cat <<'EOF'
+   ## 本輪變更
+   - <bullet>
+
+   ## 測試方式
+   - <bullet>
+
+   🤖 Generated with [Claude Code](https://claude.com/claude-code)
+   EOF
+   )"
    ```
-   PR 開出後，等 GPT 在 GitHub 上 audit 確認無誤後再 merge to main。
-6. 回報：修改檔案、build 結果、feature branch 名稱、commit hash、PR 連結
+   指令執行完成後，終端機會輸出 PR 網址（`https://github.com/davidliu260-source/idol-rhythm/pull/<N>`），將此連結回報給使用者，等 GPT 在 GitHub 上 audit 確認無誤後再 merge to main。
+6. 回報（必填）：修改檔案、build 結果、feature branch 名稱、commit hash、**PR 連結**
 
 ---
 
