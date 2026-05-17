@@ -1,73 +1,55 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
-  type BlackpinkSourceContext,
   entryToCandidatePayload,
-  parseBlackpinkTourHtml,
-} from './blackpinkOfficialTour'
+  parseTwiceScheduleHtml,
+  type TwiceSourceContext,
+} from './twiceJypSchedule'
 import {
   getCrawlerSourceByKey,
   type RunStatus,
   updateRunStatus,
 } from './crawlerSource'
 
-const SOURCE_KEY = 'blackpink-official-tour'
-const EXPECTED_PARSER_TYPE = 'blackpink_official_tour'
+const SOURCE_KEY = 'twice-jyp-schedule'
+const EXPECTED_PARSER_TYPE = 'twice_jyp_schedule'
 const MAX_ENTRIES_PER_RUN = 30
 const FETCH_TIMEOUT_MS = 15_000
 const USER_AGENT =
   'IdolRhythm-Bot/0.1 (+https://idol-rhythm.vercel.app)'
 
 export interface FetcherOptions {
-  /**
-   * When true, skip the INSERT loop entirely and report how many rows *would*
-   * have been written. Used by the Vercel Cron route under ?dryRun=1. When
-   * false, INSERT is performed as normal.
-   *
-   * Even in dry-run mode the fetcher still updates crawler_sources status,
-   * because a dry-run is still a real source-availability check.
-   *
-   * Default: false (real insert).
-   */
+  /** Skip INSERT loop; report wouldInsert. Still updates crawler_sources status. */
   dryRun?: boolean
 }
 
 export interface FetcherResult {
-  source: 'blackpink-official-tour'
+  source: 'twice-jyp-schedule'
   mode: 'insert' | 'dry-run'
   fetched: number
-  /** Rows actually inserted. Always 0 in dry-run mode. */
   inserted: number
-  /**
-   * Rows that *would* be inserted if we ran in insert mode.
-   * Equals `inserted` in insert mode; computed from dedup in dry-run mode.
-   */
   wouldInsert: number
   skipped: number
   errors: string[]
-  /** Source row id from crawler_sources, when resolved. */
   crawlerSourceId: string | null
-  /** Source display name from crawler_sources, when resolved. */
   sourceName: string | null
-  /** HTTP-ish status hint for the caller's response code. 200/502/500. */
   status: number
 }
 
 /**
- * Shared BLACKPINK fetcher logic, callable from either:
- *   - Admin manual route (POST /api/admin/crawlers/blackpink-tour/run)
- *     → real insert; auth = getCurrentAdmin() session cookie
- *   - Vercel Cron route (GET /api/cron/sync-candidates)
- *     → service_role + optional ?dryRun=1; auth = CRON_SECRET Bearer header
+ * TWICE JYP Schedule fetcher (J6c).
  *
- * Pure data layer: caller handles auth and HTTP response shaping.
- * Never writes to events, never approves candidates, never publishes.
+ * Mirrors the BLACKPINK fetcher's contract:
+ *   - Reads crawler_sources WHERE source_key = 'twice-jyp-schedule'.
+ *   - Short-circuits on missing row / wrong parser_type / is_active = false.
+ *   - Fetches HTML from source.source_url.
+ *   - Parses with the JYP schedule parser.
+ *   - Dedupes by source_hash + source_url against event_candidates.
+ *   - Inserts pending rows (or counts wouldInsert in dry-run).
+ *   - Writes back last_run_at / last_status / last_error in every path.
  *
- * J6b: source config (URL, name, type, idol_id) is now read from
- * crawler_sources where source_key = 'blackpink-official-tour'.
- * After the run, last_run_at / last_status / last_error are written back
- * to the same row.
+ * Never writes to events, never approves, never publishes.
  */
-export async function runBlackpinkFetcher(
+export async function runTwiceScheduleFetcher(
   supabase: SupabaseClient,
   options: FetcherOptions = {},
 ): Promise<FetcherResult> {
@@ -80,9 +62,8 @@ export async function runBlackpinkFetcher(
     SOURCE_KEY,
   )
   if (!source) {
-    // Cannot update status without an id; return a hard error.
     return {
-      source: 'blackpink-official-tour',
+      source: 'twice-jyp-schedule',
       mode,
       fetched: 0,
       inserted: 0,
@@ -102,7 +83,7 @@ export async function runBlackpinkFetcher(
       last_error: msg,
     })
     return {
-      source: 'blackpink-official-tour',
+      source: 'twice-jyp-schedule',
       mode,
       fetched: 0,
       inserted: 0,
@@ -122,7 +103,7 @@ export async function runBlackpinkFetcher(
       last_error: msg,
     })
     return {
-      source: 'blackpink-official-tour',
+      source: 'twice-jyp-schedule',
       mode,
       fetched: 0,
       inserted: 0,
@@ -137,7 +118,7 @@ export async function runBlackpinkFetcher(
 
   const pageUrl = source.source_url
 
-  // ── Fetch source page ────────────────────────────────────────────────────
+  // ── Fetch ────────────────────────────────────────────────────────────────
   let html: string
   try {
     const controller = new AbortController()
@@ -159,7 +140,7 @@ export async function runBlackpinkFetcher(
           last_error: msg,
         })
         return {
-          source: 'blackpink-official-tour',
+          source: 'twice-jyp-schedule',
           mode,
           fetched: 0,
           inserted: 0,
@@ -182,7 +163,7 @@ export async function runBlackpinkFetcher(
       last_error: msg,
     })
     return {
-      source: 'blackpink-official-tour',
+      source: 'twice-jyp-schedule',
       mode,
       fetched: 0,
       inserted: 0,
@@ -198,7 +179,7 @@ export async function runBlackpinkFetcher(
   // ── Parse ────────────────────────────────────────────────────────────────
   let entries
   try {
-    entries = parseBlackpinkTourHtml(html, pageUrl)
+    entries = parseTwiceScheduleHtml(html, pageUrl)
   } catch (e) {
     const msg = `解析來源頁失敗：${e instanceof Error ? e.message : String(e)}`
     await updateRunStatus(supabase, source.id, {
@@ -206,7 +187,7 @@ export async function runBlackpinkFetcher(
       last_error: msg,
     })
     return {
-      source: 'blackpink-official-tour',
+      source: 'twice-jyp-schedule',
       mode,
       fetched: 0,
       inserted: 0,
@@ -226,7 +207,7 @@ export async function runBlackpinkFetcher(
       last_error: msg,
     })
     return {
-      source: 'blackpink-official-tour',
+      source: 'twice-jyp-schedule',
       mode,
       fetched: 0,
       inserted: 0,
@@ -239,31 +220,26 @@ export async function runBlackpinkFetcher(
     }
   }
 
-  // Cap entries per run.
   const limited = entries.slice(0, MAX_ENTRIES_PER_RUN)
 
   // ── Resolve idol id ──────────────────────────────────────────────────────
-  // Prefer crawler_sources.idol_id (set during J6a seed). Fall back to
-  // looking up by slug = 'blackpink' if the FK row was cleared by
-  // ON DELETE SET NULL; never fabricate a UUID.
   let idolId: string | null = source.idol_id
   if (!idolId) {
     const { data, error } = await supabase
       .from('idols')
       .select('id')
-      .eq('slug', 'blackpink')
+      .eq('slug', 'twice')
       .eq('is_active', true)
       .maybeSingle()
     if (error) {
-      // Non-fatal: continue with null idol id.
       // eslint-disable-next-line no-console
-      console.warn('blackpink-tour: idol lookup fallback failed', error)
+      console.warn('twice-schedule: idol lookup fallback failed', error)
     } else if (data?.id) {
       idolId = data.id as string
     }
   }
 
-  const sourceCtx: BlackpinkSourceContext = {
+  const sourceCtx: TwiceSourceContext = {
     crawlerSourceId: source.id,
     sourceKey: source.source_key,
     sourceName: source.name,
@@ -273,7 +249,6 @@ export async function runBlackpinkFetcher(
     idolId,
   }
 
-  // ── Compute payloads up front (gives us source_hash for dedup query) ─────
   const payloads = limited.map((entry) => ({
     entry,
     payload: entryToCandidatePayload(entry, sourceCtx),
@@ -302,7 +277,7 @@ export async function runBlackpinkFetcher(
         last_error: msg,
       })
       return {
-        source: 'blackpink-official-tour',
+        source: 'twice-jyp-schedule',
         mode,
         fetched: limited.length,
         inserted: 0,
@@ -324,7 +299,7 @@ export async function runBlackpinkFetcher(
     }
   }
 
-  // ── INSERT (or dry-run count) loop ───────────────────────────────────────
+  // ── INSERT loop ──────────────────────────────────────────────────────────
   let inserted = 0
   let wouldInsert = 0
   let skipped = 0
@@ -352,7 +327,7 @@ export async function runBlackpinkFetcher(
         continue
       }
       errors.push(
-        `${entry.city}: insert 失敗 ${error.code ? `[${error.code}] ` : ''}${error.message}`,
+        `${entry.title}: insert 失敗 ${error.code ? `[${error.code}] ` : ''}${error.message}`,
       )
       continue
     }
@@ -361,7 +336,6 @@ export async function runBlackpinkFetcher(
 
   if (!dryRun) wouldInsert = inserted
 
-  // ── Write back run status ────────────────────────────────────────────────
   const lastStatus: RunStatus = errors.length > 0 ? 'partial_error' : 'success'
   await updateRunStatus(supabase, source.id, {
     last_status: lastStatus,
@@ -369,7 +343,7 @@ export async function runBlackpinkFetcher(
   })
 
   return {
-    source: 'blackpink-official-tour',
+    source: 'twice-jyp-schedule',
     mode,
     fetched: limited.length,
     inserted,
