@@ -1,35 +1,33 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   entryToCandidatePayload,
-  parseTwiceScheduleApiItems,
+  parseJypScheduleApiItems,
   type JypApiScheduleItem,
-  type TwiceSourceContext,
-} from './twiceJypSchedule'
+  type JypSourceContext,
+} from './jypSchedule'
 import {
   getCrawlerSourceByKey,
   type RunStatus,
   updateRunStatus,
 } from './crawlerSource'
 
-const SOURCE_KEY = 'twice-jyp-schedule'
-const EXPECTED_PARSER_TYPE = 'twice_jyp_schedule'
+const EXPECTED_PARSER_TYPE = 'jyp_schedule'
 const MAX_ENTRIES_PER_RUN = 60
 const FETCH_TIMEOUT_MS = 15_000
 const USER_AGENT = 'IdolRhythm-Bot/0.1 (+https://idol-rhythm.vercel.app)'
-
-// JYP public JSON endpoints (no auth required).
-const JYP_GROUPS_URL = 'https://twice.jype.com/api/groups/twice'
-const JYP_SCHEDULES_BASE = 'https://twice.jype.com/api/schedules'
 // Fetch this many months starting from the current month.
 const MONTHS_AHEAD = 3
 
 export interface FetcherOptions {
+  /** crawler_sources.source_key — required. Picks which JYP source to run. */
+  sourceKey: string
   /** Skip INSERT loop; report wouldInsert. Still updates crawler_sources status. */
   dryRun?: boolean
 }
 
 export interface FetcherResult {
-  source: 'twice-jyp-schedule'
+  source: 'jyp-schedule'
+  sourceKey: string
   mode: 'insert' | 'dry-run'
   fetched: number
   inserted: number
@@ -73,78 +71,118 @@ async function fetchJson<T>(url: string, signal: AbortSignal): Promise<T> {
   return res.json() as Promise<T>
 }
 
+function originOf(pageUrl: string): string {
+  try {
+    return new URL(pageUrl).origin
+  } catch {
+    return ''
+  }
+}
+
 /**
- * TWICE JYP Schedule fetcher.
+ * JYP Schedule platform fetcher.
  *
- * Reads config from crawler_sources, calls the JYP JSON API for the current
- * month plus MONTHS_AHEAD-1 additional months, parses schedule items, dedupes
- * by source_hash + source_url, and inserts pending event_candidates.
- * Updates crawler_sources.last_run_at / last_status / last_error in every path.
+ * Reads `crawler_sources` by `options.sourceKey`, expects parser_type =
+ * 'jyp_schedule' and `config.groupId` populated, then calls the JYP JSON
+ * API for the current month plus MONTHS_AHEAD-1 additional months, parses
+ * schedule items, dedupes by source_hash + source_url, and inserts pending
+ * rows into `event_candidates`.
  *
- * Never writes to events, never approves, never publishes.
+ * Updates crawler_sources.last_run_at / last_status / last_error in every
+ * exit path. Never writes to events, never approves, never publishes.
  */
-export async function runTwiceScheduleFetcher(
+export async function runJypScheduleFetcher(
   supabase: SupabaseClient,
-  options: FetcherOptions = {},
+  options: FetcherOptions,
 ): Promise<FetcherResult> {
   const dryRun = options.dryRun === true
   const mode: 'insert' | 'dry-run' = dryRun ? 'dry-run' : 'insert'
+  const sourceKey = options.sourceKey
+
+  const base = (
+    extra: Partial<FetcherResult>,
+  ): FetcherResult => ({
+    source: 'jyp-schedule',
+    sourceKey,
+    mode,
+    fetched: 0,
+    inserted: 0,
+    wouldInsert: 0,
+    skipped: 0,
+    errors: [],
+    crawlerSourceId: null,
+    sourceName: null,
+    status: 200,
+    ...extra,
+  })
 
   // ── Resolve crawler_sources row ──────────────────────────────────────────
   const { source, error: sourceError } = await getCrawlerSourceByKey(
     supabase,
-    SOURCE_KEY,
+    sourceKey,
   )
   if (!source) {
-    return {
-      source: 'twice-jyp-schedule',
-      mode,
-      fetched: 0,
-      inserted: 0,
-      wouldInsert: 0,
-      skipped: 0,
+    return base({
       errors: [sourceError ?? '找不到 crawler_sources'],
-      crawlerSourceId: null,
-      sourceName: null,
       status: 500,
-    }
+    })
   }
 
   if (source.parser_type !== EXPECTED_PARSER_TYPE) {
     const msg = `parser_type 不符：crawler_sources=${source.parser_type}，預期=${EXPECTED_PARSER_TYPE}`
     await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
-    return {
-      source: 'twice-jyp-schedule',
-      mode,
-      fetched: 0,
-      inserted: 0,
-      wouldInsert: 0,
-      skipped: 0,
+    return base({
       errors: [msg],
       crawlerSourceId: source.id,
       sourceName: source.name,
       status: 500,
-    }
+    })
   }
 
   if (!source.is_active) {
     const msg = `來源已停用：${source.name}`
     await updateRunStatus(supabase, source.id, { last_status: 'skipped', last_error: msg })
-    return {
-      source: 'twice-jyp-schedule',
-      mode,
-      fetched: 0,
-      inserted: 0,
-      wouldInsert: 0,
-      skipped: 0,
+    return base({
       errors: [msg],
       crawlerSourceId: source.id,
       sourceName: source.name,
       status: 200,
-    }
+    })
+  }
+
+  const config = source.config as { groupId?: unknown; artistSlug?: unknown }
+  const configGroupId =
+    typeof config.groupId === 'string' && config.groupId.length > 0
+      ? config.groupId
+      : null
+  const artistSlug =
+    typeof config.artistSlug === 'string' && config.artistSlug.length > 0
+      ? config.artistSlug
+      : null
+
+  if (!configGroupId && !artistSlug) {
+    const msg = `來源 config 缺少 groupId 與 artistSlug：${source.name}`
+    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
+    return base({
+      errors: [msg],
+      crawlerSourceId: source.id,
+      sourceName: source.name,
+      status: 500,
+    })
   }
 
   const pageUrl = source.source_url
+  const apiOrigin = originOf(pageUrl)
+  if (!apiOrigin) {
+    const msg = `source_url 不是合法 URL：${pageUrl}`
+    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
+    return base({
+      errors: [msg],
+      crawlerSourceId: source.id,
+      sourceName: source.name,
+      status: 500,
+    })
+  }
 
   // ── Fetch JSON API ───────────────────────────────────────────────────────
   const allItems: JypApiScheduleItem[] = []
@@ -153,22 +191,29 @@ export async function runTwiceScheduleFetcher(
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
 
+  let groupId: string
   try {
-    // Step 1: resolve groupId
-    const groupData = await fetchJson<{ groupId: string; fansKey: string }>(
-      JYP_GROUPS_URL,
-      controller.signal,
-    )
-    const { groupId } = groupData
-    if (!groupId) throw new Error('JYP API 回傳的 groupId 為空')
+    if (configGroupId) {
+      groupId = configGroupId
+    } else if (artistSlug) {
+      const groupData = await fetchJson<{ groupId: string; fansKey: string }>(
+        `${apiOrigin}/api/groups/${encodeURIComponent(artistSlug)}`,
+        controller.signal,
+      )
+      if (!groupData.groupId) throw new Error('JYP /api/groups 回傳的 groupId 為空')
+      groupId = groupData.groupId
+    } else {
+      // Already validated above, but keep TS narrowing happy.
+      throw new Error('來源 config 缺少 groupId 與 artistSlug')
+    }
 
-    // Step 2: fetch schedules month by month
+    // Fetch schedules month by month.
     const now = new Date()
     for (let i = 0; i < MONTHS_AHEAD; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() + i, 1)
       const { startDate, endDate } = monthRange(d.getFullYear(), d.getMonth() + 1)
       const url =
-        `${JYP_SCHEDULES_BASE}?groupId=${encodeURIComponent(groupId)}` +
+        `${apiOrigin}/api/schedules?groupId=${encodeURIComponent(groupId)}` +
         `&startDate=${encodeURIComponent(startDate)}` +
         `&endDate=${encodeURIComponent(endDate)}`
       try {
@@ -187,62 +232,52 @@ export async function runTwiceScheduleFetcher(
     clearTimeout(timeout)
     const msg = `JYP API 失敗：${e instanceof Error ? e.message : String(e)}`
     await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
-    return {
-      source: 'twice-jyp-schedule',
-      mode,
-      fetched: 0,
-      inserted: 0,
-      wouldInsert: 0,
-      skipped: 0,
+    return base({
       errors: [msg],
       crawlerSourceId: source.id,
       sourceName: source.name,
       status: 502,
-    }
+    })
   } finally {
     clearTimeout(timeout)
   }
 
-  // All months failed → hard error
+  // All months failed → hard error.
   if (allItems.length === 0 && fetchErrors.length === MONTHS_AHEAD) {
-    const msg = fetchErrors.join(' | ')
-    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
-    return {
-      source: 'twice-jyp-schedule',
-      mode,
-      fetched: 0,
-      inserted: 0,
-      wouldInsert: 0,
-      skipped: 0,
+    await updateRunStatus(supabase, source.id, {
+      last_status: 'error',
+      last_error: fetchErrors.join(' | '),
+    })
+    return base({
       errors: fetchErrors,
       crawlerSourceId: source.id,
       sourceName: source.name,
       status: 502,
-    }
+    })
   }
 
   // ── Parse ────────────────────────────────────────────────────────────────
-  const entries = parseTwiceScheduleApiItems(allItems, pageUrl)
+  const entries = parseJypScheduleApiItems(allItems, pageUrl)
   const limited = entries.slice(0, MAX_ENTRIES_PER_RUN)
 
   // ── Resolve idol id ──────────────────────────────────────────────────────
   let idolId: string | null = source.idol_id
-  if (!idolId) {
+  if (!idolId && artistSlug) {
     const { data, error } = await supabase
       .from('idols')
       .select('id')
-      .eq('slug', 'twice')
+      .eq('slug', artistSlug)
       .eq('is_active', true)
       .maybeSingle()
     if (error) {
       // eslint-disable-next-line no-console
-      console.warn('twice-schedule: idol lookup fallback failed', error)
+      console.warn('jyp-schedule: idol lookup fallback failed', error)
     } else if (data?.id) {
       idolId = data.id as string
     }
   }
 
-  const sourceCtx: TwiceSourceContext = {
+  const sourceCtx: JypSourceContext = {
     crawlerSourceId: source.id,
     sourceKey: source.source_key,
     sourceName: source.name,
@@ -250,6 +285,8 @@ export async function runTwiceScheduleFetcher(
     parserType: source.parser_type,
     pageUrl,
     idolId,
+    groupId,
+    artistSlug,
   }
 
   const payloads = limited.map((entry) => ({
@@ -258,37 +295,27 @@ export async function runTwiceScheduleFetcher(
   }))
 
   // ── Dedup query ──────────────────────────────────────────────────────────
-  const hashes = payloads.map((p) => p.payload.source_hash)
-  const urls = payloads.map((p) => p.entry.sourceUrl)
   const existingHashes = new Set<string>()
   const existingUrls = new Set<string>()
 
   if (limited.length > 0) {
-    const hashQuery = supabase
-      .from('event_candidates')
-      .select('source_hash')
-      .in('source_hash', hashes)
-    const urlQuery = supabase
-      .from('event_candidates')
-      .select('source_url')
-      .in('source_url', urls)
-    const [hashRes, urlRes] = await Promise.all([hashQuery, urlQuery])
+    const hashes = payloads.map((p) => p.payload.source_hash)
+    const urls = payloads.map((p) => p.entry.sourceUrl)
+    const [hashRes, urlRes] = await Promise.all([
+      supabase.from('event_candidates').select('source_hash').in('source_hash', hashes),
+      supabase.from('event_candidates').select('source_url').in('source_url', urls),
+    ])
     if (hashRes.error || urlRes.error) {
       const err = hashRes.error ?? urlRes.error
       const msg = `去重查詢失敗：${err?.code ? `[${err.code}] ` : ''}${err?.message ?? '未知錯誤'}`
       await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
-      return {
-        source: 'twice-jyp-schedule',
-        mode,
+      return base({
         fetched: limited.length,
-        inserted: 0,
-        wouldInsert: 0,
-        skipped: 0,
         errors: [msg, ...fetchErrors],
         crawlerSourceId: source.id,
         sourceName: source.name,
         status: 500,
-      }
+      })
     }
     for (const row of hashRes.data ?? []) {
       const h = (row as { source_hash: string | null }).source_hash
@@ -333,17 +360,18 @@ export async function runTwiceScheduleFetcher(
 
   if (!dryRun) wouldInsert = inserted
 
-  const lastStatus: RunStatus =
-    errors.filter((e) => !fetchErrors.includes(e)).length > 0 || fetchErrors.length === MONTHS_AHEAD
-      ? 'partial_error'
-      : 'success'
+  const insertErrorCount = errors.length - fetchErrors.length
+  const lastStatus: RunStatus = errors.length === 0 ? 'success' : 'partial_error'
   await updateRunStatus(supabase, source.id, {
     last_status: lastStatus,
     last_error: errors.length > 0 ? errors.join('\n') : null,
   })
 
+  void insertErrorCount // kept for future logging
+
   return {
-    source: 'twice-jyp-schedule',
+    source: 'jyp-schedule',
+    sourceKey,
     mode,
     fetched: limited.length,
     inserted,

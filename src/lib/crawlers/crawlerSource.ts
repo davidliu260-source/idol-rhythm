@@ -31,6 +31,12 @@ export interface CrawlerSourceRow {
   source_type: SourceTypeEnum
   parser_type: string
   is_active: boolean
+  /**
+   * Per-source parser parameters. Migration 022 introduces this column
+   * with default '{}'::jsonb; older rows may have empty object.
+   * Shape is parser-specific (e.g. jyp_schedule: { groupId, artistSlug }).
+   */
+  config: Record<string, unknown>
 }
 
 /**
@@ -44,7 +50,7 @@ export async function getCrawlerSourceByKey(
   const { data, error } = await supabase
     .from('crawler_sources')
     .select(
-      'id, name, source_key, idol_id, source_url, source_type, parser_type, is_active',
+      'id, name, source_key, idol_id, source_url, source_type, parser_type, is_active, config',
     )
     .eq('source_key', key)
     .maybeSingle()
@@ -58,7 +64,14 @@ export async function getCrawlerSourceByKey(
   if (!data) {
     return { source: null, error: `找不到 crawler_sources：${key}` }
   }
-  return { source: data as CrawlerSourceRow, error: null }
+  // Normalise: pre-migration-022 rows may not have config column; null → {}.
+  const row = data as Omit<CrawlerSourceRow, 'config'> & {
+    config: Record<string, unknown> | null
+  }
+  return {
+    source: { ...row, config: row.config ?? {} },
+    error: null,
+  }
 }
 
 /**

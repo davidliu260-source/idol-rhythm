@@ -17,6 +17,7 @@ interface SourceDetail {
   sourceType: string
   parserType: string
   isActive: boolean
+  config: Record<string, unknown>
   lastRunAt: string | null
   lastStatus: string | null
   lastError: string | null
@@ -31,7 +32,7 @@ async function getSource(id: string): Promise<SourceDetail | null> {
   const { data, error } = await supabase
     .from('crawler_sources')
     .select(
-      'id, name, source_key, source_url, source_type, parser_type, is_active, last_run_at, last_status, last_error, created_at, updated_at, idols(name, slug)',
+      'id, name, source_key, source_url, source_type, parser_type, is_active, config, last_run_at, last_status, last_error, created_at, updated_at, idols(name, slug)',
     )
     .eq('id', id)
     .single()
@@ -50,6 +51,7 @@ async function getSource(id: string): Promise<SourceDetail | null> {
     sourceType: data.source_type as string,
     parserType: data.parser_type as string,
     isActive: data.is_active as boolean,
+    config: ((data.config ?? {}) as Record<string, unknown>),
     lastRunAt: data.last_run_at as string | null,
     lastStatus: data.last_status as string | null,
     lastError: data.last_error as string | null,
@@ -107,6 +109,7 @@ export default async function AdminSourceDetailPage({
         <div className="px-4 mb-4">
           <RunSourceButton
             parserType={source.parserType}
+            sourceKey={source.sourceKey}
             sourceName={source.name}
           />
         </div>
@@ -162,6 +165,24 @@ export default async function AdminSourceDetailPage({
               </a>
             }
           />
+        </Section>
+
+        <Section title="parser 設定 (config)">
+          {Object.keys(source.config).length === 0 ? (
+            <Row label="（空）" value={<span className="text-muted">尚未設定</span>} />
+          ) : (
+            Object.entries(source.config).map(([k, v]) => (
+              <Row
+                key={k}
+                label={k}
+                value={
+                  <span className="font-mono break-all">
+                    {typeof v === 'string' ? v : JSON.stringify(v)}
+                  </span>
+                }
+              />
+            ))
+          )}
         </Section>
 
         <Section title="時間紀錄">
