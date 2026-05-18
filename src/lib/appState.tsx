@@ -76,12 +76,30 @@ function useAuthUser(): { user: AuthUser | null; isLoading: boolean } {
 
     let cancelled = false
 
-    // Initial fetch.
+    // Hard timeout safety net.
     //
-    // .catch + .finally are critical: if supabase.auth.getUser() ever rejects
-    // (offline, expired refresh token, Supabase 5xx, etc.) we MUST still flip
-    // isLoading to false. Otherwise /me and /favorites hang on the "載入中…"
-    // spinner forever because they both gate render on isUserLoading.
+    // In practice supabase.auth.getUser() can hang indefinitely (not reject,
+    // not resolve) when the locally-stored refresh token has been invalidated
+    // server-side and the refresh request stalls — the JS SDK doesn't always
+    // surface that as a rejection. The previous .catch / .finally fix only
+    // helps when the promise actually rejects, so /me and /favorites still
+    // hang on "載入中…" forever in the silent-hang case.
+    //
+    // 4s is enough for a normal Supabase round-trip; if we haven't heard back
+    // by then, treat the user as anonymous and let the page render. If
+    // getUser() does eventually resolve later, onAuthStateChange (subscribed
+    // below) will still push the real user into state.
+    const timeoutMs = 4000
+    const timeoutTimer = setTimeout(() => {
+      if (cancelled) return
+      // eslint-disable-next-line no-console
+      console.warn(
+        `useAuthUser: getUser() did not respond in ${timeoutMs}ms, ` +
+          'treating as anonymous (real session will arrive via onAuthStateChange if available).',
+      )
+      setIsLoading(false)
+    }, timeoutMs)
+
     supabase.auth
       .getUser()
       .then(({ data: { user: u } }) => {
@@ -96,19 +114,26 @@ function useAuthUser(): { user: AuthUser | null; isLoading: boolean } {
       })
       .finally(() => {
         if (cancelled) return
+        clearTimeout(timeoutTimer)
         setIsLoading(false)
       })
 
-    // Subscribe to subsequent changes (sign in / sign out / token refresh)
+    // Subscribe to subsequent changes (sign in / sign out / token refresh).
+    // After the hard timeout above, this is also how the real session lands
+    // in state if Supabase eventually replies.
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       const u = session?.user
       setUser(u ? { id: u.id, email: u.email ?? null } : null)
+      // If the timeout fired first, isLoading is already false; calling this
+      // again is a harmless idempotent set.
+      setIsLoading(false)
     })
 
     return () => {
       cancelled = true
+      clearTimeout(timeoutTimer)
       subscription.unsubscribe()
     }
   }, [])
