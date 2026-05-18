@@ -75,6 +75,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
               className="flex-shrink-0 p-1.5 -mr-1"
               onClick={(e) => {
                 e.preventDefault()
+                e.stopPropagation()
                 favorites.toggle(event.id)
               }}
               aria-label={isFavorited ? '取消收藏' : '收藏'}
