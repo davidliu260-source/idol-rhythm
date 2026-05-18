@@ -23,6 +23,7 @@ interface IdolDetail {
   member_count: number | null
   description: string | null
   is_active: boolean
+  avatar_url: string | null
 }
 
 // ── Data fetcher ──────────────────────────────────────────────────────────────
@@ -33,7 +34,7 @@ async function getIdolById(id: string): Promise<IdolDetail | null> {
 
   const { data, error } = await supabase
     .from('idols')
-    .select('id, slug, name, korean_name, type, gender, category, agency, debut_date, color, genres, member_count, description, is_active')
+    .select('id, slug, name, korean_name, type, gender, category, agency, debut_date, color, genres, member_count, description, is_active, avatar_url')
     .eq('id', id)
     .single()
 
@@ -116,6 +117,7 @@ export default async function AdminEditIdolPage({
     genres:      idol.genres.join(', '),
     memberCount: idol.member_count !== null ? String(idol.member_count) : '',
     description: idol.description ?? '',
+    avatarUrl:   idol.avatar_url ?? '',
   }
 
   return (

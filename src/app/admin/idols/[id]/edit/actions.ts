@@ -19,6 +19,7 @@ export interface UpdateIdolPayload {
   genres: string[]
   memberCount: string   // string from <input type="number">, converted server-side
   description: string
+  avatarUrl: string
 }
 
 // ── Server Action ─────────────────────────────────────────────────────────────
@@ -51,6 +52,7 @@ export async function updateIdol(
       genres:       payload.genres,
       member_count: payload.memberCount ? parseInt(payload.memberCount, 10) : null,
       description:  payload.description.trim() || null,
+      avatar_url:   payload.avatarUrl.trim() || null,
       // slug, is_active, id, created_at are intentionally omitted
     })
     .eq('id', idolId)

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Search, Check, Users } from 'lucide-react'
 import type { Idol } from '@/lib/mockIdols'
 import { useAppState } from '@/lib/appState'
+import IdolAvatar from '@/components/IdolAvatar'
 import clsx from 'clsx'
 
 const GENRES = ['全部', 'K-Pop', '嘻哈', '電子流行', '青春']
@@ -99,13 +100,13 @@ function IdolCard({
         isFollowing ? 'border-primary/50 bg-primary-dim' : 'border-card-border bg-card',
       )}
     >
-      <div
-        className={clsx(
-          'h-16 w-16 rounded-2xl flex items-center justify-center text-2xl font-bold text-white mb-3',
-          `bg-gradient-to-br ${idol.gradient}`,
-        )}
-      >
-        {idol.name.charAt(0)}
+      <div className="mb-3">
+        <IdolAvatar
+          name={idol.name}
+          avatarUrl={idol.avatarUrl}
+          color={idol.color}
+          size="lg"
+        />
       </div>
 
       <div className="mb-3">

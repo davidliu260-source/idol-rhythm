@@ -6,6 +6,7 @@ import { Sparkles, Star, Heart, Bell, ChevronRight, LogIn } from 'lucide-react'
 import { type Event } from '@/lib/mockEvents'
 import { getIdolById, type Idol } from '@/lib/mockIdols'
 import { useAppState } from '@/lib/appState'
+import IdolAvatar from './IdolAvatar'
 
 // Display caps (per work order)
 const MAX_FOLLOWING = 5
@@ -145,12 +146,13 @@ export default function HomePersonalized({
                 href="/idols"
                 className="flex flex-col items-center gap-1.5 flex-shrink-0"
               >
-                <div
-                  className="h-14 w-14 rounded-2xl flex items-center justify-center text-xl font-bold text-white ring-2 ring-primary/30"
-                  style={{ background: `linear-gradient(135deg, ${idol.color}88, ${idol.color})` }}
-                >
-                  {idol.name.charAt(0)}
-                </div>
+                <IdolAvatar
+                  name={idol.name}
+                  avatarUrl={idol.avatarUrl}
+                  color={idol.color}
+                  size="lg"
+                  className="!h-14 !w-14 !text-xl ring-2 ring-primary/30"
+                />
                 <span className="text-xs text-muted max-w-[56px] truncate text-center">
                   {idol.name}
                 </span>
@@ -301,22 +303,18 @@ function CountdownCard({ event, now }: { event: Event; now: Date }) {
   // event.idolId = slug, and mock events use 'bts' / 'blackpink' etc. So
   // both data sources match. Unknown slugs fall back to a generic gradient.
   const idol = getIdolById(event.idolId)
-  const bgStyle = idol
-    ? `linear-gradient(135deg, ${idol.color}88, ${idol.color})`
-    : 'linear-gradient(135deg, #4c1d95, #6366f1)'
-
   const label = getCountdownLabel(new Date(event.date), now)
 
   return (
     <Link href={`/events/${event.id}`} className="flex-shrink-0 w-40">
       <div className="rounded-2xl border border-card-border bg-card p-3 flex flex-col gap-2 active:scale-[0.98] transition-transform h-full">
         <div className="flex items-center gap-2">
-          <div
-            className="h-8 w-8 rounded-lg flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
-            style={{ background: bgStyle }}
-          >
-            {event.idolName.charAt(0)}
-          </div>
+          <IdolAvatar
+            name={event.idolName}
+            avatarUrl={event.idolAvatarUrl}
+            color={idol?.color ?? '#6366f1'}
+            size="xs"
+          />
           <span className="text-xs font-semibold text-primary truncate">
             {event.idolName}
           </span>

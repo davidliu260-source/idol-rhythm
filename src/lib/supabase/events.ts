@@ -23,7 +23,7 @@ interface SupabaseEventRow {
   stream_url: string | null
   is_published: boolean
   published_at: string | null
-  idols?: { slug: string } | null
+  idols?: { slug: string; avatar_url: string | null } | null
   event_sources?: SupabaseEventSourceRow[] | null
 }
 
@@ -43,6 +43,7 @@ interface SupabaseIdolRow {
   member_count: number | null
   description: string | null
   is_active: boolean
+  avatar_url: string | null
 }
 
 interface SupabaseEventSourceRow {
@@ -76,6 +77,7 @@ function rowToEvent(row: SupabaseEventRow): Event {
     // Falls back to the UUID if the idols join is unavailable.
     idolId: row.idols?.slug ?? row.idol_id,
     idolName: row.idol_name,
+    idolAvatarUrl: row.idols?.avatar_url ?? null,
     title: row.title,
     type: row.type as EventType,
     subType: (row.sub_type ?? undefined) as EventSubType | undefined,
@@ -111,6 +113,7 @@ function rowToIdol(row: SupabaseIdolRow): Idol {
     memberCount: row.member_count ?? undefined,
     following: false, // UI state — managed by localStorage / auth layer
     description: row.description ?? '',
+    avatarUrl: row.avatar_url ?? null,
   }
 }
 
@@ -135,7 +138,7 @@ export async function getPublishedEvents(): Promise<Event[]> {
 
   const { data, error } = await supabase
     .from('events')
-    .select('*, idols!inner(slug), event_sources(id, event_id, level, label, type, url)')
+    .select('*, idols!inner(slug, avatar_url), event_sources(id, event_id, level, label, type, url)')
     .eq('is_published', true)
     .in('trust_level', ['official', 'media'])
     .neq('status', 'cancelled')
@@ -175,7 +178,7 @@ export async function getEventById(id: string): Promise<Event | null> {
 
   const { data, error } = await supabase
     .from('events')
-    .select('*, idols!inner(slug), event_sources(id, event_id, level, label, type, url)')
+    .select('*, idols!inner(slug, avatar_url), event_sources(id, event_id, level, label, type, url)')
     .eq('id', id)
     .eq('is_published', true)
     .in('trust_level', ['official', 'media'])

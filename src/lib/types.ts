@@ -19,6 +19,7 @@ export interface Idol {
   memberCount?: number
   following: boolean
   description: string
+  avatarUrl?: string | null
 }
 
 // ── Event ─────────────────────────────────────────────────────────────────────
@@ -84,6 +85,12 @@ export interface Event {
   id: string
   idolId: string
   idolName: string
+  /**
+   * Joined from idols.avatar_url at query time (not stored on events row).
+   * NULL when the idol has no avatar uploaded yet — UI falls back to the
+   * initial+gradient block.
+   */
+  idolAvatarUrl?: string | null
   title: string
   type: EventType
   subType?: EventSubType
