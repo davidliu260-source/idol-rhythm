@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import { Loader2 } from 'lucide-react'
-import { updateIdol, type UpdateIdolPayload } from './actions'
+import { useRef, useState } from 'react'
+import { Loader2, Upload, ImageIcon } from 'lucide-react'
+import { updateIdol, uploadIdolAvatar, type UpdateIdolPayload } from './actions'
 
 // ── Option lists ──────────────────────────────────────────────────────────────
 
@@ -75,6 +75,31 @@ export default function EditIdolForm({ idolId, initial }: EditIdolFormProps) {
   const [memberCount, setMemberCount] = useState(initial.memberCount)
   const [description, setDescription] = useState(initial.description)
   const [avatarUrl,   setAvatarUrl]   = useState(initial.avatarUrl)
+
+  // ── I1b-A: avatar file upload state ────────────────────────────────────────
+  const [uploading,    setUploading]    = useState(false)
+  const [uploadError,  setUploadError]  = useState<string | null>(null)
+  const [uploadNotice, setUploadNotice] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  async function handleAvatarUpload(file: File) {
+    setUploadError(null)
+    setUploadNotice(null)
+    setUploading(true)
+
+    const formData = new FormData()
+    formData.append('file', file)
+    const result = await uploadIdolAvatar(idolId, formData)
+
+    if (!result.ok || !result.avatarUrl) {
+      setUploadError(result.error ?? '上傳失敗')
+    } else {
+      setAvatarUrl(result.avatarUrl)
+      setUploadNotice('已上傳並寫入 avatar_url。')
+    }
+    if (fileInputRef.current) fileInputRef.current.value = ''
+    setUploading(false)
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -257,17 +282,62 @@ export default function EditIdolForm({ idolId, initial }: EditIdolFormProps) {
           />
         </Field>
 
-        <Field label="頭像圖片 URL">
+        <Field label="頭像圖片">
+          {/* Preview + upload row */}
+          <div className="flex items-center gap-3">
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={avatarUrl}
+                alt="目前頭像預覽"
+                className="h-12 w-12 rounded-xl object-cover bg-card border border-card-border"
+              />
+            ) : (
+              <div className="h-12 w-12 rounded-xl bg-card border border-card-border flex items-center justify-center text-muted">
+                <ImageIcon className="h-5 w-5" />
+              </div>
+            )}
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0]
+                if (f) handleAvatarUpload(f)
+              }}
+            />
+
+            <button
+              type="button"
+              disabled={uploading}
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-violet/40 bg-violet/10 px-3 py-2 text-xs font-semibold text-violet-200 disabled:opacity-60 transition-opacity"
+            >
+              {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+              {uploading ? '上傳中…' : '選擇圖片上傳'}
+            </button>
+          </div>
+
+          <p className="text-[10px] text-muted/50 mt-1.5">
+            支援 JPEG / PNG / WebP，上限 2 MB。上傳成功會直接寫入 avatar_url；如不上傳本機檔，也可手動貼公開圖片網址。
+          </p>
+
+          {uploadError && (
+            <p className="text-[10px] text-red-400 mt-1">{uploadError}</p>
+          )}
+          {uploadNotice && (
+            <p className="text-[10px] text-emerald-400 mt-1">{uploadNotice}</p>
+          )}
+
           <input
             type="url"
             value={avatarUrl}
             onChange={(e) => setAvatarUrl(e.target.value)}
-            placeholder="https://...（公開可讀的圖片網址）"
-            className={inputCls}
+            placeholder="https://...（手動貼網址）"
+            className={inputCls + ' mt-2'}
           />
-          <p className="text-[10px] text-muted/50 mt-0.5">
-            填入後前台 /idols、首頁、活動卡會顯示此圖；留空則顯示首字母 + 漸層 fallback。
-          </p>
         </Field>
       </Section>
 
