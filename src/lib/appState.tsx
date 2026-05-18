@@ -76,64 +76,51 @@ function useAuthUser(): { user: AuthUser | null; isLoading: boolean } {
 
     let cancelled = false
 
-    // Hard timeout safety net.
+    // Use getSession() instead of getUser().
     //
-    // In practice supabase.auth.getUser() can hang indefinitely (not reject,
-    // not resolve) when the locally-stored refresh token has been invalidated
-    // server-side and the refresh request stalls — the JS SDK doesn't always
-    // surface that as a rejection. The previous .catch / .finally fix only
-    // helps when the promise actually rejects, so /me and /favorites still
-    // hang on "載入中…" forever in the silent-hang case.
+    // - getUser() calls Supabase's /auth/v1/user endpoint to re-verify the
+    //   JWT on every page mount. Under bad network / expired refresh tokens
+    //   it can silent-hang forever (not resolve, not reject), which is what
+    //   was breaking /me and /favorites for an actually-logged-in user.
+    // - getSession() reads the session from local cookies/storage. No
+    //   network call. Returns instantly. Good enough for "do we have a
+    //   logged-in user and what's their id/email?" — which is all we use
+    //   it for in this app.
     //
-    // 4s is enough for a normal Supabase round-trip; if we haven't heard back
-    // by then, treat the user as anonymous and let the page render. If
-    // getUser() does eventually resolve later, onAuthStateChange (subscribed
-    // below) will still push the real user into state.
-    const timeoutMs = 4000
-    const timeoutTimer = setTimeout(() => {
-      if (cancelled) return
-      // eslint-disable-next-line no-console
-      console.warn(
-        `useAuthUser: getUser() did not respond in ${timeoutMs}ms, ` +
-          'treating as anonymous (real session will arrive via onAuthStateChange if available).',
-      )
-      setIsLoading(false)
-    }, timeoutMs)
-
+    // If the cached session's JWT is expired the SDK will attempt a silent
+    // refresh in the background; onAuthStateChange (subscribed below) picks
+    // up the new session when that completes.
     supabase.auth
-      .getUser()
-      .then(({ data: { user: u } }) => {
+      .getSession()
+      .then(({ data: { session } }) => {
         if (cancelled) return
+        const u = session?.user
         setUser(u ? { id: u.id, email: u.email ?? null } : null)
       })
       .catch((err) => {
         if (cancelled) return
         // eslint-disable-next-line no-console
-        console.error('useAuthUser: getUser() failed, treating as anonymous:', err)
+        console.error('useAuthUser: getSession() failed, treating as anonymous:', err)
         setUser(null)
       })
       .finally(() => {
         if (cancelled) return
-        clearTimeout(timeoutTimer)
         setIsLoading(false)
       })
 
-    // Subscribe to subsequent changes (sign in / sign out / token refresh).
-    // After the hard timeout above, this is also how the real session lands
-    // in state if Supabase eventually replies.
+    // Subscribe to sign in / sign out / token refresh so future auth changes
+    // (including the SDK's background refresh of an expired token) land in
+    // state without forcing the user to reload.
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       const u = session?.user
       setUser(u ? { id: u.id, email: u.email ?? null } : null)
-      // If the timeout fired first, isLoading is already false; calling this
-      // again is a harmless idempotent set.
       setIsLoading(false)
     })
 
     return () => {
       cancelled = true
-      clearTimeout(timeoutTimer)
       subscription.unsubscribe()
     }
   }, [])
