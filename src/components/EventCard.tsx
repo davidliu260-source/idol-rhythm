@@ -128,6 +128,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
             className="flex-shrink-0 p-1 -mt-0.5 -mr-0.5"
             onClick={(e) => {
               e.preventDefault()
+              e.stopPropagation()
               favorites.toggle(event.id)
             }}
             aria-label={isFavorited ? '取消收藏' : '收藏'}
@@ -175,6 +176,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
             active={isFavorited}
             onClick={(e) => {
               e.preventDefault()
+              e.stopPropagation()
               favorites.toggle(event.id)
             }}
           />
@@ -186,6 +188,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
             active={hasReminder}
             onClick={(e) => {
               e.preventDefault()
+              e.stopPropagation()
               reminders.toggle(event.id)
             }}
           />
@@ -193,13 +196,19 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
             <ActionBtn
               icon={<ExternalLink className="h-3.5 w-3.5" />}
               label="來源"
-              onClick={(e) => e.preventDefault()}
+              onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+            }}
             />
           )}
           <ActionBtn
             icon={<Share2 className="h-3.5 w-3.5" />}
             label="分享"
-            onClick={(e) => e.preventDefault()}
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+            }}
           />
         </div>
       </div>
