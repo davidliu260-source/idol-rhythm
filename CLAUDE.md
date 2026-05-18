@@ -192,7 +192,7 @@
 | 021 | Seed TWICE idol + JYP schedule source（J6c）| ✅ 已執行 |
 | 022 | ADD COLUMN config jsonb；TWICE → parser_type='jyp_schedule'（J6d）| ✅ 已執行 |
 | 023 | Seed Stray Kids idol + JYP schedule source（J7a）| ✅ 已執行 |
-| 024 | GRANT SELECT ON events + event_sources TO anon（修復前台 0 筆活動）| ⏳ 待人工執行 |
+| 024 | GRANT SELECT ON events + event_sources TO anon（修復前台 0 筆活動）| ✅ 已執行 |
 
 ---
 
