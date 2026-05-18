@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { Loader2, Mail, MailCheck, KeyRound, UserPlus } from 'lucide-react'
 import { getBrowserSupabaseClient } from '@/lib/supabase/browserClient'
 
@@ -307,9 +308,18 @@ export default function LoginForm({ nextPath }: { nextPath: string }) {
               : passwordMode === 'signin' ? '登入' : '註冊'}
           </button>
 
+          {passwordMode === 'signin' && (
+            <Link
+              href="/forgot-password"
+              className="self-start text-[11px] text-primary underline underline-offset-2"
+            >
+              忘記密碼？
+            </Link>
+          )}
+
           <p className="text-[10px] text-muted/60 leading-relaxed">
             {passwordMode === 'signin'
-              ? '使用既有帳號的 email 與密碼登入。「忘記密碼」功能稍後開放。'
+              ? '使用既有帳號的 email 與密碼登入。'
               : `註冊後可能會收到一封確認信（依 Supabase「Confirm email」設定而定）。`}
           </p>
         </form>
