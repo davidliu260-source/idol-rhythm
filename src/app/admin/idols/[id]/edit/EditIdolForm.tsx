@@ -54,6 +54,7 @@ export interface EditIdolFormProps {
     memberCount: string
     description: string
     avatarUrl: string
+    altNames: string   // newline-separated string for the textarea
   }
 }
 
@@ -75,6 +76,7 @@ export default function EditIdolForm({ idolId, initial }: EditIdolFormProps) {
   const [memberCount, setMemberCount] = useState(initial.memberCount)
   const [description, setDescription] = useState(initial.description)
   const [avatarUrl,   setAvatarUrl]   = useState(initial.avatarUrl)
+  const [altNames,    setAltNames]    = useState(initial.altNames)
 
   // ── I1b-A: avatar file upload state ────────────────────────────────────────
   const [uploading,    setUploading]    = useState(false)
@@ -110,6 +112,10 @@ export default function EditIdolForm({ idolId, initial }: EditIdolFormProps) {
       ? genres.split(',').map((g) => g.trim()).filter(Boolean)
       : []
 
+    const altNamesArray = altNames
+      ? altNames.split('\n').map((n) => n.trim()).filter(Boolean)
+      : []
+
     const payload: UpdateIdolPayload = {
       name,
       koreanName,
@@ -123,6 +129,7 @@ export default function EditIdolForm({ idolId, initial }: EditIdolFormProps) {
       memberCount,
       description,
       avatarUrl,
+      altNames: altNamesArray,
     }
 
     const result = await updateIdol(idolId, payload)
@@ -280,6 +287,19 @@ export default function EditIdolForm({ idolId, initial }: EditIdolFormProps) {
             placeholder="偶像簡介（選填）"
             className={inputCls + ' resize-none'}
           />
+        </Field>
+
+        <Field label="別名（每行一個）">
+          <textarea
+            rows={3}
+            value={altNames}
+            onChange={(e) => setAltNames(e.target.value)}
+            placeholder={'例：\nSKZ\n스트레이 키즈'}
+            className={inputCls + ' resize-none font-mono text-xs'}
+          />
+          <p className="text-[10px] text-muted/50 mt-0.5">
+            供聚合來源爬蟲比對藝人用。每行一個別名，大小寫與空白會被自動 normalize；不會在前台顯示。
+          </p>
         </Field>
 
         <Field label="頭像圖片">
