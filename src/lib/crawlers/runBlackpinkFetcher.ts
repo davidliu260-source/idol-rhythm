@@ -43,6 +43,8 @@ export interface FetcherResult {
    */
   wouldInsert: number
   skipped: number
+  /** J7d-A: number of existing rows flagged needs_recheck this run. */
+  recheck: number
   errors: string[]
   /** Source row id from crawler_sources, when resolved. */
   crawlerSourceId: string | null
@@ -88,6 +90,7 @@ export async function runBlackpinkFetcher(
       inserted: 0,
       wouldInsert: 0,
       skipped: 0,
+      recheck: 0,
       errors: [sourceError ?? '找不到 crawler_sources'],
       crawlerSourceId: null,
       sourceName: null,
@@ -108,6 +111,7 @@ export async function runBlackpinkFetcher(
       inserted: 0,
       wouldInsert: 0,
       skipped: 0,
+      recheck: 0,
       errors: [msg],
       crawlerSourceId: source.id,
       sourceName: source.name,
@@ -128,6 +132,7 @@ export async function runBlackpinkFetcher(
       inserted: 0,
       wouldInsert: 0,
       skipped: 0,
+      recheck: 0,
       errors: [msg],
       crawlerSourceId: source.id,
       sourceName: source.name,
@@ -165,6 +170,7 @@ export async function runBlackpinkFetcher(
           inserted: 0,
           wouldInsert: 0,
           skipped: 0,
+          recheck: 0,
           errors: [msg],
           crawlerSourceId: source.id,
           sourceName: source.name,
@@ -188,6 +194,7 @@ export async function runBlackpinkFetcher(
       inserted: 0,
       wouldInsert: 0,
       skipped: 0,
+      recheck: 0,
       errors: [msg],
       crawlerSourceId: source.id,
       sourceName: source.name,
@@ -212,6 +219,7 @@ export async function runBlackpinkFetcher(
       inserted: 0,
       wouldInsert: 0,
       skipped: 0,
+      recheck: 0,
       errors: [msg],
       crawlerSourceId: source.id,
       sourceName: source.name,
@@ -232,6 +240,7 @@ export async function runBlackpinkFetcher(
       inserted: 0,
       wouldInsert: 0,
       skipped: 0,
+      recheck: 0,
       errors: [msg],
       crawlerSourceId: source.id,
       sourceName: source.name,
@@ -279,19 +288,26 @@ export async function runBlackpinkFetcher(
     payload: entryToCandidatePayload(entry, sourceCtx),
   }))
 
-  // ── Dedup query ──────────────────────────────────────────────────────────
+  // ── Dedup query (J7d-A: fetch id + content_hash + reviewer_note too) ─────
+  interface ExistingRow {
+    id: string
+    source_hash: string | null
+    source_url: string | null
+    content_hash: string | null
+    reviewer_note: string | null
+  }
   const hashes = payloads.map((p) => p.payload.source_hash)
   const urls = payloads.map((p) => p.entry.sourceUrl)
-  const existingHashes = new Set<string>()
-  const existingUrls = new Set<string>()
+  const existingByHash = new Map<string, ExistingRow>()
+  const existingByUrl = new Map<string, ExistingRow>()
   {
     const hashQuery = supabase
       .from('event_candidates')
-      .select('source_hash')
+      .select('id, source_hash, source_url, content_hash, reviewer_note')
       .in('source_hash', hashes)
     const urlQuery = supabase
       .from('event_candidates')
-      .select('source_url')
+      .select('id, source_hash, source_url, content_hash, reviewer_note')
       .in('source_url', urls)
     const [hashRes, urlRes] = await Promise.all([hashQuery, urlQuery])
     if (hashRes.error || urlRes.error) {
@@ -308,55 +324,106 @@ export async function runBlackpinkFetcher(
         inserted: 0,
         wouldInsert: 0,
         skipped: 0,
+        recheck: 0,
         errors: [msg],
         crawlerSourceId: source.id,
         sourceName: source.name,
         status: 500,
       }
     }
-    for (const row of hashRes.data ?? []) {
-      const h = (row as { source_hash: string | null }).source_hash
-      if (h) existingHashes.add(h)
+    for (const row of (hashRes.data ?? []) as ExistingRow[]) {
+      if (row.source_hash) existingByHash.set(row.source_hash, row)
     }
-    for (const row of urlRes.data ?? []) {
-      const u = (row as { source_url: string | null }).source_url
-      if (u) existingUrls.add(u)
+    for (const row of (urlRes.data ?? []) as ExistingRow[]) {
+      if (row.source_url) existingByUrl.set(row.source_url, row)
     }
   }
 
-  // ── INSERT (or dry-run count) loop ───────────────────────────────────────
+  // ── INSERT / RECHECK loop ────────────────────────────────────────────────
+  // Per-row outcomes (see runJypScheduleFetcher for the long-form comment):
+  //   - new row → INSERT
+  //   - existing, content_hash NULL → silent backfill (legacy row)
+  //   - existing, content_hash matches → skip
+  //   - existing, content_hash differs → flag needs_recheck=true + append
+  //     timestamped note; never touch review_status / approved_event_id /
+  //     raw fields (J7d-A scope per work order #32).
   let inserted = 0
   let wouldInsert = 0
   let skipped = 0
+  let recheck = 0
   const errors: string[] = []
 
   for (const { entry, payload } of payloads) {
-    if (existingHashes.has(payload.source_hash)) {
+    const existing =
+      existingByHash.get(payload.source_hash) ?? existingByUrl.get(entry.sourceUrl) ?? null
+
+    if (!existing) {
+      if (dryRun) {
+        wouldInsert += 1
+        continue
+      }
+      const { error } = await supabase.from('event_candidates').insert(payload)
+      if (error) {
+        if (error.code === '23505') {
+          skipped += 1
+          continue
+        }
+        errors.push(
+          `${entry.city}: insert 失敗 ${error.code ? `[${error.code}] ` : ''}${error.message}`,
+        )
+        continue
+      }
+      inserted += 1
+      continue
+    }
+
+    if (existing.content_hash === null) {
+      if (!dryRun) {
+        const { error } = await supabase
+          .from('event_candidates')
+          .update({ content_hash: payload.content_hash })
+          .eq('id', existing.id)
+        if (error) {
+          errors.push(
+            `${entry.city}: content_hash backfill 失敗 ${error.code ? `[${error.code}] ` : ''}${error.message}`,
+          )
+          continue
+        }
+      }
       skipped += 1
       continue
     }
-    if (existingUrls.has(entry.sourceUrl)) {
+
+    if (existing.content_hash === payload.content_hash) {
       skipped += 1
       continue
     }
 
     if (dryRun) {
-      wouldInsert += 1
+      recheck += 1
       continue
     }
 
-    const { error } = await supabase.from('event_candidates').insert(payload)
+    const noteSuffix = `[${new Date().toISOString()}] content changed after capture`
+    const newNote = existing.reviewer_note
+      ? `${existing.reviewer_note}\n${noteSuffix}`
+      : noteSuffix
+
+    const { error } = await supabase
+      .from('event_candidates')
+      .update({
+        needs_recheck: true,
+        content_hash: payload.content_hash,
+        reviewer_note: newNote,
+      })
+      .eq('id', existing.id)
     if (error) {
-      if (error.code === '23505') {
-        skipped += 1
-        continue
-      }
       errors.push(
-        `${entry.city}: insert 失敗 ${error.code ? `[${error.code}] ` : ''}${error.message}`,
+        `${entry.city}: recheck flag 失敗 ${error.code ? `[${error.code}] ` : ''}${error.message}`,
       )
       continue
     }
-    inserted += 1
+    recheck += 1
   }
 
   if (!dryRun) wouldInsert = inserted
@@ -375,6 +442,7 @@ export async function runBlackpinkFetcher(
     inserted,
     wouldInsert,
     skipped,
+    recheck,
     errors,
     crawlerSourceId: source.id,
     sourceName: source.name,

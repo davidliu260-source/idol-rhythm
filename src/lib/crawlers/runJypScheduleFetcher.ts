@@ -40,6 +40,8 @@ export interface FetcherResult {
   inserted: number
   wouldInsert: number
   skipped: number
+  /** J7d-A: number of existing rows flagged needs_recheck this run. */
+  recheck: number
   errors: string[]
   crawlerSourceId: string | null
   sourceName: string | null
@@ -115,6 +117,7 @@ export async function runJypScheduleFetcher(
     fetched: 0,
     inserted: 0,
     wouldInsert: 0,
+    recheck: 0,
     skipped: 0,
     errors: [],
     crawlerSourceId: null,
@@ -311,16 +314,29 @@ export async function runJypScheduleFetcher(
     payload: entryToCandidatePayload(entry, sourceCtx),
   }))
 
-  // ── Dedup query ──────────────────────────────────────────────────────────
-  const existingHashes = new Set<string>()
-  const existingUrls = new Set<string>()
+  // ── Dedup query (J7d-A: also fetch id + content_hash + reviewer_note) ────
+  interface ExistingRow {
+    id: string
+    source_hash: string | null
+    source_url: string | null
+    content_hash: string | null
+    reviewer_note: string | null
+  }
+  const existingByHash = new Map<string, ExistingRow>()
+  const existingByUrl = new Map<string, ExistingRow>()
 
   if (limited.length > 0) {
     const hashes = payloads.map((p) => p.payload.source_hash)
     const urls = payloads.map((p) => p.entry.sourceUrl)
     const [hashRes, urlRes] = await Promise.all([
-      supabase.from('event_candidates').select('source_hash').in('source_hash', hashes),
-      supabase.from('event_candidates').select('source_url').in('source_url', urls),
+      supabase
+        .from('event_candidates')
+        .select('id, source_hash, source_url, content_hash, reviewer_note')
+        .in('source_hash', hashes),
+      supabase
+        .from('event_candidates')
+        .select('id, source_hash, source_url, content_hash, reviewer_note')
+        .in('source_url', urls),
     ])
     if (hashRes.error || urlRes.error) {
       const err = hashRes.error ?? urlRes.error
@@ -334,45 +350,106 @@ export async function runJypScheduleFetcher(
         status: 500,
       })
     }
-    for (const row of hashRes.data ?? []) {
-      const h = (row as { source_hash: string | null }).source_hash
-      if (h) existingHashes.add(h)
+    for (const row of (hashRes.data ?? []) as ExistingRow[]) {
+      if (row.source_hash) existingByHash.set(row.source_hash, row)
     }
-    for (const row of urlRes.data ?? []) {
-      const u = (row as { source_url: string | null }).source_url
-      if (u) existingUrls.add(u)
+    for (const row of (urlRes.data ?? []) as ExistingRow[]) {
+      if (row.source_url) existingByUrl.set(row.source_url, row)
     }
   }
 
-  // ── INSERT loop ──────────────────────────────────────────────────────────
+  // ── INSERT / RECHECK loop ────────────────────────────────────────────────
+  // Per-row outcomes:
+  //   - no existing row matching source_hash OR source_url → INSERT
+  //   - existing row, content_hash IS NULL  → silent backfill (treat as
+  //     unchanged; first post-J7d-A run for legacy rows)
+  //   - existing row, content_hash equals payload → SKIP (unchanged)
+  //   - existing row, content_hash differs  → FLAG needs_recheck=true,
+  //     update content_hash to new value, append a note line. Never touch
+  //     review_status, approved_event_id, or raw_* fields.
   let inserted = 0
   let wouldInsert = 0
   let skipped = 0
+  let recheck = 0
   const errors: string[] = [...fetchErrors]
 
   for (const { entry, payload } of payloads) {
-    if (existingHashes.has(payload.source_hash) || existingUrls.has(entry.sourceUrl)) {
+    const existing =
+      existingByHash.get(payload.source_hash) ?? existingByUrl.get(entry.sourceUrl) ?? null
+
+    if (!existing) {
+      if (dryRun) {
+        wouldInsert += 1
+        continue
+      }
+      const { error } = await supabase.from('event_candidates').insert(payload)
+      if (error) {
+        if (error.code === '23505') {
+          skipped += 1
+          continue
+        }
+        errors.push(
+          `${entry.title}: insert 失敗 ${error.code ? `[${error.code}] ` : ''}${error.message}`,
+        )
+        continue
+      }
+      inserted += 1
+      continue
+    }
+
+    // existing row matched
+    if (existing.content_hash === null) {
+      // First post-J7d-A capture for this legacy row — silently backfill
+      // content_hash without flagging. Skipping the recheck path here is
+      // intentional: we don't know whether the source changed, only that
+      // we never recorded a hash before.
+      if (!dryRun) {
+        const { error } = await supabase
+          .from('event_candidates')
+          .update({ content_hash: payload.content_hash })
+          .eq('id', existing.id)
+        if (error) {
+          errors.push(
+            `${entry.title}: content_hash backfill 失敗 ${error.code ? `[${error.code}] ` : ''}${error.message}`,
+          )
+          continue
+        }
+      }
       skipped += 1
       continue
     }
 
-    if (dryRun) {
-      wouldInsert += 1
+    if (existing.content_hash === payload.content_hash) {
+      skipped += 1
       continue
     }
 
-    const { error } = await supabase.from('event_candidates').insert(payload)
+    // Content drift detected.
+    if (dryRun) {
+      recheck += 1
+      continue
+    }
+
+    const noteSuffix = `[${new Date().toISOString()}] content changed after capture`
+    const newNote = existing.reviewer_note
+      ? `${existing.reviewer_note}\n${noteSuffix}`
+      : noteSuffix
+
+    const { error } = await supabase
+      .from('event_candidates')
+      .update({
+        needs_recheck: true,
+        content_hash: payload.content_hash,
+        reviewer_note: newNote,
+      })
+      .eq('id', existing.id)
     if (error) {
-      if (error.code === '23505') {
-        skipped += 1
-        continue
-      }
       errors.push(
-        `${entry.title}: insert 失敗 ${error.code ? `[${error.code}] ` : ''}${error.message}`,
+        `${entry.title}: recheck flag 失敗 ${error.code ? `[${error.code}] ` : ''}${error.message}`,
       )
       continue
     }
-    inserted += 1
+    recheck += 1
   }
 
   if (!dryRun) wouldInsert = inserted
@@ -394,6 +471,7 @@ export async function runJypScheduleFetcher(
     inserted,
     wouldInsert,
     skipped,
+    recheck,
     errors,
     crawlerSourceId: source.id,
     sourceName: source.name,

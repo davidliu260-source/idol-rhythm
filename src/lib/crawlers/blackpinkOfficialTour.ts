@@ -37,6 +37,7 @@
 
 import * as cheerio from 'cheerio'
 import { computeSourceHash } from './sourceHash'
+import { computeContentHash } from './contentHash'
 import type { SourceTypeEnum } from './crawlerSource'
 
 /** Bump when the parser output shape changes meaningfully. */
@@ -149,6 +150,8 @@ export interface BlackpinkCandidatePayload {
   reviewer_note: string
   /** SHA-256 hex; required field for J4 dedupe. */
   source_hash: string
+  /** SHA-256 hex over decisive content fields; J7d content-drift detection. */
+  content_hash: string
   /** Structured parsed payload, kept for future J3 / J6 re-processing. */
   raw_data: {
     source: 'blackpink-official-tour'
@@ -183,10 +186,22 @@ export function entryToCandidatePayload(
   // entry.sourceUrl is always present (page URL + #cityId), so the URL branch
   // of computeSourceHash will fire and the return is guaranteed non-null.
   const source_hash = computeSourceHash({ sourceUrl: entry.sourceUrl })!
+  const raw_content = lines.join('\n')
+
+  const content_hash = computeContentHash({
+    rawTitle: raw_title,
+    rawContent: raw_content,
+    detectedDate: entry.detectedDate,
+    detectedEventType: 'concert',
+    detectedIdolId: source.idolId,
+    sourceUrl: entry.sourceUrl,
+    sourceName: source.sourceName,
+    sourceType: source.sourceType,
+  })
 
   return {
     raw_title,
-    raw_content: lines.join('\n'),
+    raw_content,
     detected_idol_id: source.idolId,
     detected_event_type: 'concert',
     detected_date: entry.detectedDate,
@@ -196,6 +211,7 @@ export function entryToCandidatePayload(
     ai_confidence: null,
     reviewer_note: `auto-crawled from crawler source: ${source.sourceName}`,
     source_hash,
+    content_hash,
     raw_data: {
       source: 'blackpink-official-tour',
       crawler_source_id: source.crawlerSourceId,

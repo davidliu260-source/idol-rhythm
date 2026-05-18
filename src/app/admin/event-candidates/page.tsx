@@ -19,6 +19,7 @@ interface Candidate {
   aiConfidence: number | null
   hasIdol: boolean
   createdAt: string
+  needsRecheck: boolean
 }
 
 // ── Data fetcher ──────────────────────────────────────────────────────────────
@@ -31,7 +32,7 @@ async function getCandidates(): Promise<{ candidates: Candidate[]; error: string
 
   const { data, error } = await supabase
     .from('event_candidates')
-    .select('id, raw_title, detected_idol_id, detected_date, source_name, review_status, ai_confidence, created_at, idols(name)')
+    .select('id, raw_title, detected_idol_id, detected_date, source_name, review_status, ai_confidence, created_at, needs_recheck, idols(name)')
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -53,6 +54,7 @@ async function getCandidates(): Promise<{ candidates: Candidate[]; error: string
     aiConfidence: row.ai_confidence as number | null,
     hasIdol: !!row.detected_idol_id,
     createdAt: row.created_at as string,
+    needsRecheck: (row.needs_recheck as boolean | null) ?? false,
   }))
 
   // Sort: pending first, then approved, then rejected; within group by created_at desc
@@ -73,6 +75,7 @@ export default async function AdminCandidatesPage() {
   const pendingCount = candidates.filter((c) => c.reviewStatus === 'pending').length
   const approvedCount = candidates.filter((c) => c.reviewStatus === 'approved').length
   const rejectedCount = candidates.filter((c) => c.reviewStatus === 'rejected').length
+  const recheckCount = candidates.filter((c) => c.needsRecheck).length
 
   return (
     <div className="flex flex-col gap-0 pt-12 pb-6">
@@ -102,6 +105,9 @@ export default async function AdminCandidatesPage() {
           共 {candidates.length} 筆候選
           {pendingCount > 0 && (
             <span className="ml-1 text-amber-400">（{pendingCount} 待審核）</span>
+          )}
+          {recheckCount > 0 && (
+            <span className="ml-1 text-orange-400">（{recheckCount} 需重審）</span>
           )}
         </p>
       </div>
