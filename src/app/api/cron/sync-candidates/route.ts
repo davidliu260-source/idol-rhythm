@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { getSupabaseServiceClient } from '@/lib/supabase/serviceClient'
 import { runBlackpinkFetcher } from '@/lib/crawlers/runBlackpinkFetcher'
 import { runJypScheduleFetcher } from '@/lib/crawlers/runJypScheduleFetcher'
+import { runKpopofficialConcertsFetcher } from '@/lib/crawlers/runKpopofficialConcertsFetcher'
 
 export const dynamic = 'force-dynamic'
 
@@ -100,6 +101,26 @@ async function runSource(
     }
     case 'jyp_schedule': {
       const r = await runJypScheduleFetcher(supabase, {
+        sourceKey: source.source_key,
+        dryRun,
+      })
+      return {
+        source: r.source,
+        sourceKey: r.sourceKey,
+        sourceName: r.sourceName ?? source.name,
+        parserType: source.parser_type,
+        mode: r.mode,
+        fetched: r.fetched,
+        inserted: r.inserted,
+        wouldInsert: r.wouldInsert,
+        skipped: r.skipped,
+        recheck: r.recheck,
+        errors: r.errors,
+        status: r.status,
+      }
+    }
+    case 'kpopofficial_concerts': {
+      const r = await runKpopofficialConcertsFetcher(supabase, {
         sourceKey: source.source_key,
         dryRun,
       })
