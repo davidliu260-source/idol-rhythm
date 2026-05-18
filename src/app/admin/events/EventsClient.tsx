@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
-  ChevronRight, Check, X, CheckSquare, ShieldCheck, Newspaper, Trash2,
+  ChevronRight, Check, X, CheckSquare, ShieldCheck, Newspaper, Trash2, Search,
 } from 'lucide-react'
 import { EVENT_TYPE_LABELS, SOURCE_CONFIG } from '@/lib/mockEvents'
 import type { TrustLevel } from '@/lib/types'
@@ -18,9 +18,60 @@ interface AdminEvent {
   trustLevel: TrustLevel
   date: string
   countryFlag: string
+  location: string | null
   isPublished: boolean
   publishedAt: string | null
   sourceCount: number
+}
+
+// ── Tab filter definitions ───────────────────────────────────────────────────
+// Each tab is a self-contained predicate. Counts shown in tabs match the
+// filtered list count for that tab, so the user can trust the number.
+
+type FilterTab = 'upcoming' | 'draft' | 'published' | 'past' | 'official' | 'media' | 'all'
+
+const TAB_ORDER: FilterTab[] = [
+  'upcoming', 'draft', 'published', 'past', 'official', 'media', 'all',
+]
+const TAB_LABELS: Record<FilterTab, string> = {
+  upcoming: '即將',
+  draft: '草稿',
+  published: '已發布',
+  past: '過去',
+  official: '官方',
+  media: '媒體',
+  all: '全部',
+}
+
+function todayIsoDate(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function matchTab(event: AdminEvent, tab: FilterTab, todayIso: string): boolean {
+  // events.date may include a time component or be a bare date string.
+  // Compare 10-char date prefixes so "2026-05-20T19:00:00Z" still classifies
+  // as 'upcoming' on the day of 2026-05-20.
+  const eventDay = event.date.slice(0, 10)
+  switch (tab) {
+    case 'upcoming':  return eventDay >= todayIso
+    case 'past':      return eventDay <  todayIso
+    case 'draft':     return !event.isPublished
+    case 'published': return event.isPublished
+    case 'official':  return event.trustLevel === 'official'
+    case 'media':     return event.trustLevel === 'media'
+    case 'all':       return true
+  }
+}
+
+function matchSearch(event: AdminEvent, q: string): boolean {
+  const needle = q.trim().toLowerCase()
+  if (!needle) return true
+  return (
+    event.title.toLowerCase().includes(needle) ||
+    event.idolName.toLowerCase().includes(needle) ||
+    (event.location ?? '').toLowerCase().includes(needle)
+  )
 }
 
 interface Props {
@@ -34,10 +85,47 @@ export default function EventsClient({ events, isAdmin }: Props) {
   const [isPending, startTransition] = useTransition()
   const [resultMsg, setResultMsg] = useState<{ type: 'ok' | 'error'; text: string } | null>(null)
 
-  const draftIds = useMemo(
-    () => events.filter((e) => !e.isPublished).map((e) => e.id),
-    [events],
+  // ── Filter / search state ──────────────────────────────────────────────────
+  const [tab, setTab] = useState<FilterTab>('upcoming')
+  const [query, setQuery] = useState('')
+  const todayIso = useMemo(() => todayIsoDate(), [])
+
+  // Tab counts ignore the search query so the user always sees the full
+  // distribution of activity across tabs. Search only affects the rendered
+  // list within the active tab.
+  const tabCounts = useMemo(() => {
+    const counts = {} as Record<FilterTab, number>
+    for (const t of TAB_ORDER) counts[t] = 0
+    for (const e of events) {
+      for (const t of TAB_ORDER) {
+        if (matchTab(e, t, todayIso)) counts[t]++
+      }
+    }
+    return counts
+  }, [events, todayIso])
+
+  const filteredEvents = useMemo(() => {
+    const list = events.filter(
+      (e) => matchTab(e, tab, todayIso) && matchSearch(e, query),
+    )
+    // Sort by date: 'upcoming' shows nearest-first; everything else newest-first.
+    const ascending = tab === 'upcoming'
+    return [...list].sort((a, b) => {
+      const da = a.date.slice(0, 10)
+      const db = b.date.slice(0, 10)
+      if (da === db) return 0
+      return ascending ? (da < db ? -1 : 1) : (da > db ? -1 : 1)
+    })
+  }, [events, tab, todayIso, query])
+
+  // "全選草稿" should only select drafts inside the current filtered view —
+  // selecting drafts that aren't on screen would be confusing.
+  const visibleDraftIds = useMemo(
+    () => filteredEvents.filter((e) => !e.isPublished).map((e) => e.id),
+    [filteredEvents],
   )
+
+  const draftIds = visibleDraftIds
 
   const selectionInfo = useMemo(() => {
     let drafts = 0
@@ -132,15 +220,68 @@ export default function EventsClient({ events, isAdmin }: Props) {
         </div>
       )}
 
-      {/* Select-all-drafts button */}
-      {isAdmin && draftIds.length > 0 && (
+      {/* Filter tabs — horizontal scroll on narrow screens, no wrap */}
+      <div className="px-4 mb-3">
+        <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-1">
+          {TAB_ORDER.map((t) => {
+            const isActive = tab === t
+            return (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`flex-shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                  isActive
+                    ? 'bg-violet text-white'
+                    : 'bg-card border border-card-border text-muted hover:text-text-base'
+                }`}
+              >
+                <span>{TAB_LABELS[t]}</span>
+                <span
+                  className={`tabular-nums text-[10px] ${
+                    isActive ? 'text-white/85' : 'text-muted/70'
+                  }`}
+                >
+                  {tabCounts[t]}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Search box */}
+      <div className="px-4 mb-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted pointer-events-none" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="搜尋藝人 / 活動標題 / 地點"
+            className="w-full rounded-xl bg-card border border-card-border pl-9 pr-9 py-2.5 text-xs text-text-base placeholder:text-muted focus:outline-none focus:border-violet/40"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery('')}
+              aria-label="清除搜尋"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted hover:text-text-base"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Select-all-drafts button — operates on drafts inside the current filtered view */}
+      {isAdmin && visibleDraftIds.length > 0 && (
         <div className="px-4 mb-2">
           <button
             onClick={toggleAllDrafts}
             className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-text-base transition-colors"
           >
             <CheckSquare className="h-3.5 w-3.5" />
-            {allDraftsSelected ? '取消全選' : `全選草稿（${draftIds.length} 筆）`}
+            {allDraftsSelected ? '取消全選' : `全選此頁草稿（${visibleDraftIds.length} 筆）`}
           </button>
         </div>
       )}
@@ -155,7 +296,17 @@ export default function EventsClient({ events, isAdmin }: Props) {
             </p>
           </div>
         )}
-        {events.map((event) => (
+        {events.length > 0 && filteredEvents.length === 0 && (
+          <div className="rounded-xl bg-card border border-card-border px-4 py-8 text-center">
+            <p className="text-sm text-muted">
+              {query ? '沒有符合搜尋的活動' : `「${TAB_LABELS[tab]}」分類目前沒有活動`}
+            </p>
+            <p className="text-xs text-muted/60 mt-1">
+              試試其他分類或清除搜尋條件。
+            </p>
+          </div>
+        )}
+        {filteredEvents.map((event) => (
           <EventRow
             key={event.id}
             event={event}

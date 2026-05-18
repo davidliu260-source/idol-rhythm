@@ -21,6 +21,7 @@ interface AdminEvent {
   trustLevel: TrustLevel
   date: string
   countryFlag: string
+  location: string | null
   isPublished: boolean
   publishedAt: string | null
   sourceCount: number
@@ -40,7 +41,7 @@ async function getAdminEvents(): Promise<{ events: AdminEvent[]; error: string |
 
   const { data, error } = await supabase
     .from('events')
-    .select('id, idol_name, title, type, status, trust_level, date, country_flag, is_published, published_at, event_sources(id)')
+    .select('id, idol_name, title, type, status, trust_level, date, country_flag, location, is_published, published_at, event_sources(id)')
     .order('date', { ascending: false })
 
   if (error) {
@@ -59,6 +60,7 @@ async function getAdminEvents(): Promise<{ events: AdminEvent[]; error: string |
     trustLevel: row.trust_level as TrustLevel,
     date: row.date as string,
     countryFlag: row.country_flag as string,
+    location: (row.location ?? null) as string | null,
     isPublished: row.is_published as boolean,
     publishedAt: row.published_at as string | null,
     sourceCount: Array.isArray(row.event_sources) ? row.event_sources.length : 0,
