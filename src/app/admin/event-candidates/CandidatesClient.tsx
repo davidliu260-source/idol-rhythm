@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronRight, Check, X, CheckSquare, Trash2, AlertTriangle } from 'lucide-react'
+import { ChevronRight, Check, X, CheckSquare, Trash2, AlertTriangle, Search } from 'lucide-react'
 
 interface Candidate {
   id: string
@@ -28,19 +28,89 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
   rejected: { label: '已拒絕', color: 'text-muted',       bg: 'bg-card border-card-border' },
 }
 
+// ── Tabs ────────────────────────────────────────────────────────────────────
+// Mutually exclusive so the counts always add up to "all":
+//   待審   = pending (regardless of needs_recheck)
+//   需重審 = needs_recheck AND NOT pending (drift on already-decided items)
+//   已通過 = approved AND NOT needs_recheck
+//   已退回 = rejected AND NOT needs_recheck
+//
+// Pending+needs_recheck items live in "待審" because they have to be reviewed
+// anyway; the orange "內容已變更" badge inside the card flags the drift.
+
+type FilterTab = 'pending' | 'recheck' | 'approved' | 'rejected' | 'all'
+
+const TAB_ORDER: FilterTab[] = ['pending', 'recheck', 'approved', 'rejected', 'all']
+const TAB_LABELS: Record<FilterTab, string> = {
+  pending: '待審',
+  recheck: '需重審',
+  approved: '已通過',
+  rejected: '已退回',
+  all: '全部',
+}
+
+function matchTab(c: Candidate, tab: FilterTab): boolean {
+  switch (tab) {
+    case 'pending':  return c.reviewStatus === 'pending'
+    case 'recheck':  return c.needsRecheck && c.reviewStatus !== 'pending'
+    case 'approved': return c.reviewStatus === 'approved' && !c.needsRecheck
+    case 'rejected': return c.reviewStatus === 'rejected' && !c.needsRecheck
+    case 'all':      return true
+  }
+}
+
+function matchSearch(c: Candidate, q: string): boolean {
+  const needle = q.trim().toLowerCase()
+  if (!needle) return true
+  if (c.rawTitle.toLowerCase().includes(needle)) return true
+  if (c.idolName && c.idolName.toLowerCase().includes(needle)) return true
+  if (c.sourceName && c.sourceName.toLowerCase().includes(needle)) return true
+  return false
+}
+
 export default function CandidatesClient({ candidates, isAdmin }: Props) {
   const router = useRouter()
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [isPending, startTransition] = useTransition()
   const [resultMsg, setResultMsg] = useState<{ type: 'ok' | 'error'; text: string } | null>(null)
 
-  const pendingCandidates = candidates.filter((c) => c.reviewStatus === 'pending')
+  // ── Filter / search state ──────────────────────────────────────────────────
+  const [tab, setTab] = useState<FilterTab>('pending')
+  const [query, setQuery] = useState('')
+
+  // Tab counts ignore search so the user always sees the full distribution.
+  const tabCounts = useMemo(() => {
+    const counts = {} as Record<FilterTab, number>
+    for (const t of TAB_ORDER) counts[t] = 0
+    for (const c of candidates) {
+      for (const t of TAB_ORDER) {
+        if (matchTab(c, t)) counts[t]++
+      }
+    }
+    return counts
+  }, [candidates])
+
+  const filteredCandidates = useMemo(
+    () => candidates.filter((c) => matchTab(c, tab) && matchSearch(c, query)),
+    [candidates, tab, query],
+  )
+
+  // Pending candidates within the current filtered view — bulk-select operates
+  // on these only, so the user never selects items that are off-screen.
+  const visiblePending = useMemo(
+    () => filteredCandidates.filter((c) => c.reviewStatus === 'pending'),
+    [filteredCandidates],
+  )
+  const pendingCandidates = visiblePending
   const allPendingSelected =
     pendingCandidates.length > 0 && pendingCandidates.every((c) => selected.has(c.id))
 
   const todayIso = new Date().toISOString().slice(0, 10)
-  const expiredPendingCount = pendingCandidates.filter(
-    (c) => c.detectedDate !== null && c.detectedDate < todayIso,
+  // Cleanup-expired button counts ALL pending+expired (not just filtered view).
+  // The cleanup endpoint operates server-side on every matching row, so it
+  // would be misleading to show only the in-view count here.
+  const expiredPendingCount = candidates.filter(
+    (c) => c.reviewStatus === 'pending' && c.detectedDate !== null && c.detectedDate < todayIso,
   ).length
 
   function toggleOne(id: string) {
@@ -151,7 +221,60 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
         </div>
       )}
 
-      {/* Select-all pending button */}
+      {/* Filter tabs */}
+      <div className="px-4 mb-3">
+        <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-1">
+          {TAB_ORDER.map((t) => {
+            const isActive = tab === t
+            return (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`flex-shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                  isActive
+                    ? 'bg-violet text-white'
+                    : 'bg-card border border-card-border text-muted hover:text-text-base'
+                }`}
+              >
+                <span>{TAB_LABELS[t]}</span>
+                <span
+                  className={`tabular-nums text-[10px] ${
+                    isActive ? 'text-white/85' : 'text-muted/70'
+                  }`}
+                >
+                  {tabCounts[t]}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Search box */}
+      <div className="px-4 mb-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted pointer-events-none" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="搜尋活動標題 / 對應偶像 / 來源"
+            className="w-full rounded-xl bg-card border border-card-border pl-9 pr-9 py-2.5 text-xs text-text-base placeholder:text-muted focus:outline-none focus:border-violet/40"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery('')}
+              aria-label="清除搜尋"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted hover:text-text-base"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Select-all pending button — operates on pending inside current filtered view */}
       {isAdmin && pendingCandidates.length > 0 && (
         <div className="px-4 mb-2">
           <button
@@ -159,7 +282,7 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
             className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-text-base transition-colors"
           >
             <CheckSquare className="h-3.5 w-3.5" />
-            {allPendingSelected ? '取消全選' : `全選待審核（${pendingCandidates.length} 筆）`}
+            {allPendingSelected ? '取消全選' : `全選此頁待審核（${pendingCandidates.length} 筆）`}
           </button>
         </div>
       )}
@@ -171,7 +294,17 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
             <p className="text-sm text-muted">尚無候選活動</p>
           </div>
         )}
-        {candidates.map((c) => {
+        {candidates.length > 0 && filteredCandidates.length === 0 && (
+          <div className="rounded-xl bg-card border border-card-border px-4 py-8 text-center">
+            <p className="text-sm text-muted">
+              {query ? '沒有符合搜尋的候選' : `「${TAB_LABELS[tab]}」分類目前沒有候選`}
+            </p>
+            <p className="text-xs text-muted/60 mt-1">
+              試試其他分類或清除搜尋條件。
+            </p>
+          </div>
+        )}
+        {filteredCandidates.map((c) => {
           const statusCfg = STATUS_CONFIG[c.reviewStatus] ?? STATUS_CONFIG.pending
           const isChecked = selected.has(c.id)
           const isPending = c.reviewStatus === 'pending'
