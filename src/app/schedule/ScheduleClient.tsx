@@ -273,19 +273,20 @@ function CalendarView({
         </button>
       </div>
 
-      {/* Legend (only when logged in) */}
-      {user && (
-        <div className="flex items-center gap-3 text-[10px] text-muted">
-          <span className="flex items-center gap-1">
-            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-            收藏
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="h-1.5 w-1.5 rounded-full bg-muted" />
-            其他活動
-          </span>
-        </div>
-      )}
+      {/* Legend */}
+      <div className="flex items-center gap-3 text-[10px] text-muted">
+        <span className="flex items-center gap-1">
+          <Heart className="h-2.5 w-2.5 fill-primary text-primary" />
+          收藏
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="h-1.5 w-1.5 rounded-full bg-muted" />
+          其他活動
+        </span>
+        {!user && (
+          <span className="ml-auto text-muted/60">登入後可同步收藏</span>
+        )}
+      </div>
 
       {/* Weekday header */}
       <div className="grid grid-cols-7 gap-1 text-center">
@@ -307,6 +308,7 @@ function CalendarView({
           const key = dayKey(cell.date)
           const dayEvents = eventsByDay.get(key) ?? []
           const savedCount = dayEvents.filter((e) => favorites.has(e.id)).length
+          const otherCount = dayEvents.length - savedCount
           const isSelected = selectedDate ? sameDay(selectedDate, cell.date) : false
           const isToday = sameDay(today, cell.date)
           const hasEvents = dayEvents.length > 0
@@ -315,7 +317,7 @@ function CalendarView({
             <button
               key={key}
               onClick={() => setSelectedDate(cell.date)}
-              className={`relative aspect-square rounded-lg border flex flex-col items-center justify-center gap-1 transition-colors ${
+              className={`relative aspect-square rounded-lg border flex flex-col items-center justify-center gap-0.5 transition-colors ${
                 isSelected
                   ? 'border-primary bg-primary/10'
                   : isToday
@@ -331,16 +333,21 @@ function CalendarView({
                 {cell.date.getDate()}
               </span>
               {hasEvents && (
-                <div className="flex items-center gap-0.5">
+                <div className="flex items-center gap-1 leading-none">
                   {savedCount > 0 && (
-                    <span className="h-1 w-1 rounded-full bg-primary" />
+                    <span className="flex items-center gap-0.5">
+                      <Heart className="h-2.5 w-2.5 fill-primary text-primary" />
+                      {savedCount > 1 && (
+                        <span className="text-[9px] font-semibold text-primary">{savedCount}</span>
+                      )}
+                    </span>
                   )}
-                  {dayEvents.length > savedCount && (
-                    <span className="h-1 w-1 rounded-full bg-muted" />
-                  )}
-                  {dayEvents.length > 2 && (
-                    <span className="text-[8px] text-muted leading-none ml-0.5">
-                      +{dayEvents.length}
+                  {otherCount > 0 && (
+                    <span className="flex items-center gap-0.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-muted" />
+                      {otherCount > 1 && (
+                        <span className="text-[9px] text-muted">{otherCount}</span>
+                      )}
                     </span>
                   )}
                 </div>
@@ -362,14 +369,7 @@ function CalendarView({
           <p className="text-xs text-muted/60 py-4 text-center">該日無活動</p>
         )}
         {selectedEvents.map((event) => (
-          <div key={event.id} className="relative">
-            {favorites.has(event.id) && (
-              <div className="absolute -left-1 top-3 z-10">
-                <Heart className="h-3 w-3 text-primary fill-primary" />
-              </div>
-            )}
-            <EventCard event={event} compact />
-          </div>
+          <EventCard key={event.id} event={event} compact />
         ))}
         {!selectedDate && (
           <p className="text-xs text-muted/60 py-4 text-center">
