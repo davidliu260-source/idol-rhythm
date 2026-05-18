@@ -16,6 +16,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { useAppState } from '@/lib/appState'
 import { getBrowserSupabaseClient } from '@/lib/supabase/browserClient'
+import IdolAvatar from '@/components/IdolAvatar'
 import type { Idol } from '@/lib/mockIdols'
 import type { Event } from '@/lib/mockEvents'
 
@@ -127,12 +128,13 @@ export default function MeClient({ idols, events }: { idols: Idol[]; events: Eve
                 key={idol.id}
                 className="flex items-center gap-3 rounded-xl border border-card-border bg-card px-4 py-3"
               >
-                <div
-                  className="h-9 w-9 rounded-xl flex items-center justify-center text-sm font-bold text-white"
-                  style={{ background: `linear-gradient(135deg, ${idol.color}88, ${idol.color})` }}
-                >
-                  {idol.name.charAt(0)}
-                </div>
+                <IdolAvatar
+                  name={idol.name}
+                  avatarUrl={idol.avatarUrl}
+                  color={idol.color}
+                  size="xs"
+                  className="!h-9 !w-9 !rounded-xl !text-sm"
+                />
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-text-base">{idol.name}</p>
                   <p className="text-xs text-muted">{idol.agency}</p>

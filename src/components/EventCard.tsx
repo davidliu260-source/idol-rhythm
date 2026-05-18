@@ -6,6 +6,7 @@ import { type Event, formatEventDate } from '@/lib/mockEvents'
 import { useAppState } from '@/lib/appState'
 import SourceBadge from './SourceBadge'
 import EventTypeBadge from './EventTypeBadge'
+import IdolAvatar from './IdolAvatar'
 import clsx from 'clsx'
 
 interface EventCardProps {
@@ -57,12 +58,12 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
           <div className="absolute -top-px left-4 h-0.5 w-12 rounded-full bg-primary" />
         )}
         <div className="flex items-center gap-3">
-          <div
-            className="h-10 w-10 flex-shrink-0 rounded-xl flex items-center justify-center text-base font-bold text-white"
-            style={{ background: `linear-gradient(135deg, ${idolColor(event.idolId)})` }}
-          >
-            {event.idolName.charAt(0)}
-          </div>
+          <IdolAvatar
+            name={event.idolName}
+            avatarUrl={event.idolAvatarUrl}
+            color={idolPrimaryColor(event.idolId)}
+            size="sm"
+          />
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 mb-0.5">
@@ -131,12 +132,12 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
 
       {/* Top row: avatar + meta + favorite */}
       <div className="flex items-start gap-3">
-        <div
-          className="h-12 w-12 flex-shrink-0 rounded-xl flex items-center justify-center text-lg font-bold text-white"
-          style={{ background: `linear-gradient(135deg, ${idolColor(event.idolId)})` }}
-        >
-          {event.idolName.charAt(0)}
-        </div>
+        <IdolAvatar
+          name={event.idolName}
+          avatarUrl={event.idolAvatarUrl}
+          color={idolPrimaryColor(event.idolId)}
+          size="md"
+        />
 
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-1.5 mb-1">
@@ -250,18 +251,24 @@ function ActionBtn({
   )
 }
 
-function idolColor(idolId: string): string {
+/**
+ * Per-idol primary brand color, used as the IdolAvatar fallback when the
+ * idol has no uploaded photo. Returns a single hex; IdolAvatar derives the
+ * gradient (`color88 → color`) from it. Mock-data idol slugs are hardcoded
+ * for parity with the pre-I1a visual; unknown ids fall back to indigo.
+ */
+function idolPrimaryColor(idolId: string): string {
   const colorMap: Record<string, string> = {
-    bts: '#4c1d95, #7c3aed',
-    blackpink: '#9d174d, #ec4899',
-    aespa: '#164e63, #06b6d4',
-    newjeans: '#1e3a8a, #3b82f6',
-    'stray-kids': '#78350f, #f59e0b',
-    ive: '#064e3b, #10b981',
-    twice: '#7c2d12, #f97316',
-    'le-sserafim': '#713f12, #eab308',
-    txt: '#4a1d96, #a855f7',
-    exo: '#7f1d1d, #ef4444',
+    bts: '#7c3aed',
+    blackpink: '#ec4899',
+    aespa: '#06b6d4',
+    newjeans: '#3b82f6',
+    'stray-kids': '#f59e0b',
+    ive: '#10b981',
+    twice: '#f97316',
+    'le-sserafim': '#eab308',
+    txt: '#a855f7',
+    exo: '#ef4444',
   }
-  return colorMap[idolId] ?? '#1e1b4b, #6366f1'
+  return colorMap[idolId] ?? '#6366f1'
 }

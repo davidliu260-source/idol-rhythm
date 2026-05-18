@@ -53,6 +53,7 @@ export interface EditIdolFormProps {
     genres: string     // comma-separated string for the input
     memberCount: string
     description: string
+    avatarUrl: string
   }
 }
 
@@ -73,6 +74,7 @@ export default function EditIdolForm({ idolId, initial }: EditIdolFormProps) {
   const [genres,      setGenres]      = useState(initial.genres)
   const [memberCount, setMemberCount] = useState(initial.memberCount)
   const [description, setDescription] = useState(initial.description)
+  const [avatarUrl,   setAvatarUrl]   = useState(initial.avatarUrl)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -95,6 +97,7 @@ export default function EditIdolForm({ idolId, initial }: EditIdolFormProps) {
       genres: genreArray,
       memberCount,
       description,
+      avatarUrl,
     }
 
     const result = await updateIdol(idolId, payload)
@@ -252,6 +255,19 @@ export default function EditIdolForm({ idolId, initial }: EditIdolFormProps) {
             placeholder="偶像簡介（選填）"
             className={inputCls + ' resize-none'}
           />
+        </Field>
+
+        <Field label="頭像圖片 URL">
+          <input
+            type="url"
+            value={avatarUrl}
+            onChange={(e) => setAvatarUrl(e.target.value)}
+            placeholder="https://...（公開可讀的圖片網址）"
+            className={inputCls}
+          />
+          <p className="text-[10px] text-muted/50 mt-0.5">
+            填入後前台 /idols、首頁、活動卡會顯示此圖；留空則顯示首字母 + 漸層 fallback。
+          </p>
         </Field>
       </Section>
 
