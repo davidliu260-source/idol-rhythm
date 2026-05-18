@@ -13,7 +13,7 @@
 | 本地路徑 | `~/Desktop/idol-rhythm` |
 | GitHub | `davidliu260-source/idol-rhythm` |
 | 技術棧 | Next.js 14 App Router + TypeScript + Tailwind CSS + Supabase |
-| 目前階段 | J0–J7e + J7c 完成；J7d 待 GPT 工作單（需 migration）|
+| 目前階段 | S1 / C1 / I1a / I1b-A / J7d-A / 忘記密碼 完成；下一步：I1b-B（AI 搜圖，需工作單）或 M1a（第三方爬蟲框架） |
 | 輔助參考 | `ADMIN_ROADMAP.md`（後台分階段開發路線）、`AI_PIPELINE_PLAN.md`（爬蟲架構設計文件）|
 
 ---
@@ -115,6 +115,25 @@
 
 ---
 
+## 接手須知（給下一個 session 的 Claude）
+
+進來新工作時，**先讀本檔**，然後：
+
+1. **找出使用者要做哪個代號**（例如 I1b-B、M1a、J7d-B）— 從進度索引找狀態 🔒 / 🔲 的項目
+2. **若是 🔒「待 GPT 工作單」**：使用者會貼 GPT review 結論給你，再開實作 PR
+3. **若是 🔲「待辦」且不涉 migration / Storage / RLS**：可直接開 feature branch 實作
+4. **若是 🔲 但涉及 migration / Storage / RLS / AI / 爬蟲 / 付款**：先寫工作單草案 PR，等使用者拿給 GPT review
+
+**工作流程：**
+- 每個任務：`git fetch origin main && git checkout -b feature/<phase> origin/main`
+- 寫 code → `npm run build` 必過 → `git add` 只加本任務檔案 → commit → push → `gh pr create`
+- 涉及 migration：SQL 檔放 `supabase/migrations/`，使用者手動到 Supabase SQL Editor 執行
+- PR merge ≠ migration 已執行；migration 要使用者再去 Supabase 跑
+
+**Worktree 注意：** 本 repo 開 worktree 在 `.claude/worktrees/<name>`，無法直接 `git checkout main`。改用 `git fetch origin main && git checkout -b <new-branch> origin/main`。
+
+---
+
 ## 已完成進度索引
 
 | # | 階段 | 說明 | 狀態 |
@@ -151,17 +170,21 @@
 | 30 | J7e | 批量發布 + trust_level 切換 | ✅ PR #18 merged |
 | 31 | J7c | 過期候選清理 | ✅ PR #19 merged |
 | 32 | 個人化首頁 | user_follows 過濾 timeline + 倒數 UI | ✅ 早期完成（PR #8 `42e0d42`）|
-| 33 | J7d | 內容變更偵測（content_hash）| 🔒 待 GPT 工作單（需 migration）|
-| 34 | S1 | 行程篩選器修正：真實偶像資料 + 篩選功能正常 | 🔲 待辦 |
-| 35 | C1 | 個人行事曆：月曆視圖 + 登入後收藏活動整合 | 🔲 待辦 |
-| 36 | I1 | 藝人頭像：migration 024 加 avatar_url、Supabase Storage bucket、後台 AI 搜圖選擇 + 上傳、前台顯示（/idols、個人化首頁、活動卡片）| 🔒 待 GPT 工作單（需 migration + Storage）|
-| 37 | J7d | 內容變更偵測（content_hash / needs_recheck）| 🔒 待 GPT 工作單（需 migration）|
-| 38 | M1a | 第三方爬蟲框架 + 第一個非官方來源（straykidstour.org）| 🔲 待辦（J7d 後）|
-| 39 | M1b | 更多藝人上架：JYP 系只需 migration；非 JYP agency 需新 crawler | 🔲 待辦（M1a 後）|
-| 40 | M2 | 跨來源活動去重（event_key soft-hash，同演唱會多來源合併）| 🔲 待辦（M1b 後）|
-| 41 | 忘記密碼 / 帳號設定 | — | 🔲 待辦 |
-| 42 | M3 | Custom SMTP / Resend（上線前避免 rate limit）| 🔲 待辦 |
-| 43 | Apple Sign-In | 上 App Store 前再做 | 🔲 待辦 |
+| 33 | S1 | 行程篩選器修正：真實偶像資料 + 篩選功能正常 | ✅ PR #21 merged |
+| 34 | C1 | 個人行事曆：月曆視圖 + 登入後收藏活動整合 | ✅ PR #22 merged（含 #23–#26 連續修補：EventCard Link 重構、stopPropagation、mock UUID 防護）|
+| 35 | Remove mock fallback | 前台不再 fallback mock，純 Supabase 資料 | ✅ PR #27 merged |
+| 36 | I1a | 藝人頭像基礎：migration 025 加 avatar_url + 後台手動 URL + IdolAvatar 元件 + 前台 5 處替換（/idols、首頁追蹤 strip、首頁倒數卡、EventCard compact/full、/me 追蹤、/events/[id] hero — 詳情頁補在 PR #38）| ✅ PR #31 + #38 merged |
+| 37 | J7d-A | 候選內容變更偵測：migration 026 加 content_hash + needs_recheck，fetcher 偵測 + 標旗（不動 review_status / approved_event_id / raw 欄位），後台 badge | ✅ PR #34 merged |
+| 38 | I1b-A | 藝人頭像 Storage 手動上傳：migration 027 建 public bucket idol-avatars + RLS、後台檔案上傳 server action、EditIdolForm 上傳 UI（保留手動 URL 逃生口）| ✅ PR #36 merged |
+| 39 | 忘記密碼 | /forgot-password + /reset-password 兩頁 + LoginForm 加連結；走 Supabase resetPasswordForEmail + updateUser；無 migration | ✅ PR #37 merged |
+| 40 | I1b-B | AI 搜圖（Claude web_search / Bing）+ 候選縮圖選擇 + 自動下載並上傳到 Storage + 寫回 avatar_url | 🔒 待 GPT 工作單（草案已在 PR #33 docs / 工作單，需依 GPT 結論重寫）|
+| 41 | J7d-B | resolve 按鈕（admin 清 needs_recheck）+ 需重審篩選 tab + approved event 自動同步策略 | 🔲 待辦（J7d-A 跑一段時間累積實況後決定）|
+| 42 | M1a | 第三方爬蟲框架 + 第一個非官方來源（straykidstour.org）| 🔲 待辦（J7d-A 後可開）|
+| 43 | M1b | 更多藝人上架：JYP 系只需 migration；非 JYP agency 需新 crawler | 🔲 待辦（M1a 後）|
+| 44 | M2 | 跨來源活動去重（event_key soft-hash，同演唱會多來源合併）| 🔲 待辦（M1b 後）|
+| 45 | 帳號設定 | 改 email、刪除帳號、2FA | 🔲 待辦 |
+| 46 | M3 | Custom SMTP / Resend（上線前避免 rate limit）| 🔲 待辦 |
+| 47 | Apple Sign-In | 上 App Store 前再做 | 🔲 待辦 |
 
 ---
 
@@ -192,6 +215,10 @@
 | 021 | Seed TWICE idol + JYP schedule source（J6c）| ✅ 已執行 |
 | 022 | ADD COLUMN config jsonb；TWICE → parser_type='jyp_schedule'（J6d）| ✅ 已執行 |
 | 023 | Seed Stray Kids idol + JYP schedule source（J7a）| ✅ 已執行 |
+| 024 | GRANT SELECT ON events + event_sources TO anon（修復前台 0 筆活動）| ✅ 已執行 |
+| 025 | ADD COLUMN idols.avatar_url + GRANT UPDATE（I1a）| ✅ 已執行 |
+| 026 | ADD COLUMN event_candidates.content_hash + needs_recheck + 部分索引 + GRANT UPDATE（J7d-A）| ✅ 已執行 |
+| 027 | Storage bucket idol-avatars + 4 條 RLS policy（I1b-A，public read、admin write）| ✅ 已執行 |
 | 024 | GRANT SELECT ON events + event_sources TO anon（修復前台 0 筆活動）| ⏳ 待人工執行 |
 
 ---
