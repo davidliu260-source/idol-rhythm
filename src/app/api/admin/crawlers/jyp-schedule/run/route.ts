@@ -12,6 +12,7 @@ interface CrawlerResponse {
   fetched: number
   inserted: number
   skipped: number
+  recheck: number
   errors: string[]
 }
 
@@ -47,6 +48,7 @@ export async function POST(
         fetched: 0,
         inserted: 0,
         skipped: 0,
+        recheck: 0,
         errors: ['未授權：需要管理員身份'],
       },
       401,
@@ -72,6 +74,7 @@ export async function POST(
         fetched: 0,
         inserted: 0,
         skipped: 0,
+        recheck: 0,
         errors: ['請在 body 提供 sourceKey'],
       },
       400,
@@ -88,6 +91,7 @@ export async function POST(
         fetched: 0,
         inserted: 0,
         skipped: 0,
+        recheck: 0,
         errors: ['Supabase 未設定'],
       },
       500,
@@ -104,6 +108,7 @@ export async function POST(
       fetched: result.fetched,
       inserted: result.inserted,
       skipped: result.skipped,
+      recheck: result.recheck,
       errors: result.errors,
     },
     result.status,

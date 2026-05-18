@@ -25,6 +25,7 @@
  */
 
 import { computeSourceHash } from './sourceHash'
+import { computeContentHash } from './contentHash'
 import type { SourceTypeEnum } from './crawlerSource'
 
 export const JYP_PARSER_VERSION = 1
@@ -143,6 +144,7 @@ export interface JypCandidatePayload {
   ai_confidence: null
   reviewer_note: string
   source_hash: string
+  content_hash: string
   raw_data: {
     source: 'jyp-schedule'
     crawler_source_id: string
@@ -178,12 +180,25 @@ export function entryToCandidatePayload(
   ].filter((x): x is string => x !== null)
 
   const source_hash = computeSourceHash({ sourceUrl: entry.sourceUrl })!
+  const detected_event_type = mapCategoryToEventType(entry.rawTypeText)
+  const raw_content = lines.join('\n')
+
+  const content_hash = computeContentHash({
+    rawTitle: raw_title,
+    rawContent: raw_content,
+    detectedDate: entry.detectedDate,
+    detectedEventType: detected_event_type,
+    detectedIdolId: source.idolId,
+    sourceUrl: entry.sourceUrl,
+    sourceName: source.sourceName,
+    sourceType: source.sourceType,
+  })
 
   return {
     raw_title,
-    raw_content: lines.join('\n'),
+    raw_content,
     detected_idol_id: source.idolId,
-    detected_event_type: mapCategoryToEventType(entry.rawTypeText),
+    detected_event_type,
     detected_date: entry.detectedDate,
     source_url: entry.sourceUrl,
     source_name: source.sourceName,
@@ -191,6 +206,7 @@ export function entryToCandidatePayload(
     ai_confidence: null,
     reviewer_note: `auto-crawled from crawler source: ${source.sourceName}`,
     source_hash,
+    content_hash,
     raw_data: {
       source: 'jyp-schedule',
       crawler_source_id: source.crawlerSourceId,

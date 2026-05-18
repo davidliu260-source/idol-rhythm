@@ -27,6 +27,7 @@ interface CandidateDetail {
   approvedEventTitle: string | null
   createdAt: string
   updatedAt: string
+  needsRecheck: boolean
 }
 
 // ── Data fetcher ──────────────────────────────────────────────────────────────
@@ -60,6 +61,7 @@ async function getCandidate(id: string): Promise<CandidateDetail | null> {
     approved_event_id: string | null
     created_at: string
     updated_at: string
+    needs_recheck: boolean | null
     idols: { name: string } | null
   }
 
@@ -93,6 +95,7 @@ async function getCandidate(id: string): Promise<CandidateDetail | null> {
     approvedEventTitle,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    needsRecheck: row.needs_recheck ?? false,
   }
 }
 
@@ -195,6 +198,19 @@ export default async function AdminCandidateDetailPage({
           </p>
         </div>
       </div>
+
+      {/* needs_recheck banner — only when crawler detected content drift */}
+      {candidate.needsRecheck && (
+        <div className="px-4 mb-4">
+          <div className="rounded-xl bg-orange-500/10 border border-orange-500/30 px-3 py-2.5 flex items-start gap-2">
+            <AlertTriangle className="h-3.5 w-3.5 text-orange-400 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-orange-300 leading-snug">
+              <span className="font-semibold">內容已變更</span>
+              ｜爬蟲偵測到此候選的來源內容在首次擷取後有更動，建議重新審核。詳細變更時間請見下方 reviewer note。
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ── Admin action area: pending ─── */}
       {isAdmin && isPending && (

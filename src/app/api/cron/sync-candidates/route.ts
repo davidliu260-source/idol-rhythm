@@ -22,6 +22,8 @@ interface SourceRunResult {
   inserted: number
   wouldInsert: number
   skipped: number
+  /** J7d-A: rows flagged needs_recheck on this run. */
+  recheck: number
   errors: string[]
   /** Internal HTTP status from the fetcher (200 = ok, 5xx = hard failure). */
   status: number
@@ -35,6 +37,7 @@ interface CronSummary {
   totalInserted: number
   totalWouldInsert: number
   totalSkipped: number
+  totalRecheck: number
 }
 
 interface CronOkResponse {
@@ -90,6 +93,7 @@ async function runSource(
         inserted: r.inserted,
         wouldInsert: r.wouldInsert,
         skipped: r.skipped,
+        recheck: r.recheck,
         errors: r.errors,
         status: r.status,
       }
@@ -109,6 +113,7 @@ async function runSource(
         inserted: r.inserted,
         wouldInsert: r.wouldInsert,
         skipped: r.skipped,
+        recheck: r.recheck,
         errors: r.errors,
         status: r.status,
       }
@@ -127,6 +132,7 @@ async function runSource(
         inserted: 0,
         wouldInsert: 0,
         skipped: 0,
+        recheck: 0,
         errors: [`未知 parser_type：${source.parser_type}（dispatch table 未註冊）`],
         status: 200,
       }
@@ -142,6 +148,7 @@ function summarise(results: SourceRunResult[]): CronSummary {
     totalInserted: results.reduce((s, r) => s + r.inserted, 0),
     totalWouldInsert: results.reduce((s, r) => s + r.wouldInsert, 0),
     totalSkipped: results.reduce((s, r) => s + r.skipped, 0),
+    totalRecheck: results.reduce((s, r) => s + r.recheck, 0),
   }
 }
 
@@ -278,6 +285,7 @@ export async function GET(
         inserted: 0,
         wouldInsert: 0,
         skipped: 0,
+        recheck: 0,
         errors: [
           `fetcher 拋出例外：${e instanceof Error ? e.message : String(e)}`,
         ],

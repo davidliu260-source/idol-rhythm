@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronRight, Check, X, CheckSquare, Trash2 } from 'lucide-react'
+import { ChevronRight, Check, X, CheckSquare, Trash2, AlertTriangle } from 'lucide-react'
 
 interface Candidate {
   id: string
@@ -14,6 +14,7 @@ interface Candidate {
   reviewStatus: 'pending' | 'approved' | 'rejected'
   aiConfidence: number | null
   hasIdol: boolean
+  needsRecheck: boolean
 }
 
 interface Props {
@@ -209,6 +210,12 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
                   >
                     {statusCfg.label}
                   </span>
+                  {c.needsRecheck && (
+                    <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded border bg-orange-500/10 border-orange-500/30 text-orange-400">
+                      <AlertTriangle className="h-2.5 w-2.5" />
+                      內容已變更
+                    </span>
+                  )}
                   {c.detectedDate && (
                     <span className="text-[10px] text-muted tabular-nums ml-auto">
                       {c.detectedDate.slice(0, 10)}
