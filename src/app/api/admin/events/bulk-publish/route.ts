@@ -3,7 +3,7 @@ import { revalidatePath } from 'next/cache'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
 
-type BulkAction = 'publish_official' | 'publish_media' | 'unpublish'
+type BulkAction = 'publish_official' | 'publish_media' | 'unpublish' | 'delete_drafts'
 
 interface BulkPublishRequest {
   ids: string[]
@@ -36,13 +36,36 @@ export async function POST(
   if (!Array.isArray(ids) || ids.length === 0) {
     return NextResponse.json({ ok: false, error: 'ids 不可為空' }, { status: 400 })
   }
-  if (action !== 'publish_official' && action !== 'publish_media' && action !== 'unpublish') {
+  if (!['publish_official', 'publish_media', 'unpublish', 'delete_drafts'].includes(action)) {
     return NextResponse.json({ ok: false, error: 'action 不合法' }, { status: 400 })
   }
 
   const supabase = getSupabaseServerClient()
   if (!supabase) {
     return NextResponse.json({ ok: false, error: 'Supabase 環境變數未設定' }, { status: 500 })
+  }
+
+  // ── delete_drafts: hard-delete unpublished events (RLS enforces is_published=false) ──
+  if (action === 'delete_drafts') {
+    const { data, error } = await supabase
+      .from('events')
+      .delete()
+      .in('id', ids)
+      .eq('is_published', false)
+      .select('id')
+
+    if (error) {
+      return NextResponse.json(
+        { ok: false, error: `刪除失敗：${error.code ? `[${error.code}] ` : ''}${error.message}` },
+        { status: 500 },
+      )
+    }
+
+    const affected = data?.length ?? 0
+    revalidatePath('/admin/events')
+    for (const id of ids) revalidatePath(`/admin/events/${id}`)
+
+    return NextResponse.json({ ok: true, action, total: ids.length, affected })
   }
 
   // ── Build update payload + safety filter ────────────────────────────────────
