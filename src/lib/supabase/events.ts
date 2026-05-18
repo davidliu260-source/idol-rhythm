@@ -58,18 +58,18 @@ interface SupabaseEventSourceRow {
 // ── Conversion helpers ────────────────────────────────────────────────────────
 
 function rowToEvent(row: SupabaseEventRow): Event {
+  // Single source of truth: events.trust_level. event_sources rows are still
+  // used for label / url / source-type metadata, but their `level` column is
+  // deliberately ignored here to prevent drift between the two stores.
+  // (Historical bug: bulk-publish updated events.trust_level but left
+  // event_sources.level untouched, so the badge kept saying "待確認".)
   const primarySource = row.event_sources?.[0]
-  const source: EventSource = primarySource
-    ? {
-        level: primarySource.level as TrustLevel,
-        label: primarySource.label,
-        type: (primarySource.type ?? undefined) as SourceType | undefined,
-        url: primarySource.url ?? undefined,
-      }
-    : {
-        level: row.trust_level as TrustLevel,
-        label: row.idol_name,
-      }
+  const source: EventSource = {
+    level: row.trust_level as TrustLevel,
+    label: primarySource?.label ?? row.idol_name,
+    type: (primarySource?.type ?? undefined) as SourceType | undefined,
+    url: primarySource?.url ?? undefined,
+  }
 
   return {
     id: row.id,
