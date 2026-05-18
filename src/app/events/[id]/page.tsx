@@ -21,6 +21,7 @@ import { getIdolById } from '@/lib/mockIdols'
 import { getEventById as getSupabaseEventById } from '@/lib/supabase/events'
 import SourceBadge from '@/components/SourceBadge'
 import EventTypeBadge from '@/components/EventTypeBadge'
+import IdolAvatar from '@/components/IdolAvatar'
 import {
   EventDetailFavoriteBtn,
   EventDetailReminderBtn,
@@ -68,16 +69,13 @@ export default async function EventDetailPage({
         </div>
 
         <div className="flex items-end gap-3">
-          <div
-            className="h-16 w-16 rounded-2xl flex items-center justify-center text-2xl font-bold text-white ring-2 ring-white/20 flex-shrink-0"
-            style={{
-              background: idol
-                ? `linear-gradient(135deg, ${idol.color}66, ${idol.color})`
-                : '#4c1d95',
-            }}
-          >
-            {event.idolName.charAt(0)}
-          </div>
+          <IdolAvatar
+            name={event.idolName}
+            avatarUrl={event.idolAvatarUrl}
+            color={idol?.color ?? '#6366f1'}
+            size="lg"
+            className="ring-2 ring-white/20"
+          />
           <div>
             <p className="text-xs text-white/60 font-medium">{event.idolName}</p>
             <div className="flex items-center gap-2 mt-1">
