@@ -76,12 +76,28 @@ function useAuthUser(): { user: AuthUser | null; isLoading: boolean } {
 
     let cancelled = false
 
-    // Initial fetch
-    supabase.auth.getUser().then(({ data: { user: u } }) => {
-      if (cancelled) return
-      setUser(u ? { id: u.id, email: u.email ?? null } : null)
-      setIsLoading(false)
-    })
+    // Initial fetch.
+    //
+    // .catch + .finally are critical: if supabase.auth.getUser() ever rejects
+    // (offline, expired refresh token, Supabase 5xx, etc.) we MUST still flip
+    // isLoading to false. Otherwise /me and /favorites hang on the "載入中…"
+    // spinner forever because they both gate render on isUserLoading.
+    supabase.auth
+      .getUser()
+      .then(({ data: { user: u } }) => {
+        if (cancelled) return
+        setUser(u ? { id: u.id, email: u.email ?? null } : null)
+      })
+      .catch((err) => {
+        if (cancelled) return
+        // eslint-disable-next-line no-console
+        console.error('useAuthUser: getUser() failed, treating as anonymous:', err)
+        setUser(null)
+      })
+      .finally(() => {
+        if (cancelled) return
+        setIsLoading(false)
+      })
 
     // Subscribe to subsequent changes (sign in / sign out / token refresh)
     const {
