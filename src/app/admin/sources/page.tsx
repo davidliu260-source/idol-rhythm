@@ -1,21 +1,10 @@
 export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
-import { ArrowLeft, Database, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Database } from 'lucide-react'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
-
-interface SourceRow {
-  id: string
-  name: string
-  sourceKey: string
-  idolName: string | null
-  sourceType: string
-  parserType: string
-  isActive: boolean
-  lastRunAt: string | null
-  lastStatus: string | null
-}
+import SourcesClient, { type SourceRow } from './SourcesClient'
 
 async function getSources(): Promise<{
   sources: SourceRow[]
@@ -111,8 +100,9 @@ export default async function AdminSourcesPage() {
         </div>
       )}
 
-      <div className="px-4 flex flex-col gap-2">
-        {sources.length === 0 && !error && (
+      {/* Empty state when there are no sources at all */}
+      {sources.length === 0 && !error && (
+        <div className="px-4">
           <div className="rounded-xl bg-card border border-card-border px-4 py-8 text-center">
             <p className="text-sm text-muted">目前尚未建立資料來源</p>
             <p className="text-xs text-muted/60 mt-1">
@@ -121,53 +111,11 @@ export default async function AdminSourcesPage() {
                 : '請先以管理員身份登入。'}
             </p>
           </div>
-        )}
-        {sources.map((s) => (
-          <SourceRowItem key={s.id} source={s} />
-        ))}
-      </div>
+        </div>
+      )}
+
+      {/* Tabs + search + list */}
+      {sources.length > 0 && <SourcesClient sources={sources} />}
     </div>
-  )
-}
-
-function SourceRowItem({ source }: { source: SourceRow }) {
-  return (
-    <Link
-      href={`/admin/sources/${source.id}`}
-      className="rounded-xl bg-card border border-card-border px-4 py-3 flex flex-col gap-1.5 active:opacity-70 transition-opacity"
-    >
-      <div className="flex items-center gap-2">
-        <span
-          className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${
-            source.isActive
-              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-              : 'bg-card border-card-border text-muted'
-          }`}
-        >
-          {source.isActive ? '啟用中' : '已停用'}
-        </span>
-        <span className="text-[10px] text-muted ml-auto font-mono">
-          {source.parserType}
-        </span>
-      </div>
-
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-semibold text-text-base leading-snug">
-          {source.name}
-        </p>
-        <ChevronRight className="h-4 w-4 text-muted flex-shrink-0 mt-0.5" />
-      </div>
-
-      <div className="flex items-center gap-1.5 text-xs text-muted flex-wrap">
-        {source.idolName && <span>{source.idolName}</span>}
-        {source.idolName && <span>·</span>}
-        <span>{source.sourceType}</span>
-        {source.lastRunAt && (
-          <span className="ml-auto text-[10px] text-muted/60 flex-shrink-0">
-            上次：{source.lastRunAt.slice(0, 10)}
-          </span>
-        )}
-      </div>
-    </Link>
   )
 }
