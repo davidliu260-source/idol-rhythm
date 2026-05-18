@@ -15,6 +15,9 @@ import { getBrowserSupabaseClient } from './supabase/browserClient'
 const DEFAULT_FOLLOWING = MOCK_IDOLS.filter((i) => i.following).map((i) => i.id)
 const DEFAULT_FAVORITES = MOCK_EVENTS.filter((e) => e.isFavorited).map((e) => e.id)
 
+// Matches Postgres uuid_generate_v4() output (eight-four-four-four-twelve hex digits).
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 // ─────────────────────────────────────────────────────────────────────────────
 // localStorage-backed Set helper
 // Used for `following` and `reminders` (Milestone 1 keeps these as local-only).
@@ -168,6 +171,18 @@ function useFavorites(
       if (!user) return
       const supabase = getBrowserSupabaseClient()
       if (!supabase) return
+
+      // Skip Supabase write for non-UUID event IDs (mock data fallback).
+      // Optimistic local-only update keeps the heart UI responsive even when
+      // the page is rendering mock events (e.g. when Supabase has no
+      // published events yet). Without this guard PostgreSQL throws 22P02
+      // (invalid_text_representation) because event_id expects a uuid.
+      if (!UUID_RE.test(id)) {
+        setCloudIds((prev) =>
+          prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+        )
+        return
+      }
 
       const isSaved = cloudIds.includes(id)
 
