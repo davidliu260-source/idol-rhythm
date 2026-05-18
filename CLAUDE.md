@@ -146,14 +146,22 @@
 | 25 | J6c→J6d | JYP 平台化 fetcher jyp_schedule（migrations 021/022）| ✅ |
 | 26 | J6e | Cron fan-out 跨所有 active sources | ✅ |
 | 27 | J6f | 12 個月視窗 + 過去日期過濾 | ✅ |
-| 28 | J7a | Stray Kids 種子（migration 023，PR #16）| ✅ |
+| 28 | J7a | Stray Kids 種子（migration 023，PR #16）| ✅ migration 已執行 |
 | 29 | J7b | 批量審核 UI（approve / reject）| ✅ PR #17 merged |
 | 30 | J7e | 批量發布 + trust_level 切換 | ✅ PR #18 merged |
 | 31 | J7c | 過期候選清理 | ✅ PR #19 merged |
 | 32 | 個人化首頁 | user_follows 過濾 timeline + 倒數 UI | ✅ 早期完成（PR #8 `42e0d42`）|
 | 33 | J7d | 內容變更偵測（content_hash）| 🔒 待 GPT 工作單（需 migration）|
-| 34 | 忘記密碼 / 帳號設定 | — | 🔲 待辦 |
-| 35 | Apple Sign-In | 上 App Store 前再做 | 🔲 待辦 |
+| 34 | S1 | 行程篩選器修正：真實偶像資料 + 篩選功能正常 | 🔲 待辦 |
+| 35 | C1 | 個人行事曆：月曆視圖 + 登入後收藏活動整合 | 🔲 待辦 |
+| 36 | I1 | 藝人頭像：migration 024 加 avatar_url、Supabase Storage bucket、後台 AI 搜圖選擇 + 上傳、前台顯示（/idols、個人化首頁、活動卡片）| 🔒 待 GPT 工作單（需 migration + Storage）|
+| 37 | J7d | 內容變更偵測（content_hash / needs_recheck）| 🔒 待 GPT 工作單（需 migration）|
+| 38 | M1a | 第三方爬蟲框架 + 第一個非官方來源（straykidstour.org）| 🔲 待辦（J7d 後）|
+| 39 | M1b | 更多藝人上架：JYP 系只需 migration；非 JYP agency 需新 crawler | 🔲 待辦（M1a 後）|
+| 40 | M2 | 跨來源活動去重（event_key soft-hash，同演唱會多來源合併）| 🔲 待辦（M1b 後）|
+| 41 | 忘記密碼 / 帳號設定 | — | 🔲 待辦 |
+| 42 | M3 | Custom SMTP / Resend（上線前避免 rate limit）| 🔲 待辦 |
+| 43 | Apple Sign-In | 上 App Store 前再做 | 🔲 待辦 |
 
 ---
 
@@ -183,7 +191,7 @@
 | 020 | crawler_sources RLS + service_role GRANT（J6b）| ✅ 已執行 |
 | 021 | Seed TWICE idol + JYP schedule source（J6c）| ✅ 已執行 |
 | 022 | ADD COLUMN config jsonb；TWICE → parser_type='jyp_schedule'（J6d）| ✅ 已執行 |
-| 023 | Seed Stray Kids idol + JYP schedule source（J7a）| ⏳ 待人工執行 |
+| 023 | Seed Stray Kids idol + JYP schedule source（J7a）| ✅ 已執行 |
 
 ---
 
