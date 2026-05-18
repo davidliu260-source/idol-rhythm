@@ -13,7 +13,7 @@
 | 本地路徑 | `~/Desktop/idol-rhythm` |
 | GitHub | `davidliu260-source/idol-rhythm` |
 | 技術棧 | Next.js 14 App Router + TypeScript + Tailwind CSS + Supabase |
-| 目前階段 | J0–J7e + J7c 完成；J7d 待 GPT 工作單（需 migration）|
+| 目前階段 | S1 / C1 / I1a / J7d-A 完成；下一步 I1b-A（Storage 手動上傳）|
 | 輔助參考 | `ADMIN_ROADMAP.md`（後台分階段開發路線）、`AI_PIPELINE_PLAN.md`（爬蟲架構設計文件）|
 
 ---
@@ -151,12 +151,14 @@
 | 30 | J7e | 批量發布 + trust_level 切換 | ✅ PR #18 merged |
 | 31 | J7c | 過期候選清理 | ✅ PR #19 merged |
 | 32 | 個人化首頁 | user_follows 過濾 timeline + 倒數 UI | ✅ 早期完成（PR #8 `42e0d42`）|
-| 33 | J7d | 內容變更偵測（content_hash）| 🔒 待 GPT 工作單（需 migration）|
-| 34 | S1 | 行程篩選器修正：真實偶像資料 + 篩選功能正常 | 🔲 待辦 |
-| 35 | C1 | 個人行事曆：月曆視圖 + 登入後收藏活動整合 | 🔲 待辦 |
-| 36 | I1 | 藝人頭像：migration 024 加 avatar_url、Supabase Storage bucket、後台 AI 搜圖選擇 + 上傳、前台顯示（/idols、個人化首頁、活動卡片）| 🔒 待 GPT 工作單（需 migration + Storage）|
-| 37 | J7d | 內容變更偵測（content_hash / needs_recheck）| 🔒 待 GPT 工作單（需 migration）|
-| 38 | M1a | 第三方爬蟲框架 + 第一個非官方來源（straykidstour.org）| 🔲 待辦（J7d 後）|
+| 33 | S1 | 行程篩選器修正：真實偶像資料 + 篩選功能正常 | ✅ PR #21 merged |
+| 34 | C1 | 個人行事曆：月曆視圖 + 登入後收藏活動整合 | ✅ PR #22 merged |
+| 35 | I1a | 藝人頭像基礎：migration 025 加 avatar_url + 後台手動 URL + IdolAvatar 元件 + 前台 4 處替換 | ✅ PR #31 merged |
+| 36 | J7d-A | 候選內容變更偵測：migration 026 加 content_hash + needs_recheck，fetcher 偵測 + 標旗，後台 badge | ✅ PR #34 merged |
+| 37 | I1b-A | 藝人頭像 Storage 手動上傳：migration 027 idol-avatars bucket + RLS、後台檔案上傳 | 🔲 待辦（GPT 已 review，下一個 sprint）|
+| 38 | 忘記密碼 / 帳號設定 | — | 🔲 待辦 |
+| 39 | I1b-B | AI 搜圖（Claude / Bing）+ 候選縮圖 + 自動寫回 avatar_url | 🔒 待 GPT 工作單 |
+| 40 | M1a | 第三方爬蟲框架 + 第一個非官方來源（straykidstour.org）| 🔲 待辦（J7d-A 後可開）|
 | 39 | M1b | 更多藝人上架：JYP 系只需 migration；非 JYP agency 需新 crawler | 🔲 待辦（M1a 後）|
 | 40 | M2 | 跨來源活動去重（event_key soft-hash，同演唱會多來源合併）| 🔲 待辦（M1b 後）|
 | 41 | 忘記密碼 / 帳號設定 | — | 🔲 待辦 |
@@ -192,7 +194,9 @@
 | 021 | Seed TWICE idol + JYP schedule source（J6c）| ✅ 已執行 |
 | 022 | ADD COLUMN config jsonb；TWICE → parser_type='jyp_schedule'（J6d）| ✅ 已執行 |
 | 023 | Seed Stray Kids idol + JYP schedule source（J7a）| ✅ 已執行 |
-| 024 | GRANT SELECT ON events + event_sources TO anon（修復前台 0 筆活動）| ⏳ 待人工執行 |
+| 024 | GRANT SELECT ON events + event_sources TO anon（修復前台 0 筆活動）| ✅ 已執行 |
+| 025 | ADD COLUMN idols.avatar_url + GRANT UPDATE（I1a）| ✅ 已執行 |
+| 026 | ADD COLUMN event_candidates.content_hash + needs_recheck + 索引 + GRANT UPDATE（J7d-A）| ✅ 已執行 |
 
 ---
 
