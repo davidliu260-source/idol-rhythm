@@ -1,22 +1,10 @@
 export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
-import { ArrowLeft, Users, UserPlus, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Users, UserPlus } from 'lucide-react'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-interface AdminIdol {
-  id: string
-  slug: string
-  name: string
-  korean_name: string | null
-  type: string | null
-  category: string | null
-  agency: string | null
-  is_active: boolean
-}
+import IdolsClient, { type AdminIdol } from './IdolsClient'
 
 // ── Data fetcher ──────────────────────────────────────────────────────────────
 
@@ -31,7 +19,7 @@ async function getAdminIdols(): Promise<{ idols: AdminIdol[]; error: string | nu
 
   const { data, error } = await supabase
     .from('idols')
-    .select('id, slug, name, korean_name, type, category, agency, is_active')
+    .select('id, slug, name, korean_name, type, category, agency, alt_names, is_active')
     .order('name')
 
   if (error) {
@@ -41,14 +29,22 @@ async function getAdminIdols(): Promise<{ idols: AdminIdol[]; error: string | nu
     }
   }
 
-  return { idols: (data ?? []) as AdminIdol[], error: null }
+  const idols: AdminIdol[] = (data ?? []).map((row) => ({
+    id: row.id as string,
+    slug: row.slug as string,
+    name: row.name as string,
+    korean_name: (row.korean_name ?? null) as string | null,
+    type: (row.type ?? null) as string | null,
+    category: (row.category ?? null) as string | null,
+    agency: (row.agency ?? null) as string | null,
+    alt_names: Array.isArray(row.alt_names) ? (row.alt_names as string[]) : [],
+    is_active: row.is_active as boolean,
+  }))
+
+  return { idols, error: null }
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
-
-const CATEGORY_LABELS: Record<string, string> = {
-  kpop: 'K-Pop', cpop: 'C-Pop', jpop: 'J-Pop', idol: 'Idol', other: 'Other',
-}
 
 export default async function AdminIdolsPage() {
   const [{ isAdmin }, { idols, error }] = await Promise.all([
@@ -116,7 +112,7 @@ export default async function AdminIdolsPage() {
         </div>
       )}
 
-      {/* Empty state */}
+      {/* Empty state when there are zero idols total */}
       {idols.length === 0 && !error && (
         <div className="px-4">
           <div className="rounded-xl bg-card border border-card-border px-4 py-8 text-center">
@@ -128,47 +124,8 @@ export default async function AdminIdolsPage() {
         </div>
       )}
 
-      {/* Idols list */}
-      <div className="px-4 flex flex-col gap-2">
-        {idols.map((idol) => (
-          <Link
-            key={idol.id}
-            href={`/admin/idols/${idol.id}`}
-            className={`rounded-xl bg-card border border-card-border px-4 py-3 flex items-center gap-3 active:opacity-70 transition-opacity ${!idol.is_active ? 'opacity-50' : ''}`}
-          >
-            {/* Active indicator */}
-            <span className={`h-2 w-2 rounded-full flex-shrink-0 ${idol.is_active ? 'bg-emerald-400' : 'bg-muted/40'}`} />
-
-            {/* Info */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <p className="text-sm font-semibold text-text-base truncate">{idol.name}</p>
-                {idol.korean_name && (
-                  <p className="text-xs text-muted truncate">{idol.korean_name}</p>
-                )}
-              </div>
-              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                <span className="text-[10px] text-muted font-mono">{idol.slug}</span>
-                {idol.category && (
-                  <span className="text-[10px] text-muted border border-card-border rounded px-1.5 py-0.5">
-                    {CATEGORY_LABELS[idol.category] ?? idol.category}
-                  </span>
-                )}
-                {idol.type && (
-                  <span className="text-[10px] text-muted">
-                    {idol.type === 'group' ? '團體' : '個人'}
-                  </span>
-                )}
-                {idol.agency && (
-                  <span className="text-[10px] text-muted/60 truncate">{idol.agency}</span>
-                )}
-              </div>
-            </div>
-
-            <ChevronRight className="h-4 w-4 text-muted flex-shrink-0" />
-          </Link>
-        ))}
-      </div>
+      {/* Tabs + search + filtered list */}
+      {idols.length > 0 && <IdolsClient idols={idols} />}
     </div>
   )
 }
