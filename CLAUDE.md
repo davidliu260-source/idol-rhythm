@@ -13,7 +13,7 @@
 | 本地路徑 | `~/Desktop/idol-rhythm` |
 | GitHub | `davidliu260-source/idol-rhythm` |
 | 技術棧 | Next.js 14 App Router + TypeScript + Tailwind CSS + Supabase |
-| 目前階段 | S1 / C1 / I1a / I1b-A / J7d-A / 忘記密碼 完成；下一步：I1b-B（AI 搜圖，需工作單）或 M1a（第三方爬蟲框架） |
+| 目前階段 | S1 / C1 / I1a / I1b-A / J7d-A / 忘記密碼 / M1a（A+B+C 全段）/ admin 刪除草稿 完成；下一步：M1b（更多藝人上架，先從 JYP 系）或 J7d-B（resolve 按鈕，累積實況後做）|
 | 輔助參考 | `ADMIN_ROADMAP.md`（後台分階段開發路線）、`AI_PIPELINE_PLAN.md`（爬蟲架構設計文件）|
 
 ---
@@ -179,8 +179,9 @@
 | 39 | 忘記密碼 | /forgot-password + /reset-password 兩頁 + LoginForm 加連結；走 Supabase resetPasswordForEmail + updateUser；無 migration | ✅ PR #37 merged |
 | 40 | I1b-B | AI 搜圖（Claude web_search / Bing）+ 候選縮圖選擇 + 自動下載並上傳到 Storage + 寫回 avatar_url | 🔒 待 GPT 工作單（草案已在 PR #33 docs / 工作單，需依 GPT 結論重寫）|
 | 41 | J7d-B | resolve 按鈕（admin 清 needs_recheck）+ 需重審篩選 tab + approved event 自動同步策略 | 🔲 待辦（J7d-A 跑一段時間累積實況後決定）|
-| 42 | M1a | 第三方爬蟲框架 + 第一個非官方來源（straykidstour.org）| 🔲 待辦（J7d-A 後可開）|
-| 43 | M1b | 更多藝人上架：JYP 系只需 migration；非 JYP agency 需新 crawler | 🔲 待辦（M1a 後）|
+| 42 | M1a | 多藝人聚合爬蟲框架（kpopofficial.com）：A 加 idols.alt_names、B idolMatcher + parser/fetcher、C seed crawler_sources + 接 cron fan-out | ✅ PR #40 + #41 + #42 merged（migrations 028 + 029 已執行）|
+| 42.5 | admin 刪除草稿 | /admin/events 工具列加批量刪除草稿按鈕（migration 030 GRANT DELETE + RLS）| ✅ PR #43 merged（migration 030 已執行）|
+| 43 | M1b | 更多藝人上架：JYP 系只需 migration；非 JYP agency 需新 crawler | 🔲 待辦（M1a 後，下一個建議從 JYP 系開始）|
 | 44 | M2 | 跨來源活動去重（event_key soft-hash，同演唱會多來源合併）| 🔲 待辦（M1b 後）|
 | 45 | 帳號設定 | 改 email、刪除帳號、2FA | 🔲 待辦 |
 | 46 | M3 | Custom SMTP / Resend（上線前避免 rate limit）| 🔲 待辦 |
@@ -219,7 +220,9 @@
 | 025 | ADD COLUMN idols.avatar_url + GRANT UPDATE（I1a）| ✅ 已執行 |
 | 026 | ADD COLUMN event_candidates.content_hash + needs_recheck + 部分索引 + GRANT UPDATE（J7d-A）| ✅ 已執行 |
 | 027 | Storage bucket idol-avatars + 4 條 RLS policy（I1b-A，public read、admin write）| ✅ 已執行 |
-| 024 | GRANT SELECT ON events + event_sources TO anon（修復前台 0 筆活動）| ⏳ 待人工執行 |
+| 028 | ADD COLUMN idols.alt_names text[] + GRANT UPDATE（M1a-A，聚合爬蟲名稱匹配）| ✅ 已執行 |
+| 029 | Seed crawler_sources for kpopofficial-concerts（M1a-C）| ✅ 已執行 |
+| 030 | GRANT DELETE ON events + admin_delete_draft_events RLS（後台刪除草稿）| ✅ 已執行 |
 
 ---
 
