@@ -42,6 +42,11 @@ function planForSource(
       }
     case 'blackpink_official_tour':
       return { endpoint: '/api/admin/crawlers/blackpink-tour/run' }
+    case 'kpopofficial_concerts':
+      return {
+        endpoint: '/api/admin/crawlers/kpopofficial-concerts/run',
+        body: { sourceKey },
+      }
     default:
       return null
   }
