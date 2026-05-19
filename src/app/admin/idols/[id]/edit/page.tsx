@@ -25,6 +25,11 @@ interface IdolDetail {
   is_active: boolean
   avatar_url: string | null
   alt_names: string[]
+  avatar_source_url: string | null
+  avatar_source_provider: string | null
+  avatar_source_license: string | null
+  avatar_source_author: string | null
+  avatar_source_note: string | null
 }
 
 // ── Data fetcher ──────────────────────────────────────────────────────────────
@@ -35,7 +40,7 @@ async function getIdolById(id: string): Promise<IdolDetail | null> {
 
   const { data, error } = await supabase
     .from('idols')
-    .select('id, slug, name, korean_name, type, gender, category, agency, debut_date, color, genres, member_count, description, is_active, avatar_url, alt_names')
+    .select('id, slug, name, korean_name, type, gender, category, agency, debut_date, color, genres, member_count, description, is_active, avatar_url, alt_names, avatar_source_url, avatar_source_provider, avatar_source_license, avatar_source_author, avatar_source_note')
     .eq('id', id)
     .single()
 
@@ -120,6 +125,14 @@ export default async function AdminEditIdolPage({
     description: idol.description ?? '',
     avatarUrl:   idol.avatar_url ?? '',
     altNames:    (idol.alt_names ?? []).join('\n'),
+    // I1b-C: pass source provenance to the form for the read-only summary section
+    avatarSource: {
+      url:       idol.avatar_source_url,
+      provider:  idol.avatar_source_provider,
+      license:   idol.avatar_source_license,
+      author:    idol.avatar_source_author,
+      note:      idol.avatar_source_note,
+    },
   }
 
   return (

@@ -65,7 +65,9 @@ export default function AiImageSearchModal({
   /** Track whether we've kicked off the initial search yet for this open. */
   const initialDoneRef = useRef(false)
 
-  const [selectedUrl, setSelectedUrl] = useState<string | null>(null)
+  /** Holds the currently-picked candidate so we can pass attribution metadata
+   *  (sourceUrl = Wikipedia article URL, distinct from the image file URL). */
+  const [selected, setSelected] = useState<Candidate | null>(null)
   const [confirming, setConfirming] = useState(false)
   const [confirmError, setConfirmError] = useState<string | null>(null)
 
@@ -81,7 +83,7 @@ export default function AiImageSearchModal({
       setSearching(true)
       setCandidates([])
       setSearchError(null)
-      setSelectedUrl(null)
+      setSelected(null)
       setConfirmError(null)
 
       const path =
@@ -141,11 +143,21 @@ export default function AiImageSearchModal({
   }
 
   async function handleConfirm() {
-    if (!selectedUrl) return
+    if (!selected) return
     setConfirming(true)
     setConfirmError(null)
     try {
-      const result = await uploadIdolAvatarFromUrl(idolId, selectedUrl)
+      // Wikimedia → provider='wikimedia', source_url = the Wikipedia article
+      // page (NOT the Commons file URL — admin needs the article context to
+      // verify license / depiction). license/author are null until we extend
+      // the Wikimedia client to fetch Commons file metadata.
+      const result = await uploadIdolAvatarFromUrl(idolId, selected.imageUrl, {
+        provider: 'wikimedia',
+        attributionSourceUrl: selected.sourceUrl || null,
+        license: null,
+        author: null,
+        note: `selected from Wikimedia by admin (page: ${selected.title})`,
+      })
       if (!result.ok || !result.avatarUrl) {
         setConfirmError(result.error || '圖片上傳失敗，請稍後再試。')
         return
@@ -260,12 +272,12 @@ export default function AiImageSearchModal({
         {!searching && candidates.length > 0 && (
           <div className="grid grid-cols-2 gap-2">
             {candidates.map((c) => {
-              const isSelected = selectedUrl === c.imageUrl
+              const isSelected = selected?.imageUrl === c.imageUrl
               return (
                 <button
                   key={c.imageUrl}
                   type="button"
-                  onClick={() => setSelectedUrl(c.imageUrl)}
+                  onClick={() => setSelected(c)}
                   disabled={confirming}
                   className={`relative rounded-xl overflow-hidden border-2 active:opacity-80 transition-all ${
                     isSelected
@@ -325,7 +337,7 @@ export default function AiImageSearchModal({
           <button
             type="button"
             onClick={handleConfirm}
-            disabled={!selectedUrl || confirming}
+            disabled={!selected || confirming}
             className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-violet px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"
           >
             {confirming ? (
