@@ -56,6 +56,14 @@ export interface EditIdolFormProps {
     description: string
     avatarUrl: string
     altNames: string   // newline-separated string for the textarea
+    /** I1b-C: avatar provenance (read-only summary) */
+    avatarSource: {
+      url: string | null
+      provider: string | null
+      license: string | null
+      author: string | null
+      note: string | null
+    }
   }
 }
 
@@ -372,6 +380,9 @@ export default function EditIdolForm({ idolId, initial }: EditIdolFormProps) {
             placeholder="https://...（手動貼網址）"
             className={inputCls + ' mt-2'}
           />
+
+          {/* I1b-C: avatar provenance summary (read-only) */}
+          <AvatarSourceSummary source={initial.avatarSource} hasAvatar={!!avatarUrl} />
         </Field>
       </Section>
 
@@ -436,6 +447,101 @@ function Field({
         {required && <span className="text-primary ml-0.5">*</span>}
       </label>
       {children}
+    </div>
+  )
+}
+
+// ── I1b-C: avatar source provenance summary (read-only) ───────────────────
+//
+// Renders the current avatar's source metadata stored on the idols row.
+// Always shows the legal reminder text whether or not source data exists,
+// because anyone editing avatars needs to think about licensing.
+
+const PROVIDER_LABELS: Record<string, string> = {
+  wikimedia: 'Wikimedia / Wikipedia',
+  manual_upload: '手動上傳',
+  manual_url: '手動貼網址',
+  other: '其他',
+}
+
+function AvatarSourceSummary({
+  source,
+  hasAvatar,
+}: {
+  source: EditIdolFormProps['initial']['avatarSource']
+  hasAvatar: boolean
+}) {
+  const recorded =
+    source.provider !== null ||
+    source.url !== null ||
+    source.license !== null ||
+    source.author !== null
+  const providerLabel = source.provider
+    ? PROVIDER_LABELS[source.provider] ?? source.provider
+    : null
+
+  return (
+    <div className="mt-3 rounded-xl border border-card-border bg-bg/40 p-3 flex flex-col gap-2">
+      <p className="text-[10px] font-semibold text-muted uppercase tracking-wide">
+        圖片來源
+      </p>
+
+      {!hasAvatar ? (
+        <p className="text-[11px] text-muted/70 leading-relaxed">
+          目前無頭像。前台會顯示文字 placeholder。
+        </p>
+      ) : !recorded ? (
+        <p className="text-[11px] text-muted/70 leading-relaxed">
+          尚未記錄圖片來源（可能是 I1b-C 之前上傳的）。
+          下次重新上傳會自動寫入來源。
+        </p>
+      ) : (
+        <dl className="grid grid-cols-[auto,1fr] gap-x-3 gap-y-1 text-[11px]">
+          {providerLabel && (
+            <>
+              <dt className="text-muted">類型</dt>
+              <dd className="text-text-base">{providerLabel}</dd>
+            </>
+          )}
+          {source.url && (
+            <>
+              <dt className="text-muted">來源</dt>
+              <dd>
+                <a
+                  href={source.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-violet-200 underline underline-offset-2 break-all"
+                >
+                  {source.url}
+                </a>
+              </dd>
+            </>
+          )}
+          {source.author && (
+            <>
+              <dt className="text-muted">作者</dt>
+              <dd className="text-text-base break-all">{source.author}</dd>
+            </>
+          )}
+          {source.license && (
+            <>
+              <dt className="text-muted">授權</dt>
+              <dd className="text-text-base break-all">{source.license}</dd>
+            </>
+          )}
+          {source.note && (
+            <>
+              <dt className="text-muted">備註</dt>
+              <dd className="text-text-base/80 break-all">{source.note}</dd>
+            </>
+          )}
+        </dl>
+      )}
+
+      <p className="text-[10px] text-amber-300/80 leading-relaxed mt-1">
+        ⚠️ 請確認圖片來源與使用權限。若非 Wikimedia / 官方授權圖片，請勿作為公開頭像使用。
+      </p>
     </div>
   )
 }

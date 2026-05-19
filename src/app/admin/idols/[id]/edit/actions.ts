@@ -49,24 +49,76 @@ export async function updateIdol(
   // Guard 2: name must not be empty (slug is immutable — never sent)
   if (!payload.name.trim()) return { error: '名稱不可為空。' }
 
+  // I1b-C: if the avatar URL changed via this form (admin pasted a public
+  // URL by hand), mark source as 'manual_url'. Look up current state first
+  // so we only flip metadata on real change — saving other fields shouldn't
+  // wipe Wikimedia attribution out.
+  const newAvatarUrl = payload.avatarUrl.trim() || null
+  const { data: existing } = await supabase
+    .from('idols')
+    .select('avatar_url')
+    .eq('id', idolId)
+    .single<{ avatar_url: string | null }>()
+  const avatarChanged = (existing?.avatar_url ?? null) !== newAvatarUrl
+
+  type IdolUpdate = {
+    name: string
+    korean_name: string | null
+    type: string | null
+    gender: string | null
+    category: string | null
+    agency: string | null
+    debut_date: string | null
+    color: string | null
+    genres: string[]
+    member_count: number | null
+    description: string | null
+    avatar_url: string | null
+    alt_names: string[]
+    avatar_source_url?: string | null
+    avatar_source_provider?: string | null
+    avatar_source_license?: string | null
+    avatar_source_author?: string | null
+    avatar_source_note?: string | null
+  }
+
+  const updatePayload: IdolUpdate = {
+    name:         payload.name.trim(),
+    korean_name:  payload.koreanName.trim() || null,
+    type:         payload.type || null,
+    gender:       payload.gender || null,
+    category:     payload.category || null,
+    agency:       payload.agency.trim() || null,
+    debut_date:   payload.debutDate || null,
+    color:        payload.color.trim() || null,
+    genres:       payload.genres,
+    member_count: payload.memberCount ? parseInt(payload.memberCount, 10) : null,
+    description:  payload.description.trim() || null,
+    avatar_url:   newAvatarUrl,
+    alt_names:    payload.altNames,
+    // slug, is_active, id, created_at are intentionally omitted
+  }
+
+  if (avatarChanged) {
+    if (newAvatarUrl) {
+      updatePayload.avatar_source_url = newAvatarUrl
+      updatePayload.avatar_source_provider = 'manual_url'
+      updatePayload.avatar_source_license = null
+      updatePayload.avatar_source_author = null
+      updatePayload.avatar_source_note = 'manual URL confirmed by admin'
+    } else {
+      // Admin cleared the URL — clear provenance too.
+      updatePayload.avatar_source_url = null
+      updatePayload.avatar_source_provider = null
+      updatePayload.avatar_source_license = null
+      updatePayload.avatar_source_author = null
+      updatePayload.avatar_source_note = null
+    }
+  }
+
   const { error } = await supabase
     .from('idols')
-    .update({
-      name:         payload.name.trim(),
-      korean_name:  payload.koreanName.trim() || null,
-      type:         payload.type || null,
-      gender:       payload.gender || null,
-      category:     payload.category || null,
-      agency:       payload.agency.trim() || null,
-      debut_date:   payload.debutDate || null,
-      color:        payload.color.trim() || null,
-      genres:       payload.genres,
-      member_count: payload.memberCount ? parseInt(payload.memberCount, 10) : null,
-      description:  payload.description.trim() || null,
-      avatar_url:   payload.avatarUrl.trim() || null,
-      alt_names:    payload.altNames,
-      // slug, is_active, id, created_at are intentionally omitted
-    })
+    .update(updatePayload)
     .eq('id', idolId)
 
   if (error) {
@@ -166,9 +218,18 @@ export async function uploadIdolAvatar(
     .getPublicUrl(newPath)
   const publicUrl = publicUrlData.publicUrl
 
+  // I1b-C: record provenance alongside avatar_url so admin can audit the
+  // image's origin later. Manual local upload → provider='manual_upload'.
   const { error: dbError } = await supabase
     .from('idols')
-    .update({ avatar_url: publicUrl })
+    .update({
+      avatar_url: publicUrl,
+      avatar_source_url: null,
+      avatar_source_provider: 'manual_upload',
+      avatar_source_license: null,
+      avatar_source_author: null,
+      avatar_source_note: 'uploaded by admin',
+    })
     .eq('id', idolId)
 
   if (dbError) {
@@ -232,9 +293,26 @@ const REMOTE_FETCH_TIMEOUT_MS = 10_000
 /** Hard cap on the source image we'll download before resizing. */
 const REMOTE_MAX_DOWNLOAD_BYTES = 15 * 1024 * 1024 // 15 MiB
 
+/**
+ * Attribution metadata for I1b-C source tracking. All fields optional —
+ * unknowns are stored as null. `provider` defaults to 'manual_url' when
+ * the caller doesn't tell us where the URL came from (e.g. admin pasting
+ * a public photo URL).
+ */
+export interface AvatarSourceMeta {
+  /** The page where the image was found (Wikipedia article, etc.).
+   *  Distinct from the imageUrl which is the direct file URL we download. */
+  attributionSourceUrl?: string | null
+  provider?: 'wikimedia' | 'manual_upload' | 'manual_url' | 'other'
+  license?: string | null
+  author?: string | null
+  note?: string | null
+}
+
 export async function uploadIdolAvatarFromUrl(
   idolId: string,
   sourceUrl: string,
+  meta?: AvatarSourceMeta,
 ): Promise<UploadAvatarResult> {
   const { isAdmin } = await getCurrentAdmin()
   if (!isAdmin) return { ok: false, error: '需要管理員身份才能上傳頭像。' }
@@ -359,10 +437,24 @@ export async function uploadIdolAvatarFromUrl(
     .getPublicUrl(newPath)
   const publicUrl = publicUrlData.publicUrl
 
-  // ── 5. Write back idols.avatar_url ────────────────────────────────────────
+  // ── 5. Write back idols.avatar_url + I1b-C source metadata ───────────────
+  const provider = meta?.provider ?? 'manual_url'
+  const fallbackNote =
+    provider === 'wikimedia'
+      ? 'selected from Wikimedia by admin'
+      : provider === 'manual_url'
+        ? 'manual URL confirmed by admin'
+        : null
   const { error: dbError } = await supabase
     .from('idols')
-    .update({ avatar_url: publicUrl })
+    .update({
+      avatar_url: publicUrl,
+      avatar_source_url: meta?.attributionSourceUrl ?? sourceUrl,
+      avatar_source_provider: provider,
+      avatar_source_license: meta?.license ?? null,
+      avatar_source_author: meta?.author ?? null,
+      avatar_source_note: meta?.note ?? fallbackNote,
+    })
     .eq('id', idolId)
 
   if (dbError) {
