@@ -32,9 +32,16 @@ type Response = OkResponse | ErrResponse
  * Wikimedia image search. Returns up to 10 candidates for the AI search
  * modal to render. Does NOT touch Storage or idols.avatar_url — that's the
  * follow-up uploadIdolAvatarFromUrl server action.
+ *
+ * Optional query params:
+ *   ?q=  — override the English search term (default: idols.name)
+ *   ?ko= — override the Korean search term (default: idols.korean_name)
+ *
+ * Either override may be empty string to explicitly skip that language
+ * (e.g. `?q=Jennie+Kim&ko=` to search English only).
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: { id: string } },
 ): Promise<NextResponse<Response>> {
   const { isAdmin } = await getCurrentAdmin()
@@ -67,12 +74,21 @@ export async function GET(
     )
   }
 
+  // Apply optional overrides from query params. `null` for ko means "ignore",
+  // empty string means "explicitly skip Korean fallback".
+  const url = new URL(request.url)
+  const qOverride = url.searchParams.get('q')
+  const koOverride = url.searchParams.get('ko')
+  const effName = qOverride !== null ? qOverride : idol.name
+  const effKo =
+    koOverride !== null ? koOverride : idol.korean_name
+
   try {
-    const result = await searchIdolImages(idol.name, idol.korean_name)
+    const result = await searchIdolImages(effName, effKo)
     return NextResponse.json({
       ok: true,
       idolId: idol.id,
-      query: { name: idol.name, koreanName: idol.korean_name },
+      query: { name: effName, koreanName: effKo },
       candidates: result.candidates,
       diagnostics: result.diagnostics,
     })
