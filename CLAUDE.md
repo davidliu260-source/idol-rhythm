@@ -115,6 +115,16 @@
 
 ---
 
+## 偵錯與重大修改原則（從實戰學到）
+
+- **Read before write**：改 bug 前先讀完相關流程的所有檔案 + 註解，特別注意 `TODO` / `later phase` / `to be added` 字樣 — 那很可能就是答案
+  - 反例：PR #49 / #50 / #51 三輪都在症狀治療，因為沒先讀 `serverClient.ts` 註解；註解早寫了「Session refresh happens via middleware (to be added in a later phase)」，PR #52 才補上 middleware，才是根因
+- **修了 2 次還沒中就停下重讀**：不要連開 3 個症狀治療 PR；第二次修錯時主動承認假設可能有問題，重新讀整個流程
+- **完成 ≠ 結束**：build pass、commit、push 都不等於實際運作。Silent-hang（Promise 不 resolve 也不 reject）、catch 沒命中、async finally 沒跑 都算未完成。預設懷疑「表面平靜」
+- **長 session 主動 checkpoint**：累積 5+ PRs 時主動整理一次成果盤點；換主題前先 summary，避免後面迷路
+
+---
+
 ## 接手須知（給下一個 session 的 Claude）
 
 進來新工作時，**先讀本檔**，然後：
