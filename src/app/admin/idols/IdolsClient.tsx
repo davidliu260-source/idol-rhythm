@@ -18,6 +18,7 @@ export interface AdminIdol {
   is_active: boolean
   avatar_url: string | null
   description: string | null
+  color: string | null
 }
 
 interface Props {
@@ -69,14 +70,16 @@ function isBigFour(agency: string | null): boolean {
   return BIG_FOUR.some((k) => agencyMatches(agency, k))
 }
 
-// "缺資料" = either avatar or description is missing/blank. These are the
-// two fields that most visibly affect frontend cards and admin browsing.
+// "缺資料" = avatar, description, or primary color is missing/blank.
+// These fields most visibly affect frontend cards, detail pages, and admin
+// browsing.
 // Doesn't filter by is_active — admin sometimes wants to backfill data for
 // dormant idols too.
 function isMissingData(idol: AdminIdol): boolean {
   const noAvatar = !idol.avatar_url || idol.avatar_url.trim().length === 0
   const noDesc = !idol.description || idol.description.trim().length === 0
-  return noAvatar || noDesc
+  const noColor = !idol.color || idol.color.trim().length === 0
+  return noAvatar || noDesc || noColor
 }
 
 function matchTab(idol: AdminIdol, tab: FilterTab): boolean {
@@ -235,6 +238,11 @@ export default function IdolsClient({ idols }: Props) {
                 {(!idol.description || idol.description.trim().length === 0) && (
                   <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded border bg-amber-500/10 border-amber-500/30 text-amber-400">
                     缺描述
+                  </span>
+                )}
+                {(!idol.color || idol.color.trim().length === 0) && (
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded border bg-amber-500/10 border-amber-500/30 text-amber-400">
+                    缺主色
                   </span>
                 )}
               </div>
