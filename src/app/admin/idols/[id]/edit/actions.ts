@@ -212,3 +212,180 @@ function extractAvatarBucketPath(url: string): string | null {
   const path = url.substring(idx + marker.length)
   return path.length > 0 ? path : null
 }
+
+
+// ── I1b-B: Avatar from remote URL (AI search result) ─────────────────────────
+//
+// Wikimedia search returns Commons file URLs. This action takes that URL +
+// the idol id, server-side fetches the image, validates it, resizes via sharp
+// to 512x512 WebP, and re-uses the I1b-A Storage upload + DB write flow.
+//
+// Why the resize: Wikipedia thumbnails for popular acts can be 2000+ px and
+// blow past the 2 MiB bucket limit. WebP 512x512 is enough for the IdolAvatar
+// component (which renders at most ~96px on mobile) and keeps every avatar
+// at a predictable size for CDN caching.
+//
+// Why "cover" + center: idol portraits are usually centered; cover crop
+// avoids letterboxing while preserving the face area in most cases.
+
+const REMOTE_FETCH_TIMEOUT_MS = 10_000
+/** Hard cap on the source image we'll download before resizing. */
+const REMOTE_MAX_DOWNLOAD_BYTES = 15 * 1024 * 1024 // 15 MiB
+
+export async function uploadIdolAvatarFromUrl(
+  idolId: string,
+  sourceUrl: string,
+): Promise<UploadAvatarResult> {
+  const { isAdmin } = await getCurrentAdmin()
+  if (!isAdmin) return { ok: false, error: '需要管理員身份才能上傳頭像。' }
+
+  // Validate the URL shape early so we don't waste a Storage round-trip.
+  let parsed: URL
+  try {
+    parsed = new URL(sourceUrl)
+  } catch {
+    return { ok: false, error: '圖片網址格式錯誤。' }
+  }
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+    return { ok: false, error: '圖片網址必須是 http(s)。' }
+  }
+
+  const supabase = getSupabaseServerClient()
+  if (!supabase) return { ok: false, error: 'Supabase 未設定，請檢查環境變數。' }
+
+  // ── 1. Download the source image ──────────────────────────────────────────
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), REMOTE_FETCH_TIMEOUT_MS)
+  let sourceBuffer: ArrayBuffer
+  let sourceMime: string | null = null
+  try {
+    const res = await fetch(sourceUrl, {
+      headers: {
+        'User-Agent': 'IdolRhythm-Admin-Bot/0.1 (+https://idol-rhythm.vercel.app)',
+        Accept: 'image/*',
+      },
+      signal: controller.signal,
+      cache: 'no-store',
+    })
+    if (!res.ok) {
+      return { ok: false, error: `圖片下載失敗，請換一張（HTTP ${res.status}）。` }
+    }
+    sourceMime = res.headers.get('content-type')?.split(';')[0]?.trim() ?? null
+    // Read with size guard so a 100 MB PNG can't OOM the route.
+    sourceBuffer = await res.arrayBuffer()
+    if (sourceBuffer.byteLength > REMOTE_MAX_DOWNLOAD_BYTES) {
+      return {
+        ok: false,
+        error: `圖片過大（${(sourceBuffer.byteLength / 1024 / 1024).toFixed(1)} MiB），請換一張。`,
+      }
+    }
+  } catch (e) {
+    return {
+      ok: false,
+      error: `圖片下載失敗，請換一張（${e instanceof Error ? e.message : 'unknown'}）。`,
+    }
+  } finally {
+    clearTimeout(timer)
+  }
+
+  // Surface MIME mismatch early. sharp can still handle most things, but
+  // unfamiliar formats (SVG, AVIF, HEIC) deserve a clear "請換一張" message.
+  if (sourceMime && !sourceMime.startsWith('image/')) {
+    return {
+      ok: false,
+      error: `下載到的不是圖片格式（${sourceMime}），請換一張。`,
+    }
+  }
+
+  // ── 2. Resize + transcode with sharp ──────────────────────────────────────
+  // Import lazily so sharp isn't pulled into edge bundles.
+  let resized: Buffer
+  try {
+    const sharp = (await import('sharp')).default
+    resized = await sharp(Buffer.from(sourceBuffer))
+      .rotate() // honour EXIF orientation
+      .resize(512, 512, { fit: 'cover', position: 'attention' })
+      .webp({ quality: 82 })
+      .toBuffer()
+  } catch (e) {
+    return {
+      ok: false,
+      error: `圖片處理失敗（${e instanceof Error ? e.message : 'unknown'}），請換一張。`,
+    }
+  }
+
+  if (resized.byteLength > AVATAR_MAX_BYTES) {
+    // Extremely unlikely at 512x512 webp q82, but guard anyway.
+    return {
+      ok: false,
+      error: `處理後圖片仍大於 ${AVATAR_MAX_BYTES / 1024 / 1024} MiB，請換一張。`,
+    }
+  }
+
+  // ── 3. Look up the idol slug for path naming, mirror uploadIdolAvatar ────
+  const { data: idol, error: lookupError } = await supabase
+    .from('idols')
+    .select('slug, avatar_url')
+    .eq('id', idolId)
+    .single<{ slug: string; avatar_url: string | null }>()
+
+  if (lookupError || !idol) {
+    return {
+      ok: false,
+      error: `找不到偶像或讀取失敗：${lookupError?.message ?? 'unknown'}`,
+    }
+  }
+
+  const newPath = `${idol.slug}-${Date.now()}.webp`
+
+  // ── 4. Upload to Storage ──────────────────────────────────────────────────
+  const { error: uploadError } = await supabase.storage
+    .from(AVATAR_BUCKET)
+    .upload(newPath, resized, {
+      contentType: 'image/webp',
+      upsert: false,
+      cacheControl: '3600',
+    })
+
+  if (uploadError) {
+    return {
+      ok: false,
+      error: `圖片上傳失敗，請稍後再試（${uploadError.message}）。`,
+    }
+  }
+
+  const { data: publicUrlData } = supabase.storage
+    .from(AVATAR_BUCKET)
+    .getPublicUrl(newPath)
+  const publicUrl = publicUrlData.publicUrl
+
+  // ── 5. Write back idols.avatar_url ────────────────────────────────────────
+  const { error: dbError } = await supabase
+    .from('idols')
+    .update({ avatar_url: publicUrl })
+    .eq('id', idolId)
+
+  if (dbError) {
+    return {
+      ok: false,
+      error: `寫回 idols.avatar_url 失敗：${dbError.code ? `[${dbError.code}] ` : ''}${dbError.message}`,
+    }
+  }
+
+  // ── 6. Clean up the previous bucket-hosted avatar (best-effort) ──────────
+  if (idol.avatar_url) {
+    const oldPath = extractAvatarBucketPath(idol.avatar_url)
+    if (oldPath && oldPath !== newPath) {
+      await supabase.storage.from(AVATAR_BUCKET).remove([oldPath])
+    }
+  }
+
+  revalidatePath('/admin/idols')
+  revalidatePath(`/admin/idols/${idolId}`)
+  revalidatePath(`/admin/idols/${idolId}/edit`)
+  revalidatePath('/idols')
+  revalidatePath('/')
+  revalidatePath('/schedule')
+
+  return { ok: true, avatarUrl: publicUrl }
+}

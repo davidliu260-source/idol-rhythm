@@ -1,7 +1,8 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { Loader2, Upload, ImageIcon } from 'lucide-react'
+import { Loader2, Upload, ImageIcon, Sparkles } from 'lucide-react'
+import AiImageSearchModal from './AiImageSearchModal'
 import { updateIdol, uploadIdolAvatar, type UpdateIdolPayload } from './actions'
 
 // ── Option lists ──────────────────────────────────────────────────────────────
@@ -81,6 +82,8 @@ export default function EditIdolForm({ idolId, initial }: EditIdolFormProps) {
   // ── I1b-A: avatar file upload state ────────────────────────────────────────
   const [uploading,    setUploading]    = useState(false)
   const [uploadError,  setUploadError]  = useState<string | null>(null)
+  // I1b-B: AI image search modal open state
+  const [aiModalOpen,  setAiModalOpen]  = useState(false)
   const [uploadNotice, setUploadNotice] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -338,10 +341,21 @@ export default function EditIdolForm({ idolId, initial }: EditIdolFormProps) {
               {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
               {uploading ? '上傳中…' : '選擇圖片上傳'}
             </button>
+
+            <button
+              type="button"
+              disabled={uploading}
+              onClick={() => setAiModalOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-violet/40 bg-violet/10 px-3 py-2 text-xs font-semibold text-violet-200 disabled:opacity-60 transition-opacity"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              AI 搜圖
+            </button>
           </div>
 
           <p className="text-[10px] text-muted/50 mt-1.5">
             支援 JPEG / PNG / WebP，上限 2 MB。上傳成功會直接寫入 avatar_url；如不上傳本機檔，也可手動貼公開圖片網址。
+            或點「AI 搜圖」自動從 Wikimedia 找候選圖片。
           </p>
 
           {uploadError && (
@@ -379,6 +393,18 @@ export default function EditIdolForm({ idolId, initial }: EditIdolFormProps) {
         {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
         {submitting ? '儲存中…' : '儲存變更'}
       </button>
+
+      {/* I1b-B: AI image search modal (renders only when open) */}
+      <AiImageSearchModal
+        idolId={idolId}
+        isOpen={aiModalOpen}
+        onClose={() => setAiModalOpen(false)}
+        onAvatarUpdated={(url) => {
+          setAvatarUrl(url)
+          setUploadNotice('已從 AI 搜圖選定圖片並寫入 avatar_url。')
+          setUploadError(null)
+        }}
+      />
     </form>
   )
 }
