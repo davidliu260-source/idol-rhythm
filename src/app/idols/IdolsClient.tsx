@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { Search, Check, Users } from 'lucide-react'
 import type { Idol } from '@/lib/mockIdols'
 import { useAppState } from '@/lib/appState'
@@ -125,37 +126,43 @@ function IdolCard({
         isFollowing ? 'border-primary/50 bg-primary-dim' : 'border-card-border bg-card',
       )}
     >
-      <div className="mb-3">
-        <IdolAvatar
-          name={idol.name}
-          avatarUrl={idol.avatarUrl}
-          color={idol.color}
-          size="lg"
-        />
-      </div>
+      {/* F5: wrap the info portion in a Link to the detail page. The follow
+          button stays OUTSIDE the link so clicking it doesn't navigate. */}
+      <Link href={`/idols/${idol.id}`} className="block group">
+        <div className="mb-3">
+          <IdolAvatar
+            name={idol.name}
+            avatarUrl={idol.avatarUrl}
+            color={idol.color}
+            size="lg"
+          />
+        </div>
 
-      <div className="mb-3">
-        <h3 className="font-bold text-text-base text-sm leading-tight">{idol.name}</h3>
-        <p className="text-xs text-muted mt-0.5">{idol.koreanName}</p>
-        {idol.memberCount && (
-          <div className="flex items-center gap-1 mt-1.5">
-            <Users className="h-3 w-3 text-muted" />
-            <span className="text-xs text-muted">{idol.memberCount} 人</span>
-          </div>
-        )}
-        <p className="text-xs text-muted/60 mt-0.5">{idol.agency}</p>
-      </div>
+        <div className="mb-3">
+          <h3 className="font-bold text-text-base text-sm leading-tight group-hover:text-primary transition-colors">
+            {idol.name}
+          </h3>
+          <p className="text-xs text-muted mt-0.5">{idol.koreanName}</p>
+          {idol.memberCount && (
+            <div className="flex items-center gap-1 mt-1.5">
+              <Users className="h-3 w-3 text-muted" />
+              <span className="text-xs text-muted">{idol.memberCount} 人</span>
+            </div>
+          )}
+          <p className="text-xs text-muted/60 mt-0.5">{idol.agency}</p>
+        </div>
 
-      <div className="flex flex-wrap gap-1 mb-3">
-        {idol.genres.slice(0, 2).map((g) => (
-          <span
-            key={g}
-            className="rounded-full bg-card-border px-2 py-0.5 text-[10px] text-muted"
-          >
-            {g}
-          </span>
-        ))}
-      </div>
+        <div className="flex flex-wrap gap-1 mb-3">
+          {idol.genres.slice(0, 2).map((g) => (
+            <span
+              key={g}
+              className="rounded-full bg-card-border px-2 py-0.5 text-[10px] text-muted"
+            >
+              {g}
+            </span>
+          ))}
+        </div>
+      </Link>
 
       <button
         onClick={() => onToggle(idol.id)}

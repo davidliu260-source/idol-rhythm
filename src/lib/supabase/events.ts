@@ -169,6 +169,28 @@ export async function getActiveIdols(): Promise<Idol[]> {
 }
 
 /**
+ * Returns a single idol by slug for the F5 idol detail page.
+ * Returns null when not found, inactive, or Supabase unavailable.
+ *
+ * Inactive idols deliberately 404 so we don't leak dormant rows publicly —
+ * admin can re-activate them via /admin/idols if needed.
+ */
+export async function getIdolBySlug(slug: string): Promise<Idol | null> {
+  const supabase = getSupabaseClient()
+  if (!supabase) return null
+
+  const { data, error } = await supabase
+    .from('idols')
+    .select('*')
+    .eq('slug', slug)
+    .eq('is_active', true)
+    .maybeSingle()
+
+  if (error || !data) return null
+  return rowToIdol(data as SupabaseIdolRow)
+}
+
+/**
  * Returns a single published event by UUID.
  * Returns null if not found, not published, or Supabase is not configured.
  */
