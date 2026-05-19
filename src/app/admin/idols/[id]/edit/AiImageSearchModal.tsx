@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Loader2, X, ExternalLink, Sparkles, AlertTriangle, Check } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Loader2, X, ExternalLink, Sparkles, AlertTriangle, Check, Search, RotateCw } from 'lucide-react'
 import { uploadIdolAvatarFromUrl } from './actions'
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -58,52 +58,87 @@ export default function AiImageSearchModal({
   const [searching, setSearching] = useState(false)
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [searchError, setSearchError] = useState<string | null>(null)
+  /** Last query the server actually ran (echoed in the result). */
   const [query, setQuery] = useState<{ name: string; koreanName: string | null } | null>(null)
+  /** What's currently typed in the search box (editable; used to trigger re-search). */
+  const [queryInput, setQueryInput] = useState('')
+  /** Track whether we've kicked off the initial search yet for this open. */
+  const initialDoneRef = useRef(false)
 
   const [selectedUrl, setSelectedUrl] = useState<string | null>(null)
   const [confirming, setConfirming] = useState(false)
   const [confirmError, setConfirmError] = useState<string | null>(null)
 
-  // Kick off the search whenever the modal opens.
+  // ── Search runner ─────────────────────────────────────────────────────────
+  // `customQuery`:
+  //   - null  → first-open path; let the API fall back to idols.name (and ko)
+  //   - else  → user pressed re-search; send `?q=` (Korean isn't editable in
+  //             this version, so we let the API still attach idols.korean_name
+  //             by NOT sending ?ko=)
+  const runSearch = useCallback(
+    (customQuery: string | null) => {
+      let cancelled = false
+      setSearching(true)
+      setCandidates([])
+      setSearchError(null)
+      setSelectedUrl(null)
+      setConfirmError(null)
+
+      const path =
+        customQuery === null
+          ? `/api/admin/idols/${idolId}/ai-search-image`
+          : `/api/admin/idols/${idolId}/ai-search-image?q=${encodeURIComponent(customQuery)}`
+
+      fetch(path, { method: 'GET', cache: 'no-store' })
+        .then(async (res) => {
+          const body = (await res.json()) as SearchResponse
+          if (cancelled) return
+          if (body.ok) {
+            setCandidates(body.candidates)
+            setQuery(body.query)
+            // Keep the input in sync with what the server actually ran so the
+            // user can refine from the real keyword instead of stale state.
+            setQueryInput(body.query.name)
+          } else {
+            setSearchError(body.error || '搜尋失敗，請稍後再試。')
+          }
+        })
+        .catch((e) => {
+          if (cancelled) return
+          setSearchError(
+            `搜尋失敗：${e instanceof Error ? e.message : '網路錯誤'}。`,
+          )
+        })
+        .finally(() => {
+          if (!cancelled) setSearching(false)
+        })
+
+      return () => {
+        cancelled = true
+      }
+    },
+    [idolId],
+  )
+
+  // Initial search on open. Only runs once per open cycle.
   useEffect(() => {
-    if (!isOpen) return
-
-    let cancelled = false
-    setSearching(true)
-    setCandidates([])
-    setSearchError(null)
-    setSelectedUrl(null)
-    setConfirmError(null)
-    setQuery(null)
-
-    fetch(`/api/admin/idols/${idolId}/ai-search-image`, {
-      method: 'GET',
-      cache: 'no-store',
-    })
-      .then(async (res) => {
-        const body = (await res.json()) as SearchResponse
-        if (cancelled) return
-        if (body.ok) {
-          setCandidates(body.candidates)
-          setQuery(body.query)
-        } else {
-          setSearchError(body.error || '搜尋失敗，請稍後再試。')
-        }
-      })
-      .catch((e) => {
-        if (cancelled) return
-        setSearchError(
-          `搜尋失敗：${e instanceof Error ? e.message : '網路錯誤'}。`,
-        )
-      })
-      .finally(() => {
-        if (!cancelled) setSearching(false)
-      })
-
-    return () => {
-      cancelled = true
+    if (!isOpen) {
+      initialDoneRef.current = false
+      return
     }
-  }, [isOpen, idolId])
+    if (initialDoneRef.current) return
+    initialDoneRef.current = true
+    setQuery(null)
+    setQueryInput('')
+    const cancel = runSearch(null)
+    return cancel
+  }, [isOpen, runSearch])
+
+  function handleManualSearch() {
+    const trimmed = queryInput.trim()
+    if (!trimmed || searching || confirming) return
+    runSearch(trimmed)
+  }
 
   async function handleConfirm() {
     if (!selectedUrl) return
@@ -152,16 +187,42 @@ export default function AiImageSearchModal({
           </button>
         </div>
 
-        {/* Query echo */}
-        {query && (
-          <p className="text-[11px] text-muted">
-            搜尋：<span className="text-text-base font-mono">{query.name}</span>
-            {query.koreanName && (
-              <>
-                {' / '}
-                <span className="text-text-base font-mono">{query.koreanName}</span>
-              </>
-            )}
+        {/* Search input — editable to refine if first round isn't satisfying.
+            Korean fallback stays attached server-side using idols.korean_name. */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted pointer-events-none" />
+            <input
+              type="text"
+              value={queryInput}
+              onChange={(e) => setQueryInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  handleManualSearch()
+                }
+              }}
+              placeholder="搜尋關鍵字（按 Enter 重搜）"
+              disabled={searching || confirming}
+              className="w-full rounded-xl bg-bg border border-card-border pl-9 pr-3 py-2 text-xs text-text-base placeholder:text-muted focus:outline-none focus:border-violet/40 disabled:opacity-50"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleManualSearch}
+            disabled={
+              searching || confirming || queryInput.trim().length === 0
+            }
+            className="inline-flex items-center gap-1 rounded-xl bg-violet/10 border border-violet/40 px-3 py-2 text-xs font-semibold text-violet-200 disabled:opacity-40"
+          >
+            <RotateCw className={`h-3 w-3 ${searching ? 'animate-spin' : ''}`} />
+            再搜
+          </button>
+        </div>
+        {query?.koreanName && (
+          <p className="text-[10px] text-muted/70 -mt-1">
+            自動附加韓文搜尋：
+            <span className="font-mono text-muted">{query.koreanName}</span>
           </p>
         )}
 
