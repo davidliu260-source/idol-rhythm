@@ -19,7 +19,7 @@ async function getAdminIdols(): Promise<{ idols: AdminIdol[]; error: string | nu
 
   const { data, error } = await supabase
     .from('idols')
-    .select('id, slug, name, korean_name, type, category, agency, alt_names, is_active')
+    .select('id, slug, name, korean_name, type, category, agency, alt_names, is_active, avatar_url, description')
     .order('name')
 
   if (error) {
@@ -39,6 +39,8 @@ async function getAdminIdols(): Promise<{ idols: AdminIdol[]; error: string | nu
     agency: (row.agency ?? null) as string | null,
     alt_names: Array.isArray(row.alt_names) ? (row.alt_names as string[]) : [],
     is_active: row.is_active as boolean,
+    avatar_url: (row.avatar_url ?? null) as string | null,
+    description: (row.description ?? null) as string | null,
   }))
 
   return { idols, error: null }
