@@ -170,42 +170,24 @@ export default async function EventDetailPage({
           />
         </div>
 
-        {/* Ticket info */}
-        {event.ticketUrl && (
-          <div className="rounded-2xl border border-orange-500/25 bg-orange-500/5 p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Ticket className="h-4 w-4 text-orange-400" />
-              <h2 className="text-xs font-semibold text-orange-400">票務資訊</h2>
-            </div>
-            <a
-              href={event.ticketUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-bold text-white"
-            >
-              <ExternalLink className="h-4 w-4" />
-              前往購票
-            </a>
-          </div>
+        {/* Ticket info (F3): show whenever it makes sense for the event type,
+            with a "⏳ 連結待補" placeholder when the URL hasn't landed yet so
+            the section doesn't silently vanish. */}
+        {(event.ticketUrl ||
+          event.type === 'concert' ||
+          event.type === 'ticketing' ||
+          event.subType === 'fanmeet' ||
+          event.subType === 'fansign') && (
+          <TicketSection ticketUrl={event.ticketUrl} />
         )}
 
-        {/* Streaming info */}
-        {event.streamUrl && (
-          <div className="rounded-2xl border border-indigo-500/25 bg-indigo-500/5 p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Tv className="h-4 w-4 text-indigo-400" />
-              <h2 className="text-xs font-semibold text-indigo-400">串流 / 直播資訊</h2>
-            </div>
-            <a
-              href={event.streamUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3.5 text-sm font-bold text-white"
-            >
-              <ExternalLink className="h-4 w-4" />
-              前往觀看
-            </a>
-          </div>
+        {/* Streaming info (F3): same pattern — show for livestream/streaming
+            types and concerts that often have a live stream option. */}
+        {(event.streamUrl ||
+          event.type === 'livestream' ||
+          event.type === 'streaming' ||
+          event.type === 'concert') && (
+          <StreamSection streamUrl={event.streamUrl} />
         )}
       </div>
     </div>
@@ -228,6 +210,72 @@ function InfoRow({
         <span className="text-xs text-muted">{label}</span>
         <span className="text-sm text-text-base font-medium text-right">{value}</span>
       </div>
+    </div>
+  )
+}
+
+// ── F3: Ticket / Stream sections with "連結待補" placeholder ────────────────
+//
+// When the event type suggests a ticket / streaming link SHOULD exist but the
+// URL hasn't landed yet, show the section with a grayed-out "⏳ 連結待補"
+// button instead of hiding the section entirely. This tells the user "we
+// know this should have a link, the admin is working on it" rather than
+// leaving an empty visual gap.
+
+function TicketSection({ ticketUrl }: { ticketUrl?: string }) {
+  return (
+    <div className="rounded-2xl border border-orange-500/25 bg-orange-500/5 p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Ticket className="h-4 w-4 text-orange-400" />
+        <h2 className="text-xs font-semibold text-orange-400">票務資訊</h2>
+      </div>
+      {ticketUrl ? (
+        <a
+          href={ticketUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-bold text-white"
+        >
+          <ExternalLink className="h-4 w-4" />
+          前往購票
+        </a>
+      ) : (
+        <div
+          className="flex items-center justify-center gap-2 rounded-xl bg-card border border-card-border py-3.5 text-sm font-medium text-muted cursor-not-allowed select-none"
+          aria-disabled="true"
+        >
+          ⏳ 購票連結待補
+        </div>
+      )}
+    </div>
+  )
+}
+
+function StreamSection({ streamUrl }: { streamUrl?: string }) {
+  return (
+    <div className="rounded-2xl border border-indigo-500/25 bg-indigo-500/5 p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Tv className="h-4 w-4 text-indigo-400" />
+        <h2 className="text-xs font-semibold text-indigo-400">串流 / 直播資訊</h2>
+      </div>
+      {streamUrl ? (
+        <a
+          href={streamUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3.5 text-sm font-bold text-white"
+        >
+          <ExternalLink className="h-4 w-4" />
+          前往觀看
+        </a>
+      ) : (
+        <div
+          className="flex items-center justify-center gap-2 rounded-xl bg-card border border-card-border py-3.5 text-sm font-medium text-muted cursor-not-allowed select-none"
+          aria-disabled="true"
+        >
+          ⏳ 串流連結待補
+        </div>
+      )}
     </div>
   )
 }

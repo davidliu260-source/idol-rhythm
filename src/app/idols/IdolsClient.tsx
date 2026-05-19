@@ -7,20 +7,45 @@ import { useAppState } from '@/lib/appState'
 import IdolAvatar from '@/components/IdolAvatar'
 import clsx from 'clsx'
 
-const GENRES = ['全部', 'K-Pop', '嘻哈', '電子流行', '青春']
+// F1: switch from hard-coded "genre" tags (mostly unset on the new seeds) to
+// agency-based filtering — matches the admin/idols pattern and lines up with
+// how K-pop fans actually browse (by label/company).
+const AGENCY_FILTERS = [
+  { id: 'all',   label: '全部' },
+  { id: 'jyp',   label: 'JYP' },
+  { id: 'hybe',  label: 'HYBE' },
+  { id: 'sm',    label: 'SM' },
+  { id: 'yg',    label: 'YG' },
+  { id: 'other', label: '其他' },
+] as const
+
+type AgencyFilterId = (typeof AGENCY_FILTERS)[number]['id']
+const BIG_FOUR: AgencyFilterId[] = ['jyp', 'hybe', 'sm', 'yg']
+
+function agencyContains(agency: string, label: string): boolean {
+  return agency.toLowerCase().includes(label)
+}
+
+function matchAgency(agency: string, filter: AgencyFilterId): boolean {
+  if (filter === 'all') return true
+  if (filter === 'other') {
+    return !BIG_FOUR.some((k) => agencyContains(agency, k))
+  }
+  return agencyContains(agency, filter)
+}
 
 export default function IdolsClient({ idols }: { idols: Idol[] }) {
   const { following } = useAppState()
   const [query, setQuery] = useState('')
-  const [activeFilter, setActiveFilter] = useState<string>('全部')
+  const [activeFilter, setActiveFilter] = useState<AgencyFilterId>('all')
 
   const filtered = idols.filter((idol) => {
     const matchQuery =
       !query ||
       idol.name.toLowerCase().includes(query.toLowerCase()) ||
       idol.koreanName.includes(query)
-    const matchGenre = activeFilter === '全部' || idol.genres.includes(activeFilter)
-    return matchQuery && matchGenre
+    const matchA = matchAgency(idol.agency ?? '', activeFilter)
+    return matchQuery && matchA
   })
 
   return (
@@ -45,21 +70,21 @@ export default function IdolsClient({ idols }: { idols: Idol[] }) {
         </div>
       </div>
 
-      {/* Genre filter */}
+      {/* Agency filter (F1) — chips matching the admin/idols pattern. */}
       <div className="px-4 mb-4 overflow-x-auto scrollbar-none">
         <div className="flex gap-2 pb-1">
-          {GENRES.map((genre) => (
+          {AGENCY_FILTERS.map((f) => (
             <button
-              key={genre}
-              onClick={() => setActiveFilter(genre)}
+              key={f.id}
+              onClick={() => setActiveFilter(f.id)}
               className={clsx(
                 'flex-shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-colors',
-                activeFilter === genre
+                activeFilter === f.id
                   ? 'bg-primary text-white'
                   : 'border border-card-border bg-card text-muted',
               )}
             >
-              {genre}
+              {f.label}
             </button>
           ))}
         </div>
