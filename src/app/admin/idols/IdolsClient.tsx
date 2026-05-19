@@ -16,6 +16,8 @@ export interface AdminIdol {
   agency: string | null
   alt_names: string[]
   is_active: boolean
+  avatar_url: string | null
+  description: string | null
 }
 
 interface Props {
@@ -32,6 +34,7 @@ interface Props {
 type FilterTab =
   | 'active'
   | 'inactive'
+  | 'missing'
   | 'jyp'
   | 'hybe'
   | 'yg'
@@ -40,11 +43,12 @@ type FilterTab =
   | 'all'
 
 const TAB_ORDER: FilterTab[] = [
-  'active', 'inactive', 'jyp', 'hybe', 'yg', 'sm', 'other', 'all',
+  'active', 'inactive', 'missing', 'jyp', 'hybe', 'yg', 'sm', 'other', 'all',
 ]
 const TAB_LABELS: Record<FilterTab, string> = {
   active: '啟用中',
   inactive: '停用',
+  missing: '缺資料',
   jyp: 'JYP',
   hybe: 'HYBE',
   yg: 'YG',
@@ -65,10 +69,21 @@ function isBigFour(agency: string | null): boolean {
   return BIG_FOUR.some((k) => agencyMatches(agency, k))
 }
 
+// "缺資料" = either avatar or description is missing/blank. These are the
+// two fields that most visibly affect frontend cards and admin browsing.
+// Doesn't filter by is_active — admin sometimes wants to backfill data for
+// dormant idols too.
+function isMissingData(idol: AdminIdol): boolean {
+  const noAvatar = !idol.avatar_url || idol.avatar_url.trim().length === 0
+  const noDesc = !idol.description || idol.description.trim().length === 0
+  return noAvatar || noDesc
+}
+
 function matchTab(idol: AdminIdol, tab: FilterTab): boolean {
   switch (tab) {
     case 'active':   return idol.is_active
     case 'inactive': return !idol.is_active
+    case 'missing':  return isMissingData(idol)
     case 'jyp':      return agencyMatches(idol.agency, 'jyp')
     case 'hybe':     return agencyMatches(idol.agency, 'hybe')
     case 'yg':       return agencyMatches(idol.agency, 'yg')
@@ -124,14 +139,21 @@ export default function IdolsClient({ idols }: Props) {
         <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-1">
           {TAB_ORDER.map((t) => {
             const isActive = tab === t
+            // "缺資料" chip turns amber when count > 0 so a backfill backlog
+            // surfaces even before the admin clicks the tab.
+            const isMissingChip = t === 'missing' && tabCounts.missing > 0
             return (
               <button
                 key={t}
                 onClick={() => setTab(t)}
                 className={`flex-shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                   isActive
-                    ? 'bg-violet text-white'
-                    : 'bg-card border border-card-border text-muted hover:text-text-base'
+                    ? isMissingChip
+                      ? 'bg-amber-500 text-white'
+                      : 'bg-violet text-white'
+                    : isMissingChip
+                      ? 'bg-amber-500/10 border border-amber-500/30 text-amber-400'
+                      : 'bg-card border border-card-border text-muted hover:text-text-base'
                 }`}
               >
                 <span>{TAB_LABELS[t]}</span>
@@ -202,6 +224,18 @@ export default function IdolsClient({ idols }: Props) {
                 <p className="text-sm font-semibold text-text-base truncate">{idol.name}</p>
                 {idol.korean_name && (
                   <p className="text-xs text-muted truncate">{idol.korean_name}</p>
+                )}
+                {/* Surface missing-data badges inline so admin sees exactly
+                    what to fill without entering edit page. */}
+                {(!idol.avatar_url || idol.avatar_url.trim().length === 0) && (
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded border bg-amber-500/10 border-amber-500/30 text-amber-400">
+                    缺頭像
+                  </span>
+                )}
+                {(!idol.description || idol.description.trim().length === 0) && (
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded border bg-amber-500/10 border-amber-500/30 text-amber-400">
+                    缺描述
+                  </span>
                 )}
               </div>
               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
