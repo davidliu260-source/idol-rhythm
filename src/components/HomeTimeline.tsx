@@ -85,13 +85,15 @@ function FollowedView({
 }) {
   const followedSet = new Set(followedSlugs)
 
-  const followedEvents = events
+  // F2: keep the totals so we can show "查看全部 N 場 →" footers when truncated.
+  const followedSorted = events
     .filter((e) => followedSet.has(e.idolId) && isFutureOrToday(e.date))
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(0, MAX_FOLLOWED)
+  const followedTotal = followedSorted.length
+  const followedEvents = followedSorted.slice(0, MAX_FOLLOWED)
 
   const followedIds = new Set(followedEvents.map((e) => e.id))
-  const otherEvents = events
+  const otherSorted = events
     .filter(
       (e) =>
         !followedSet.has(e.idolId) &&
@@ -99,7 +101,8 @@ function FollowedView({
         isFutureOrToday(e.date),
     )
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(0, MAX_MORE)
+  const otherTotal = otherSorted.length
+  const otherEvents = otherSorted.slice(0, MAX_MORE)
 
   return (
     <div className="flex flex-col gap-6">
@@ -107,7 +110,7 @@ function FollowedView({
         <SectionHeader
           icon={<Sparkles className="h-4 w-4 text-primary" />}
           title="我追蹤的近期行程"
-          count={followedEvents.length}
+          count={followedTotal}
           href="/schedule"
         />
         {followedEvents.length > 0 ? (
@@ -115,6 +118,10 @@ function FollowedView({
             {followedEvents.map((event) => (
               <EventCard key={event.id} event={event} />
             ))}
+            <SeeAllFooter
+              shown={followedEvents.length}
+              total={followedTotal}
+            />
           </div>
         ) : (
           <div className="rounded-2xl border border-card-border bg-card px-4 py-5 text-center">
@@ -134,13 +141,14 @@ function FollowedView({
           <SectionHeader
             icon={<Star className="h-4 w-4 text-yellow-400" />}
             title="更多星動行程"
-            count={otherEvents.length}
+            count={otherTotal}
             href="/schedule"
           />
           <div className="flex flex-col gap-2">
             {otherEvents.map((event) => (
               <EventCard key={event.id} event={event} compact />
             ))}
+            <SeeAllFooter shown={otherEvents.length} total={otherTotal} />
           </div>
         </section>
       )}
@@ -227,6 +235,7 @@ function DefaultView({
             {weekHighlights.slice(0, 3).map((event) => (
               <EventCard key={event.id} event={event} compact />
             ))}
+            <SeeAllFooter shown={Math.min(3, weekHighlights.length)} total={weekHighlights.length} />
           </div>
         </section>
       )}
@@ -243,6 +252,7 @@ function DefaultView({
             {streamableEvents.slice(0, 3).map((event) => (
               <EventCard key={event.id} event={event} compact />
             ))}
+            <SeeAllFooter shown={Math.min(3, streamableEvents.length)} total={streamableEvents.length} />
           </div>
         </section>
       )}
@@ -259,10 +269,28 @@ function DefaultView({
             {newsEvents.slice(0, 3).map((event) => (
               <EventCard key={event.id} event={event} compact />
             ))}
+            <SeeAllFooter shown={Math.min(3, newsEvents.length)} total={newsEvents.length} />
           </div>
         </section>
       )}
     </div>
+  )
+}
+
+/**
+ * F2: footer CTA shown under a truncated section. Renders nothing when the
+ * full list fits inside the displayed slice (shown >= total) — keeps the
+ * homepage uncluttered when traffic is low.
+ */
+function SeeAllFooter({ shown, total }: { shown: number; total: number }) {
+  if (shown >= total) return null
+  return (
+    <Link
+      href="/schedule"
+      className="rounded-2xl border border-card-border bg-card/60 px-4 py-2.5 text-xs font-medium text-primary text-center hover:bg-card transition-colors"
+    >
+      查看全部 {total} 場 →
+    </Link>
   )
 }
 

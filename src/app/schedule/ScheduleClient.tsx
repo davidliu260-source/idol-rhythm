@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, List, CalendarDays, Heart } from 'lucide-react'
 import type { Event } from '@/lib/mockEvents'
 import type { Idol } from '@/lib/types'
@@ -44,34 +44,15 @@ export default function ScheduleClient({ events, idols }: Props) {
         </div>
       </div>
 
-      {/* Idol filter */}
-      <div className="px-4 mb-4 overflow-x-auto scrollbar-none">
-        <div className="flex gap-2 pb-1">
-          <button
-            onClick={() => setActiveIdolId(null)}
-            className={`flex-shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
-              activeIdolId === null
-                ? 'bg-primary text-white'
-                : 'border border-card-border bg-card text-muted'
-            }`}
-          >
-            全部
-          </button>
-          {idols.map((idol) => (
-            <button
-              key={idol.id}
-              onClick={() => setActiveIdolId(idol.id === activeIdolId ? null : idol.id)}
-              className={`flex-shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
-                activeIdolId === idol.id
-                  ? 'bg-primary text-white'
-                  : 'border border-card-border bg-card text-muted'
-              }`}
-            >
-              {idol.name}
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* Idol filter (F-scroll): horizontal scroller with desktop arrow
+          buttons + mouse-wheel-to-horizontal + edge fade indicators. */}
+      <IdolFilterBar
+        idols={idols}
+        activeIdolId={activeIdolId}
+        onSelect={(id) =>
+          setActiveIdolId(id === activeIdolId ? null : id)
+        }
+      />
 
       {view === 'timeline' ? (
         <TimelineView events={filtered} activeIdolId={activeIdolId} />
@@ -418,4 +399,148 @@ function buildMonthCells(monthStart: Date): DayCell[] {
     cells.push({ date: d, isCurrentMonth: d.getMonth() === month })
   }
   return cells
+}
+
+// ── F-scroll: idol filter chip bar with scroll affordances ────────────────
+//
+// The chip row is horizontally scrollable but a plain `overflow-x-auto` gives
+// the user no visual cue on desktop (the trackpad / wheel scrolls vertically
+// only, and the scrollbar can be invisible). This component adds:
+//
+//   - Left / right chevron buttons that appear only when more chips exist
+//     in that direction. On click they scroll the row by 60% of the viewport
+//     width — enough to feel snappy but not skip past visible chips.
+//   - Edge fade gradients that intensify when content extends past the visible
+//     area, mirroring the chevron state.
+//   - Wheel handler that translates vertical scroll into horizontal so a
+//     trackpad swipe / mouse wheel feels native on desktop.
+//
+// Mobile is unaffected: touch-drag scrolling on the inner container still
+// works the same, and the chevron buttons are hidden when they'd overlap a
+// small viewport (>= sm: breakpoint).
+
+function IdolFilterBar({
+  idols,
+  activeIdolId,
+  onSelect,
+}: {
+  idols: Idol[]
+  activeIdolId: string | null
+  onSelect: (idolId: string | null) => void
+}) {
+  const scrollRef = useRef<HTMLDivElement | null>(null)
+  const [canScrollLeft, setCanScrollLeft] = useState(false)
+  const [canScrollRight, setCanScrollRight] = useState(false)
+
+  function refreshAffordances() {
+    const el = scrollRef.current
+    if (!el) return
+    setCanScrollLeft(el.scrollLeft > 4)
+    setCanScrollRight(
+      el.scrollLeft + el.clientWidth < el.scrollWidth - 4,
+    )
+  }
+
+  useEffect(() => {
+    refreshAffordances()
+    const el = scrollRef.current
+    if (!el) return
+    el.addEventListener('scroll', refreshAffordances, { passive: true })
+    window.addEventListener('resize', refreshAffordances)
+    return () => {
+      el.removeEventListener('scroll', refreshAffordances)
+      window.removeEventListener('resize', refreshAffordances)
+    }
+  }, [idols.length])
+
+  function scrollByPage(direction: 1 | -1) {
+    const el = scrollRef.current
+    if (!el) return
+    el.scrollBy({
+      left: direction * Math.round(el.clientWidth * 0.6),
+      behavior: 'smooth',
+    })
+  }
+
+  // Convert vertical wheel deltas to horizontal scroll so mouse-wheel users
+  // can navigate. We don't preventDefault when the user IS holding shift /
+  // already scrolling horizontally — let the browser's native behavior win.
+  function handleWheel(e: React.WheelEvent<HTMLDivElement>) {
+    const el = scrollRef.current
+    if (!el) return
+    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return
+    el.scrollLeft += e.deltaY
+  }
+
+  return (
+    <div className="relative px-4 mb-4">
+      {/* Left chevron — visible only when scrollable left + desktop */}
+      {canScrollLeft && (
+        <button
+          type="button"
+          aria-label="向左捲動"
+          onClick={() => scrollByPage(-1)}
+          className="hidden sm:flex absolute left-1 top-1/2 -translate-y-1/2 z-10 h-7 w-7 items-center justify-center rounded-full bg-card border border-card-border text-muted hover:text-text-base shadow-sm"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+      )}
+
+      {/* Edge fade gradients */}
+      <div
+        className={`pointer-events-none absolute left-4 top-0 bottom-0 w-6 bg-gradient-to-r from-bg to-transparent transition-opacity ${
+          canScrollLeft ? 'opacity-100' : 'opacity-0'
+        }`}
+      />
+      <div
+        className={`pointer-events-none absolute right-4 top-0 bottom-0 w-6 bg-gradient-to-l from-bg to-transparent transition-opacity ${
+          canScrollRight ? 'opacity-100' : 'opacity-0'
+        }`}
+      />
+
+      <div
+        ref={scrollRef}
+        onWheel={handleWheel}
+        className="overflow-x-auto scrollbar-none"
+      >
+        <div className="flex gap-2 pb-1">
+          <button
+            onClick={() => onSelect(null)}
+            className={`flex-shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+              activeIdolId === null
+                ? 'bg-primary text-white'
+                : 'border border-card-border bg-card text-muted'
+            }`}
+          >
+            全部
+          </button>
+          {idols.map((idol) => (
+            <button
+              key={idol.id}
+              onClick={() => onSelect(idol.id)}
+              className={`flex-shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                activeIdolId === idol.id
+                  ? 'bg-primary text-white'
+                  : 'border border-card-border bg-card text-muted'
+              }`}
+            >
+              {idol.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Right chevron */}
+      {canScrollRight && (
+        <button
+          type="button"
+          aria-label="向右捲動"
+          onClick={() => scrollByPage(1)}
+          className="hidden sm:flex absolute right-1 top-1/2 -translate-y-1/2 z-10 h-7 w-7 items-center justify-center rounded-full bg-card border border-card-border text-muted hover:text-text-base shadow-sm"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      )}
+    </div>
+  )
 }
