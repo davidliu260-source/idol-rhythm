@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Loader2 } from 'lucide-react'
+import { getReviewSourceInfo } from '@/lib/admin/sourceReview'
 import { updateDraftEvent } from './actions'
 
 // ── Option lists (same as NewEventForm) ──────────────────────────────────────
@@ -49,7 +50,6 @@ export interface EditEventFormProps {
     type: string
     subType: string
     status: string
-    trustLevel: string
     date: string
     time: string
     country: string
@@ -84,7 +84,6 @@ export default function EditEventForm({ eventId, idols, initial }: EditEventForm
   const [type,         setType]         = useState(initial.type)
   const [subType,      setSubType]      = useState(initial.subType)
   const [status,       setStatus]       = useState(initial.status)
-  const [trustLevel,   setTrustLevel]   = useState(initial.trustLevel)
   const [date,         setDate]         = useState(initial.date)
   const [time,         setTime]         = useState(initial.time)
   const [country,      setCountry]      = useState(initial.country)
@@ -121,7 +120,6 @@ export default function EditEventForm({ eventId, idols, initial }: EditEventForm
       type,
       subType,
       status,
-      trustLevel,
       date,
       time,
       country,
@@ -210,17 +208,6 @@ export default function EditEventForm({ eventId, idols, initial }: EditEventForm
               <option value="confirmed">已確認</option>
               <option value="tentative">暫定</option>
               <option value="postponed">延期</option>
-            </select>
-          </Field>
-
-          <Field label="可信度" required>
-            <select
-              value={trustLevel}
-              onChange={(e) => setTrustLevel(e.target.value)}
-              className={selectCls}
-            >
-              <option value="official">官方確認</option>
-              <option value="media">媒體確認</option>
             </select>
           </Field>
         </div>
@@ -324,6 +311,11 @@ export default function EditEventForm({ eventId, idols, initial }: EditEventForm
             />
           </Field>
         </div>
+        <AutoTrustNotice
+          sourceName={sourceLabel}
+          sourceType={sourceType}
+          sourceUrl={sourceUrl}
+        />
       </Section>
 
       {/* 連結 / 標籤 / 說明 */}
@@ -398,6 +390,37 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     <div className="rounded-xl bg-card border border-card-border px-4 py-4 flex flex-col gap-3">
       <p className="text-xs font-semibold text-muted uppercase tracking-wide">{title}</p>
       {children}
+    </div>
+  )
+}
+
+function AutoTrustNotice({
+  sourceName,
+  sourceType,
+  sourceUrl,
+}: {
+  sourceName: string
+  sourceType: string
+  sourceUrl: string
+}) {
+  const sourceInfo = getReviewSourceInfo({ sourceName, sourceType, sourceUrl })
+  const label =
+    sourceInfo.trustLevel === 'official'
+      ? '官方確認'
+      : sourceInfo.trustLevel === 'media'
+        ? '媒體確認'
+        : '待確認草稿'
+
+  return (
+    <div className="rounded-xl border border-card-border bg-bg px-3 py-2.5">
+      <p className="text-xs text-text-base">
+        系統判斷：<span className="font-semibold">{label}</span>
+      </p>
+      {sourceInfo.hint && (
+        <p className="text-[10px] text-amber-300 leading-snug mt-1">
+          {sourceInfo.hint}
+        </p>
+      )}
     </div>
   )
 }

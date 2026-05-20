@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronRight, Check, X, CheckSquare, Trash2, AlertTriangle, Search } from 'lucide-react'
+import { getReviewSourceInfo } from '@/lib/admin/sourceReview'
 
 interface Candidate {
   id: string
@@ -11,6 +12,8 @@ interface Candidate {
   idolName: string | null
   detectedDate: string | null
   sourceName: string | null
+  sourceType: string | null
+  sourceUrl: string | null
   reviewStatus: 'pending' | 'approved' | 'rejected'
   aiConfidence: number | null
   hasIdol: boolean
@@ -66,6 +69,19 @@ function matchSearch(c: Candidate, q: string): boolean {
   if (c.idolName && c.idolName.toLowerCase().includes(needle)) return true
   if (c.sourceName && c.sourceName.toLowerCase().includes(needle)) return true
   return false
+}
+
+function sourceBadgeClass(risk: string): string {
+  switch (risk) {
+    case 'official':
+      return 'bg-sky-500/10 border-sky-500/25 text-sky-300'
+    case 'media':
+      return 'bg-teal-500/10 border-teal-500/25 text-teal-300'
+    case 'aggregator':
+      return 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+    default:
+      return 'bg-card border-card-border text-muted'
+  }
 }
 
 export default function CandidatesClient({ candidates, isAdmin }: Props) {
@@ -189,6 +205,11 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
   const selectedHaveNoIdol = Array.from(selected).some(
     (id) => !candidates.find((c) => c.id === id)?.hasIdol,
   )
+  const selectedHaveAggregator = Array.from(selected).some((id) => {
+    const candidate = candidates.find((c) => c.id === id)
+    if (!candidate) return false
+    return getReviewSourceInfo(candidate).needsOriginalSource
+  })
 
   return (
     <>
@@ -306,6 +327,7 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
         )}
         {filteredCandidates.map((c) => {
           const statusCfg = STATUS_CONFIG[c.reviewStatus] ?? STATUS_CONFIG.pending
+          const sourceInfo = getReviewSourceInfo(c)
           const isChecked = selected.has(c.id)
           const isPending = c.reviewStatus === 'pending'
 
@@ -349,6 +371,14 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
                       內容已變更
                     </span>
                   )}
+                  {sourceInfo.needsOriginalSource && (
+                    <span
+                      className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded border ${sourceBadgeClass(sourceInfo.risk)}`}
+                    >
+                      <AlertTriangle className="h-2.5 w-2.5" />
+                      {sourceInfo.shortLabel}
+                    </span>
+                  )}
                   {c.detectedDate && (
                     <span className="text-[10px] text-muted tabular-nums ml-auto">
                       {c.detectedDate.slice(0, 10)}
@@ -363,6 +393,11 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
                   {c.idolName && <span>{c.idolName}</span>}
                   {c.idolName && c.sourceName && <span>·</span>}
                   {c.sourceName && <span>{c.sourceName}</span>}
+                  {c.sourceName && (
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded border ${sourceBadgeClass(sourceInfo.risk)}`}>
+                      {sourceInfo.shortLabel}
+                    </span>
+                  )}
                   {!c.hasIdol && isPending && (
                     <span className="ml-auto text-[10px] text-amber-500/80">無偶像對應</span>
                   )}
@@ -395,8 +430,14 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
             </button>
             <button
               onClick={() => bulkAction('approve')}
-              disabled={isPending || selectedHaveNoIdol}
-              title={selectedHaveNoIdol ? '部分候選缺少偶像對應，無法批量核准' : undefined}
+              disabled={isPending || selectedHaveNoIdol || selectedHaveAggregator}
+              title={
+                selectedHaveNoIdol
+                  ? '部分候選缺少偶像對應，無法批量核准'
+                  : selectedHaveAggregator
+                    ? '聚合 / 社群來源需要逐筆確認原始佐證，不支援批量核准'
+                    : undefined
+              }
               className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40 active:opacity-70 transition-opacity"
             >
               <Check className="h-3 w-3" />

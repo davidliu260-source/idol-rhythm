@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { getBrowserSupabaseClient } from '@/lib/supabase/browserClient'
+import { getReviewSourceInfo, inferTrustLevelFromSource } from '@/lib/admin/sourceReview'
 
 const EVENT_TYPE_OPTIONS = [
   { value: 'concert', label: '演唱會 / 見面會' },
@@ -57,7 +58,6 @@ export default function NewEventForm({
   const [type, setType] = useState('concert')
   const [subType, setSubType] = useState('')
   const [status, setStatus] = useState('confirmed')
-  const [trustLevel, setTrustLevel] = useState('official')
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
   const [country, setCountry] = useState('台灣')
@@ -93,6 +93,11 @@ export default function NewEventForm({
     const tagArray = tags
       ? tags.split(',').map((t) => t.trim()).filter(Boolean)
       : []
+    const trustLevel = inferTrustLevelFromSource({
+      sourceName: sourceLabel,
+      sourceType,
+      sourceUrl,
+    })
 
     // Step 1: insert event
     const { data: eventData, error: eventError } = await supabase
@@ -220,17 +225,6 @@ export default function NewEventForm({
               <option value="postponed">延期</option>
             </select>
           </Field>
-
-          <Field label="可信度" required>
-            <select
-              value={trustLevel}
-              onChange={(e) => setTrustLevel(e.target.value)}
-              className={selectCls}
-            >
-              <option value="official">官方確認</option>
-              <option value="media">媒體確認</option>
-            </select>
-          </Field>
         </div>
       </Section>
 
@@ -329,6 +323,11 @@ export default function NewEventForm({
             />
           </Field>
         </div>
+        <AutoTrustNotice
+          sourceName={sourceLabel}
+          sourceType={sourceType}
+          sourceUrl={sourceUrl}
+        />
       </Section>
 
       {/* 其他連結 */}
@@ -401,6 +400,37 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     <div className="rounded-xl bg-card border border-card-border px-4 py-4 flex flex-col gap-3">
       <p className="text-xs font-semibold text-muted uppercase tracking-wide">{title}</p>
       {children}
+    </div>
+  )
+}
+
+function AutoTrustNotice({
+  sourceName,
+  sourceType,
+  sourceUrl,
+}: {
+  sourceName: string
+  sourceType: string
+  sourceUrl: string
+}) {
+  const sourceInfo = getReviewSourceInfo({ sourceName, sourceType, sourceUrl })
+  const label =
+    sourceInfo.trustLevel === 'official'
+      ? '官方確認'
+      : sourceInfo.trustLevel === 'media'
+        ? '媒體確認'
+        : '待確認草稿'
+
+  return (
+    <div className="rounded-xl border border-card-border bg-bg px-3 py-2.5">
+      <p className="text-xs text-text-base">
+        系統判斷：<span className="font-semibold">{label}</span>
+      </p>
+      {sourceInfo.hint && (
+        <p className="text-[10px] text-amber-300 leading-snug mt-1">
+          {sourceInfo.hint}
+        </p>
+      )}
     </div>
   )
 }

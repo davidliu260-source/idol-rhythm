@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
+import { inferTrustLevelFromSource } from '@/lib/admin/sourceReview'
 
 // ── Payload type ──────────────────────────────────────────────────────────────
 
@@ -14,7 +15,6 @@ export interface UpdateDraftPayload {
   type: string
   subType: string
   status: string
-  trustLevel: string
   date: string
   time: string
   country: string
@@ -55,6 +55,11 @@ export async function updateDraftEvent(
   if (!payload.title.trim())       return { error: '活動標題不可空白' }
   if (!payload.date)               return { error: '日期不可空白' }
   if (!payload.idolId)             return { error: '請選擇偶像' }
+  const trustLevel = inferTrustLevelFromSource({
+    sourceName: payload.sourceLabel,
+    sourceType: payload.sourceType,
+    sourceUrl: payload.sourceUrl,
+  })
 
   // ── Verify event exists and is a draft ────────────────────────────────────
   const { data: existing, error: fetchError } = await supabase
@@ -81,7 +86,7 @@ export async function updateDraftEvent(
       type:         payload.type,
       sub_type:     payload.subType || null,
       status:       payload.status,
-      trust_level:  payload.trustLevel,
+      trust_level:  trustLevel,
       date:         payload.date,
       time:         payload.time || null,
       country:      payload.country.trim(),
@@ -118,7 +123,7 @@ export async function updateDraftEvent(
     .from('event_sources')
     .insert({
       event_id: eventId,
-      level:    payload.trustLevel,
+      level:    trustLevel,
       label:    payload.sourceLabel.trim(),
       type:     payload.sourceType,
       url:      payload.sourceUrl.trim() || null,

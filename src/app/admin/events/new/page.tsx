@@ -93,7 +93,7 @@ export default async function AdminNewEventPage() {
       <div className="px-4 mb-4">
         <div className="rounded-xl bg-violet/10 border border-violet/25 px-3 py-2.5">
           <p className="text-xs text-muted leading-snug">
-            建立後 <span className="font-semibold text-text-base">is_published = false</span>，需管理員手動發布才會出現在前台。trust_level 只能選 official 或 media。
+            建立後 <span className="font-semibold text-text-base">is_published = false</span>，需管理員手動發布才會出現在前台。系統會依來源類型自動判斷官方 / 媒體 / 待確認。
           </p>
         </div>
       </div>

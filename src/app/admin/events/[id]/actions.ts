@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
+import { inferTrustLevelFromSource } from '@/lib/admin/sourceReview'
 
 // ── Guard ──────────────────────────────────────────────────────────────────────
 
@@ -40,11 +41,33 @@ export async function publishEvent(id: string): Promise<void> {
   const supabase = getSupabaseServerClient()
   if (!supabase) throw new Error('Supabase 未設定')
 
+  const { data: sources, error: sourceError } = await supabase
+    .from('event_sources')
+    .select('label, type, url')
+    .eq('event_id', id)
+    .limit(1)
+
+  if (sourceError) {
+    throw new Error(`讀取來源失敗：${sourceError.code ? `[${sourceError.code}] ` : ''}${sourceError.message}`)
+  }
+
+  const primarySource = sources?.[0]
+  const trustLevel = inferTrustLevelFromSource({
+    sourceName: primarySource?.label ?? null,
+    sourceType: primarySource?.type ?? null,
+    sourceUrl: primarySource?.url ?? null,
+  })
+
+  if (trustLevel === 'pending') {
+    throw new Error('發布被擋下：來源仍是聚合 / 社群 / 未知來源，請先補官方、售票、主辦、場館或可靠媒體來源。')
+  }
+
   const { error } = await supabase
     .from('events')
     .update({
       is_published: true,
       published_at: new Date().toISOString(),
+      trust_level: trustLevel,
     })
     .eq('id', id)
 
