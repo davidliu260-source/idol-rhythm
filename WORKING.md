@@ -81,9 +81,10 @@
 | 53 | YG crawler 工作單 | `CRAWLER_WORK_ORDER_YG.md`：設計 YG artist schedule / notice crawler，覆蓋 BLACKPINK group / BABYMONSTER / TREASURE；不含 BLACKPINK solo / THEBLACKLABEL；只做工作單，未寫 crawler | ✅ PR #73 merged（無 migration / 無 DB 變更 / 無 crawler）|
 | 54 | 快閃店搜尋與呈現 | 新增 pop-up store / 快閃店 類活動的搜尋、資料分類與前台呈現。需先評估 `event_type` / `sub_type` 是否已有可承載欄位；若需新增 enum 或 filter，先寫工作單與 migration SQL。來源上可從 official notice / brand collaboration / ticketing secondary 抓候選，trust_level 仍須保守 | 🔲 待辦（可能涉及 migration / UI / crawler filter）|
 | 55 | 後台用戶統計 | Admin analytics：未來用戶數、註冊趨勢、活躍用戶、收藏 / 追蹤 / reminder 使用量、來源候選審核漏斗等。需先定義指標與隱私邊界；讀 auth.users 可能需要 service_role 或 Supabase admin API，不可暴露到 client | 🔲 待辦（先工作單，再實作 dashboard）|
-| 56 | YG artist schedule crawler | `yg_artist_schedule` 官方來源 crawler：走 YG `/api/artist/schedule/list/{artistId}/{year}/{month}` JSON endpoint，覆蓋 BLACKPINK group / BABYMONSTER / TREASURE；接入 cron/manual sync fan-out；migration 040 seed 三個 official crawler_sources；只進 event_candidates，不自動審核 / 發布 | ✅ PR 待 merge（migration 040 merge 後需手動執行）|
+| 56 | YG artist schedule crawler | `yg_artist_schedule` 官方來源 crawler：走 YG `/api/artist/schedule/list/{artistId}/{year}/{month}` JSON endpoint，覆蓋 BLACKPINK group / BABYMONSTER / TREASURE；接入 cron/manual sync fan-out；migration 040 seed 三個 official crawler_sources；只進 event_candidates，不自動審核 / 發布 | ✅ PR #77 merged（migration 040 已執行）|
 | 57 | 中文顯示 + 快閃店資料模型工作單 | `DISPLAY_LOCALIZATION_AND_POPUP_WORK_ORDER.md`：規劃原文保留、中文展示欄位、AI/規則中文摘要、人工覆寫、快閃店日期區間與地點模型、sub_type 擴充、活動類型圖示系統與後續 PR 拆分；僅工作單，未改 DB / UI / crawler | ✅ PR #78 merged（無 migration）|
-| 58 | 主流漏網藝人 seed 工作單 | `MAINSTREAM_ARTIST_SEED_WORK_ORDER.md`：規劃 Lee Young Ji、QWER、BIBI、Jay Park、Kwon Eunbi、Chungha、Sunmi、Baekhyun 等 P0/P1/P2 seed 候選；只做研究與後續 PR 拆分，不改 DB / migration / UI / crawler | ✅ PR 待 merge（無 migration）|
+| 58 | 主流漏網藝人 seed 工作單 | `MAINSTREAM_ARTIST_SEED_WORK_ORDER.md`：規劃 Lee Young Ji、QWER、BIBI、Jay Park、Kwon Eunbi、Chungha、Sunmi、Baekhyun 等 P0/P1/P2 seed 候選；只做研究與後續 PR 拆分，不改 DB / migration / UI / crawler | ✅ PR #81 merged（無 migration）|
+| 59 | 中文顯示 + 快閃店資料模型 migration | migration 041：新增 events / event_candidates 中文展示欄位、translation metadata、日期區間、細分地點欄位，並擴充 `event_sub_type` 支援 `popup_store` / `exhibition` / `brand_event`；不改 UI / crawler / 自動翻譯 | ✅ PR 待 merge（merge 後需手動執行 migration 041）|
 
 ---
 
@@ -130,7 +131,8 @@
 | 037 | ADD COLUMN idols.avatar_source_url / provider / license / author / note + GRANT UPDATE（I1b-C）| ✅ 已執行 |
 | 038 | Seed 20 個 solo / 分隊 / 大團成員（Rain / IU / TAEYEON / G-DRAGON / BLACKPINK solo / BTS solo / NCT 分隊 / PLAVE / (G)I-DLE / STAYC）+ 修 aespa agency typo | ✅ 已執行 |
 | 039 | GRANT SELECT ON idols TO service_role + 停用 BLACKPINK 2025 舊巡演頁 source | ✅ 已執行 |
-| 040 | Seed BLACKPINK / BABYMONSTER / TREASURE 官方 YG Schedule crawler_sources（parser_type=`yg_artist_schedule`）| ⏳ PR merge 後待手動執行 |
+| 040 | Seed BLACKPINK / BABYMONSTER / TREASURE 官方 YG Schedule crawler_sources（parser_type=`yg_artist_schedule`）| ✅ 已執行 |
+| 041 | Add events / event_candidates Chinese display fields, translation metadata, date ranges, richer locations, and popup/exhibition/brand_event subtypes | ⏳ PR merge 後待手動執行 |
 
 ---
 
