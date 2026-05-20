@@ -5,6 +5,7 @@ import { ArrowLeft, FileSearch, CheckCircle2, XCircle, AlertTriangle } from 'luc
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
 import { getReviewSourceInfo } from '@/lib/admin/sourceReview'
+import EventTypeBadge from '@/components/EventTypeBadge'
 import { approveCandidate, rejectCandidate } from './actions'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -148,31 +149,6 @@ function formatDatetime(iso: string): string {
   } catch {
     return iso
   }
-}
-
-const EVENT_TYPE_LABELS: Record<string, string> = {
-  concert: '演唱會 / 見面會',
-  ticketing: '開票售票',
-  livestream: '直播',
-  streaming: '串流',
-  media: '媒體',
-  brand: '代言品牌',
-  official: '官方發布',
-}
-
-const EVENT_SUBTYPE_LABELS: Record<string, string> = {
-  fanmeet: '粉絲見面',
-  fansign: '簽名會',
-  musicshow: '音樂節目',
-  variety: '綜藝節目',
-  interview: '採訪宣傳',
-  award: '頒獎典禮',
-  release: '專輯發行',
-  announcement: '官方公告',
-  magazine: '雜誌媒體',
-  popup_store: '快閃店',
-  exhibition: '展覽',
-  brand_event: '品牌活動',
 }
 
 const TRANSLATION_STATUS_LABELS: Record<string, string> = {
@@ -439,15 +415,10 @@ export default async function AdminCandidateDetailPage({
             <>
               <Divider />
               <Field label="活動類型">
-                {EVENT_TYPE_LABELS[candidate.detectedEventType] ?? candidate.detectedEventType}
-              </Field>
-            </>
-          )}
-          {candidate.detectedEventSubType && (
-            <>
-              <Divider />
-              <Field label="細分類型">
-                {EVENT_SUBTYPE_LABELS[candidate.detectedEventSubType] ?? candidate.detectedEventSubType}
+                <EventTypeBadge
+                  type={candidate.detectedEventType}
+                  subType={candidate.detectedEventSubType}
+                />
               </Field>
             </>
           )}

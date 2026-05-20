@@ -6,11 +6,10 @@ import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
 import {
   getEventById as getMockEvent,
-  EVENT_TYPE_LABELS,
-  EVENT_SUBTYPE_LABELS,
   SOURCE_CONFIG,
 } from '@/lib/mockEvents'
 import type { TrustLevel, EventSubType, EventType, EventStatus, SourceType } from '@/lib/types'
+import EventTypeBadge from '@/components/EventTypeBadge'
 import { publishEvent, unpublishEvent } from './actions'
 
 // ── Admin-only types (not exported — used only in this page) ──────────────────
@@ -215,10 +214,6 @@ export default async function AdminEventDetailPage({
   }
 
   const trustConfig = SOURCE_CONFIG[event.trustLevel]
-  const typeLabel = EVENT_TYPE_LABELS[event.type] ?? event.type
-  const subTypeLabel = event.subType
-    ? (EVENT_SUBTYPE_LABELS[event.subType as EventSubType] ?? event.subType)
-    : null
   const displayTitle = event.displayTitleZh || event.title
   const dateDisplay =
     event.dateLabel ||
@@ -319,14 +314,7 @@ export default async function AdminEventDetailPage({
             <span className={`text-[10px] font-semibold ${trustConfig.color}`}>
               {trustConfig.label}
             </span>
-            <span className="text-[10px] text-muted border border-card-border rounded px-1.5 py-0.5">
-              {typeLabel}
-            </span>
-            {subTypeLabel && (
-              <span className="text-[10px] text-muted border border-card-border rounded px-1.5 py-0.5">
-                {subTypeLabel}
-              </span>
-            )}
+            <EventTypeBadge type={event.type} subType={event.subType} />
           </div>
           <h2 className="text-base font-bold text-text-base leading-snug">{displayTitle}</h2>
           {event.displayTitleZh && event.displayTitleZh !== event.title && (

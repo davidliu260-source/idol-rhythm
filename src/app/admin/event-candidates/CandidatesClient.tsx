@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronRight, Check, X, CheckSquare, Trash2, AlertTriangle, Search } from 'lucide-react'
 import { getReviewSourceInfo } from '@/lib/admin/sourceReview'
+import EventTypeBadge from '@/components/EventTypeBadge'
 
 interface Candidate {
   id: string
@@ -14,6 +15,8 @@ interface Candidate {
   sourceName: string | null
   sourceType: string | null
   sourceUrl: string | null
+  detectedEventType: string | null
+  detectedEventSubType: string | null
   reviewStatus: 'pending' | 'approved' | 'rejected'
   aiConfidence: number | null
   hasIdol: boolean
@@ -378,6 +381,12 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
                       <AlertTriangle className="h-2.5 w-2.5" />
                       {sourceInfo.shortLabel}
                     </span>
+                  )}
+                  {c.detectedEventType && (
+                    <EventTypeBadge
+                      type={c.detectedEventType}
+                      subType={c.detectedEventSubType}
+                    />
                   )}
                   {c.detectedDate && (
                     <span className="text-[10px] text-muted tabular-nums ml-auto">

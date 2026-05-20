@@ -17,6 +17,7 @@ interface AdminEvent {
   idolName: string
   title: string
   type: string
+  subType: string | null
   status: string
   trustLevel: TrustLevel
   date: string
@@ -41,7 +42,7 @@ async function getAdminEvents(): Promise<{ events: AdminEvent[]; error: string |
 
   const { data, error } = await supabase
     .from('events')
-    .select('id, idol_name, title, type, status, trust_level, date, country_flag, location, is_published, published_at, event_sources(id)')
+    .select('id, idol_name, title, type, sub_type, status, trust_level, date, country_flag, location, is_published, published_at, event_sources(id)')
     .order('date', { ascending: false })
 
   if (error) {
@@ -56,6 +57,7 @@ async function getAdminEvents(): Promise<{ events: AdminEvent[]; error: string |
     idolName: row.idol_name as string,
     title: row.title as string,
     type: row.type as string,
+    subType: row.sub_type as string | null,
     status: row.status as string,
     trustLevel: row.trust_level as TrustLevel,
     date: row.date as string,
@@ -176,4 +178,3 @@ function MiniStat({
     </div>
   )
 }
-
