@@ -87,7 +87,8 @@
 | 59 | 中文顯示 + 快閃店資料模型 migration | migration 041：新增 events / event_candidates 中文展示欄位、translation metadata、日期區間、細分地點欄位，並擴充 `event_sub_type` 支援 `popup_store` / `exhibition` / `brand_event`；不改 UI / crawler / 自動翻譯 | ✅ PR #83 merged（migration 041 已執行）|
 | 60 | 後台中文欄位 + 快閃店 subtype UI | 候選詳情顯示中文展示欄位 / subtype / 日期區間；核准候選時帶入草稿；草稿活動編輯頁可手動補中文標題、中文摘要、日期區間與地點細節；新增活動支援 popup/exhibition/brand_event subtype | ✅ PR #85 merged（無 migration）|
 | 61 | 前台中文顯示 + 日期區間 | 公開活動卡片 / 詳情頁優先顯示 `display_title_zh`，保留原文標題；日期支援 `start_date` / `end_date` / `date_label`；地點可顯示中文地點與地址；不改 crawler / AI / schema | ✅ PR #86 merged（無 migration）|
-| 62 | 活動類型 icon 顯示 | 共用 `EventTypeBadge` 加 lucide icon mapping；前台卡片 / 詳情頁、後台活動列表 / 詳情、候選列表 / 詳情顯示 label-backed icon；不改 crawler / AI / schema | ⏳ PR #87 待驗收（無 migration）|
+| 62 | 活動類型 icon 顯示 | 共用 `EventTypeBadge` 加 lucide icon mapping；前台卡片 / 詳情頁、後台活動列表 / 詳情、候選列表 / 詳情顯示 label-backed icon；不改 crawler / AI / schema | ✅ PR #87 merged（無 migration）|
+| 63 | 前台摘要 fallback 文案 | 活動詳情頁只有在 `display_summary_zh` 有值時顯示「AI 繁中摘要」；否則將原始 description 標為「原始摘要 / 原文」，避免誤導 | ⏳ PR #88 待驗收（無 migration）|
 
 ---
 
