@@ -8,6 +8,7 @@ import { getReviewSourceInfo } from '@/lib/admin/sourceReview'
 import EventTypeBadge from '@/components/EventTypeBadge'
 import { approveCandidate, rejectCandidate } from './actions'
 import GenerateChineseButton from './GenerateChineseButton'
+import MarkReviewedButton from './MarkReviewedButton'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -172,6 +173,16 @@ function getCandidateChineseDisabledReason(candidate: CandidateDetail): string |
   return null
 }
 
+function getCandidateReviewedDisabledReason(candidate: CandidateDetail): string | null {
+  if (candidate.translationStatus !== 'machine') {
+    return '只有機器產生狀態可以標記已審閱'
+  }
+  if (!candidate.displayTitleZh && !candidate.displaySummaryZh && !candidate.locationNameZh) {
+    return '缺少中文欄位，無法標記已審閱'
+  }
+  return null
+}
+
 function sourceBadgeClass(risk: string): string {
   switch (risk) {
     case 'official':
@@ -223,6 +234,7 @@ export default async function AdminCandidateDetailPage({
   const hasIdol    = !!candidate.detectedIdolId
   const sourceInfo = getReviewSourceInfo(candidate)
   const chineseDisabledReason = getCandidateChineseDisabledReason(candidate)
+  const reviewedDisabledReason = getCandidateReviewedDisabledReason(candidate)
 
   return (
     <div className="flex flex-col gap-0 pt-12 pb-6">
@@ -402,6 +414,12 @@ export default async function AdminCandidateDetailPage({
                 candidateId={candidate.id}
                 disabledReason={chineseDisabledReason}
               />
+              {candidate.translationStatus === 'machine' && (
+                <MarkReviewedButton
+                  candidateId={candidate.id}
+                  disabledReason={reviewedDisabledReason}
+                />
+              )}
               <Divider />
             </>
           )}

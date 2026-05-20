@@ -146,6 +146,59 @@ export async function generateCandidateChineseDisplay(
   }
 }
 
+export async function markCandidateChineseReviewed(
+  id: string,
+): Promise<GenerateChineseActionResult> {
+  try {
+    await requireActiveAdmin()
+
+    const supabase = getSupabaseServerClient()
+    if (!supabase) throw new Error('Supabase 未設定')
+
+    const { data: candidate, error: fetchError } = await supabase
+      .from('event_candidates')
+      .select('translation_status, display_title_zh, display_summary_zh, location_name_zh')
+      .eq('id', id)
+      .single()
+
+    if (fetchError || !candidate) {
+      throw new Error(`找不到候選活動：${fetchError?.message ?? '無資料'}`)
+    }
+
+    if (candidate.translation_status !== 'machine') {
+      throw new Error('只有機器產生狀態可以標記已審閱')
+    }
+
+    if (
+      !candidate.display_title_zh &&
+      !candidate.display_summary_zh &&
+      !candidate.location_name_zh
+    ) {
+      throw new Error('缺少中文欄位，無法標記已審閱')
+    }
+
+    const { error: updateError } = await supabase
+      .from('event_candidates')
+      .update({
+        translation_status: 'reviewed',
+        translation_updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .eq('translation_status', 'machine')
+
+    if (updateError) {
+      throw new Error(
+        `標記已審閱失敗：${updateError.code ? `[${updateError.code}] ` : ''}${updateError.message}`,
+      )
+    }
+
+    revalidateCandidatePaths(id)
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+}
+
 /**
  * Approves the candidate:
  *   1. Reads and validates the candidate (must be pending + have detected_idol_id)
