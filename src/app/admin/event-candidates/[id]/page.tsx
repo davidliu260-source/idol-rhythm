@@ -16,7 +16,19 @@ interface CandidateDetail {
   detectedIdolId: string | null
   idolName: string | null
   detectedEventType: string | null
+  detectedEventSubType: string | null
   detectedDate: string | null
+  detectedStartDate: string | null
+  detectedEndDate: string | null
+  detectedDateLabel: string | null
+  detectedCity: string | null
+  detectedVenueName: string | null
+  detectedAddress: string | null
+  displayTitleZh: string | null
+  displaySummaryZh: string | null
+  locationNameZh: string | null
+  translationStatus: string
+  translationSource: string | null
   sourceUrl: string | null
   sourceName: string | null
   sourceType: string | null
@@ -51,7 +63,19 @@ async function getCandidate(id: string): Promise<CandidateDetail | null> {
     raw_content: string | null
     detected_idol_id: string | null
     detected_event_type: string | null
+    detected_event_sub_type: string | null
     detected_date: string | null
+    detected_start_date: string | null
+    detected_end_date: string | null
+    detected_date_label: string | null
+    detected_city: string | null
+    detected_venue_name: string | null
+    detected_address: string | null
+    display_title_zh: string | null
+    display_summary_zh: string | null
+    location_name_zh: string | null
+    translation_status: string | null
+    translation_source: string | null
     source_url: string | null
     source_name: string | null
     source_type: string | null
@@ -84,7 +108,19 @@ async function getCandidate(id: string): Promise<CandidateDetail | null> {
     detectedIdolId: row.detected_idol_id,
     idolName: row.idols?.name ?? null,
     detectedEventType: row.detected_event_type,
+    detectedEventSubType: row.detected_event_sub_type,
     detectedDate: row.detected_date,
+    detectedStartDate: row.detected_start_date,
+    detectedEndDate: row.detected_end_date,
+    detectedDateLabel: row.detected_date_label,
+    detectedCity: row.detected_city,
+    detectedVenueName: row.detected_venue_name,
+    detectedAddress: row.detected_address,
+    displayTitleZh: row.display_title_zh,
+    displaySummaryZh: row.display_summary_zh,
+    locationNameZh: row.location_name_zh,
+    translationStatus: row.translation_status ?? 'none',
+    translationSource: row.translation_source,
     sourceUrl: row.source_url,
     sourceName: row.source_name,
     sourceType: row.source_type,
@@ -122,6 +158,28 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   media: '媒體',
   brand: '代言品牌',
   official: '官方發布',
+}
+
+const EVENT_SUBTYPE_LABELS: Record<string, string> = {
+  fanmeet: '粉絲見面',
+  fansign: '簽名會',
+  musicshow: '音樂節目',
+  variety: '綜藝節目',
+  interview: '採訪宣傳',
+  award: '頒獎典禮',
+  release: '專輯發行',
+  announcement: '官方公告',
+  magazine: '雜誌媒體',
+  popup_store: '快閃店',
+  exhibition: '展覽',
+  brand_event: '品牌活動',
+}
+
+const TRANSLATION_STATUS_LABELS: Record<string, string> = {
+  none: '未產生',
+  machine: '機器產生',
+  reviewed: '已審閱',
+  manual: '人工編輯',
 }
 
 function sourceBadgeClass(risk: string): string {
@@ -344,6 +402,29 @@ export default async function AdminCandidateDetailPage({
           )}
         </div>
 
+        {/* Chinese display metadata */}
+        <div className="rounded-xl bg-card border border-card-border px-4 py-4 flex flex-col gap-3">
+          <p className="text-xs font-semibold text-muted uppercase tracking-wide">中文顯示</p>
+          <Field label="中文標題">{candidate.displayTitleZh || <span className="text-muted/60">尚未填寫</span>}</Field>
+          {candidate.displaySummaryZh && (
+            <>
+              <Divider />
+              <Field label="中文摘要">{candidate.displaySummaryZh}</Field>
+            </>
+          )}
+          {candidate.locationNameZh && (
+            <>
+              <Divider />
+              <Field label="中文地點">{candidate.locationNameZh}</Field>
+            </>
+          )}
+          <Divider />
+          <Field label="翻譯狀態">
+            {TRANSLATION_STATUS_LABELS[candidate.translationStatus] ?? candidate.translationStatus}
+            {candidate.translationSource ? ` / ${candidate.translationSource}` : ''}
+          </Field>
+        </div>
+
         {/* Detection results */}
         <div className="rounded-xl bg-card border border-card-border px-4 py-4 flex flex-col gap-3">
           <p className="text-xs font-semibold text-muted uppercase tracking-wide">偵測結果</p>
@@ -362,10 +443,35 @@ export default async function AdminCandidateDetailPage({
               </Field>
             </>
           )}
+          {candidate.detectedEventSubType && (
+            <>
+              <Divider />
+              <Field label="細分類型">
+                {EVENT_SUBTYPE_LABELS[candidate.detectedEventSubType] ?? candidate.detectedEventSubType}
+              </Field>
+            </>
+          )}
           {candidate.detectedDate && (
             <>
               <Divider />
               <Field label="偵測日期">{candidate.detectedDate.slice(0, 10)}</Field>
+            </>
+          )}
+          {(candidate.detectedStartDate || candidate.detectedEndDate || candidate.detectedDateLabel) && (
+            <>
+              <Divider />
+              <Field label="日期區間">
+                {candidate.detectedDateLabel ||
+                  [candidate.detectedStartDate, candidate.detectedEndDate].filter(Boolean).join(' - ')}
+              </Field>
+            </>
+          )}
+          {(candidate.detectedCity || candidate.detectedVenueName || candidate.detectedAddress) && (
+            <>
+              <Divider />
+              <Field label="地點細節">
+                {[candidate.detectedCity, candidate.detectedVenueName, candidate.detectedAddress].filter(Boolean).join(' / ')}
+              </Field>
             </>
           )}
           {candidate.aiConfidence !== null && (
