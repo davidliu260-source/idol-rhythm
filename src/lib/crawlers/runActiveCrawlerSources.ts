@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { runBlackpinkFetcher } from './runBlackpinkFetcher'
 import { runJypScheduleFetcher } from './runJypScheduleFetcher'
 import { runKpopofficialConcertsFetcher } from './runKpopofficialConcertsFetcher'
+import { runYgArtistScheduleFetcher } from './runYgArtistScheduleFetcher'
 
 export type CrawlerRunTrigger = 'vercel-cron' | 'admin-manual'
 
@@ -123,6 +124,26 @@ export async function runCrawlerSource(
         status: r.status,
       }
     }
+    case 'yg_artist_schedule': {
+      const r = await runYgArtistScheduleFetcher(supabase, {
+        sourceKey: source.source_key,
+        dryRun,
+      })
+      return {
+        source: r.source,
+        sourceKey: r.sourceKey,
+        sourceName: r.sourceName ?? source.name,
+        parserType: source.parser_type,
+        mode: r.mode,
+        fetched: r.fetched,
+        inserted: r.inserted,
+        wouldInsert: r.wouldInsert,
+        skipped: r.skipped,
+        recheck: r.recheck,
+        errors: r.errors,
+        status: r.status,
+      }
+    }
     default:
       return {
         source: 'unknown',
@@ -194,4 +215,3 @@ export async function runActiveCrawlerSources(
     error: null,
   }
 }
-
