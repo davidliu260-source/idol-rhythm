@@ -93,7 +93,7 @@
 | 65 | 候選 + 草稿單筆繁中生成 | 後台候選詳情與草稿活動詳情加 admin-only「產生繁中顯示文案」；共用 Claude JSON helper；保護 manual/reviewed 與既有中文欄位；不做 batch / overwrite / reviewed / 發布提示 / crawler | ✅ PR #90 merged（無 migration）|
 | 66 | 繁中欄位標記已審閱 | 後台候選詳情與草稿活動詳情加 admin-only「標記已審閱」；只允許 `translation_status = machine` 且已有中文欄位；只更新 `translation_status` / `translation_updated_at`，不改中文內容、不改 `translation_source`、不碰發布 / AI / crawler / schema | ✅ PR #91 merged（無 migration）|
 | 67 | WAKEONE crawler 工作單 | `CRAWLER_WORK_ORDER_WAKEONE.md`：規劃 WAKEONE 公開 notice crawler，第一版覆蓋 ZEROBASEONE / Kep1er / izna；共享 label notice feed，需保守 artist matching 與 event filter；只做工作單，不改 DB / crawler / migration | ✅ PR #92 merged（無 migration）|
-| 68 | SMTOWN crawler 工作單 | `CRAWLER_WORK_ORDER_SMTOWN.md`：規劃 SMTOWN 公開 notice crawler，第一版先聚焦 aespa / RIIZE / Red Velvet / EXO / NCT 等高訊號群組；共享 label notice feed，需保守 artist matching 與 event filter，特別注意 NCT unit / solo overlap；只做工作單，不改 DB / crawler / migration | ⏳ PR 待建立（無 migration）|
+| 68 | SMTOWN crawler 工作單 | `CRAWLER_WORK_ORDER_SMTOWN.md`：規劃 SMTOWN 公開 notice crawler，第一版先聚焦 aespa / RIIZE / Red Velvet / EXO / NCT 等高訊號群組；共享 label notice feed，需保守 artist matching 與 event filter，特別注意 NCT unit / solo overlap；只做工作單，不改 DB / crawler / migration | ⏳ PR #93 待驗收（無 migration）|
 
 ---
 
