@@ -43,6 +43,8 @@ export default async function EventDetailPage({
   const dateLabel = getEventDateLabel(event)
   const isConfirmed = event.status === 'confirmed'
   const isDemoEvent = !supabaseEvent
+  const summaryText = event.displaySummaryZh?.trim() || event.description.trim()
+  const hasTranslatedSummary = Boolean(event.displaySummaryZh?.trim())
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -149,29 +151,32 @@ export default async function EventDetailPage({
           )}
         </div>
 
-        {/* AI summary mock */}
-        <div className="rounded-2xl border border-violet-500/25 bg-violet-500/5 p-4">
-          <div className="flex items-center gap-2 mb-2.5">
-            <Sparkles className="h-3.5 w-3.5 text-violet-400" />
-            <span className="text-xs font-semibold text-violet-400">AI 繁中摘要</span>
-            <span className="ml-auto text-[10px] text-muted bg-card border border-card-border px-1.5 py-0.5 rounded-full">
-              Demo
-            </span>
-          </div>
-          <p className="text-sm text-text-base leading-relaxed">{event.description}</p>
-          {event.tags.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {event.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full bg-violet-500/10 border border-violet-500/20 px-2.5 py-0.5 text-xs text-violet-300"
-                >
-                  #{tag}
-                </span>
-              ))}
+        {summaryText && (
+          <div className="rounded-2xl border border-violet-500/25 bg-violet-500/5 p-4">
+            <div className="flex items-center gap-2 mb-2.5">
+              <Sparkles className="h-3.5 w-3.5 text-violet-400" />
+              <span className="text-xs font-semibold text-violet-400">
+                {hasTranslatedSummary ? 'AI 繁中摘要' : '原始摘要'}
+              </span>
+              <span className="ml-auto text-[10px] text-muted bg-card border border-card-border px-1.5 py-0.5 rounded-full">
+                {hasTranslatedSummary ? '繁中' : '原文'}
+              </span>
             </div>
-          )}
-        </div>
+            <p className="text-sm text-text-base leading-relaxed">{summaryText}</p>
+            {event.tags.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {event.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full bg-violet-500/10 border border-violet-500/20 px-2.5 py-0.5 text-xs text-violet-300"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Source */}
         <div className="rounded-2xl border border-card-border bg-card p-4">
