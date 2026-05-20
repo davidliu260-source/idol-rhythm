@@ -183,12 +183,48 @@ Detail pages should show:
 - Chinese summary if available
 - original source URL preserved
 - range display for popup/exhibition events
+- activity type icon next to the type/subtype label when available
 
 Suggested date rendering:
 
 - single-day: `2026-06-01`
 - range same month: `2026-06-01 - 06-15`
 - range cross-month/year: `2026-06-28 - 2026-07-05`
+
+## Activity Type Icon System
+
+Lists should be scannable without reading every title. Frontend cards, admin
+event lists, and admin candidate lists should eventually show a small activity
+type icon derived from `event.type + event.sub_type`.
+
+Recommended first pass:
+
+- use `lucide-react` icons already available in the app
+- centralize mapping in one shared helper/component
+- keep icons small and label-backed; icon alone should not be the only meaning
+- use the same mapping in frontend and admin
+- avoid custom image assets until event subtypes are stable
+
+Suggested mapping:
+
+| event/subtype | icon idea | display idea |
+|---|---|---|
+| `concert` | music / mic | 演唱會 |
+| `fanmeet` | users | 見面會 |
+| `fansign` | pen / signature | 簽名會 |
+| `musicshow` | tv | 音樂節目 |
+| future `radio` subtype | radio | 廣播 |
+| `variety` | clapperboard / tv | 綜藝 |
+| `ticketing` | ticket | 開票 |
+| `livestream` | video | 直播 |
+| future `popup_store` | store | 快閃店 |
+| future `exhibition` | images | 展覽 |
+| future `brand_event` / `brand` | shopping bag / badge | 品牌活動 |
+| `release` | disc / sparkle | 發行 |
+| `announcement` | megaphone | 官方公告 |
+
+Open decision: exact icon choices should be finalized after subtype migration,
+otherwise the mapping will churn.
 
 ## Admin Workflow
 
@@ -254,6 +290,8 @@ Potential scope:
 - show original title when different
 - render date ranges
 - add popup/exhibition subtype badges
+- add shared activity type icon mapping for frontend cards/details
+- reuse the same icon mapping in admin lists/details where helpful
 
 ### PR D - Chinese Generation
 
