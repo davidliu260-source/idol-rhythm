@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
-  ChevronRight, Check, X, CheckSquare, ShieldCheck, Newspaper, Trash2, Search,
+  ChevronRight, Check, X, CheckSquare, ShieldCheck, Trash2, Search,
 } from 'lucide-react'
 import { EVENT_TYPE_LABELS, SOURCE_CONFIG } from '@/lib/mockEvents'
 import type { TrustLevel } from '@/lib/types'
@@ -166,7 +166,7 @@ export default function EventsClient({ events, isAdmin }: Props) {
     }
   }
 
-  async function bulkAction(action: 'publish_official' | 'publish_media' | 'unpublish' | 'delete_drafts') {
+  async function bulkAction(action: 'publish_auto' | 'unpublish' | 'delete_drafts') {
     const ids = Array.from(selected)
     if (ids.length === 0) return
     setResultMsg(null)
@@ -183,8 +183,7 @@ export default function EventsClient({ events, isAdmin }: Props) {
           setResultMsg({ type: 'error', text: data.error ?? '操作失敗' })
         } else {
           const labelMap = {
-            publish_official: '設為官方並發布',
-            publish_media: '設為媒體並發布',
+            publish_auto: '自動判斷並發布',
             unpublish: '下架',
             delete_drafts: '刪除草稿',
           }
@@ -344,24 +343,17 @@ export default function EventsClient({ events, isAdmin }: Props) {
 
             {selectionInfo.kind === 'drafts' && (
               <div className="flex flex-col gap-2">
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => bulkAction('publish_official')}
-                    disabled={isPending}
-                    className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg bg-violet px-3 py-2 text-xs font-semibold text-white disabled:opacity-50 active:opacity-70 transition-opacity"
-                  >
-                    <ShieldCheck className="h-3.5 w-3.5" />
-                    設官方 + 發布
-                  </button>
-                  <button
-                    onClick={() => bulkAction('publish_media')}
-                    disabled={isPending}
-                    className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50 active:opacity-70 transition-opacity"
-                  >
-                    <Newspaper className="h-3.5 w-3.5" />
-                    設媒體 + 發布
-                  </button>
-                </div>
+                <button
+                  onClick={() => bulkAction('publish_auto')}
+                  disabled={isPending}
+                  className="inline-flex items-center justify-center gap-1 rounded-lg bg-violet px-3 py-2 text-xs font-semibold text-white disabled:opacity-50 active:opacity-70 transition-opacity"
+                >
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  自動判斷 + 發布
+                </button>
+                <p className="text-[10px] text-muted leading-snug">
+                  系統會依來源類型自動設為官方或媒體；聚合、社群或未知來源會保持草稿。
+                </p>
                 <button
                   onClick={() => {
                     if (!confirm(`確定要永久刪除這 ${selected.size} 筆草稿嗎？此操作無法復原。`)) return

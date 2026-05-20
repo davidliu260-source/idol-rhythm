@@ -182,7 +182,6 @@ export default async function AdminEditEventPage({
     type:        eventResult.type,
     subType:     eventResult.sub_type ?? '',
     status:      eventResult.status,
-    trustLevel:  eventResult.trust_level,
     date:        eventResult.date,
     time:        eventResult.time ?? '',
     country:     eventResult.country,
