@@ -15,10 +15,10 @@ import {
 } from 'lucide-react'
 import {
   getEventById as getMockEventById,
-  formatEventDate,
 } from '@/lib/mockEvents'
 import { getIdolById } from '@/lib/mockIdols'
 import { getEventById as getSupabaseEventById } from '@/lib/supabase/events'
+import { getEventDateLabel } from '@/lib/eventDisplay'
 import SourceBadge from '@/components/SourceBadge'
 import EventTypeBadge from '@/components/EventTypeBadge'
 import IdolAvatar from '@/components/IdolAvatar'
@@ -40,8 +40,9 @@ export default async function EventDetailPage({
   if (!event) return notFound()
 
   const idol = getIdolById(event.idolId)
-  const dateLabel = formatEventDate(event.date)
+  const dateLabel = getEventDateLabel(event)
   const isConfirmed = event.status === 'confirmed'
+  const isDemoEvent = !supabaseEvent
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -88,18 +89,24 @@ export default async function EventDetailPage({
       {/* Content */}
       <div className="flex-1 px-4 py-5 flex flex-col gap-4">
 
-        {/* Demo data notice */}
-        <div className="flex items-start gap-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 px-3 py-2.5">
-          <span className="text-amber-400 text-sm leading-none mt-0.5">⚠️</span>
-          <p className="text-xs text-amber-300 leading-snug">
-            <span className="font-semibold">Demo 展示資料</span>
-            ｜非真實官方行程，請以官方 SNS 或購票平台公告為準
-          </p>
-        </div>
+        {isDemoEvent && (
+          <div className="flex items-start gap-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 px-3 py-2.5">
+            <span className="text-amber-400 text-sm leading-none mt-0.5">⚠️</span>
+            <p className="text-xs text-amber-300 leading-snug">
+              <span className="font-semibold">Demo 展示資料</span>
+              ｜非真實官方行程，請以官方 SNS 或購票平台公告為準
+            </p>
+          </div>
+        )}
 
         {/* Title & status */}
         <div>
           <h1 className="text-lg font-bold text-text-base leading-snug">{event.title}</h1>
+          {event.originalTitle && (
+            <p className="mt-1 text-xs leading-snug text-muted">
+              原文：{event.originalTitle}
+            </p>
+          )}
           <div className="flex items-center gap-2 mt-2">
             {isConfirmed ? (
               <span className="flex items-center gap-1 text-xs text-emerald-400">
@@ -131,6 +138,13 @@ export default async function EventDetailPage({
               icon={<MapPin className="h-4 w-4" />}
               label="地點"
               value={event.location}
+            />
+          )}
+          {event.address && (
+            <InfoRow
+              icon={<MapPin className="h-4 w-4" />}
+              label="地址"
+              value={event.address}
             />
           )}
         </div>

@@ -94,17 +94,32 @@ export interface Event {
    * initial+gradient block.
    */
   idolAvatarUrl?: string | null
+  /**
+   * Public display title. Supabase rows may prefer display_title_zh here while
+   * keeping the source title in originalTitle.
+   */
   title: string
+  originalTitle?: string
   type: EventType
   subType?: EventSubType
   status: EventStatus
   date: string
+  startDate?: string
+  endDate?: string
+  dateLabel?: string
   time?: string
   location?: string
+  originalLocation?: string
+  city?: string
+  venueName?: string
+  address?: string
+  mapUrl?: string
   country: string
   countryFlag: string
   source: EventSource
   description: string
+  displaySummaryZh?: string
+  translationStatus?: 'none' | 'pending' | 'machine' | 'reviewed' | 'manual'
   isFavorited: boolean
   ticketUrl?: string
   streamUrl?: string
