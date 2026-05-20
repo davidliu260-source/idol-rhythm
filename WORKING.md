@@ -9,7 +9,7 @@
 
 | 項目 | 值 |
 |---|---|
-| 目前階段 | S1 / C1 / I1a / I1b-A / J7d-A / 忘記密碼 / M1a / admin 刪除草稿 / M1b 第一批 + 第二批 + M1b-3（75 個 active idol）/ trust_level 單一真相 / Supabase SSR middleware / 後台 4 頁 filter tabs + 搜尋 pilot / 後台 idols「缺資料」tab / I1b-B AI 搜圖（Wikimedia + 可重搜）/ I1b-C avatar 來源紀錄 + 多色 placeholder / 前台 polish 6 改動 / #45 description + color 補齊 / Source Inventory A / YG crawler 工作單 / YG artist schedule crawler / 中文顯示 + 快閃店資料模型 / 後台中文欄位 / 前台中文顯示 / 活動類型 icon / 摘要 fallback / 中文生成工作單 / 候選 + 草稿單筆繁中生成 / 繁中欄位標記已審閱 完成。下一步建議：WAKEONE crawler 工作單完成後，接 SMTOWN notice 工作單或 Weverse 技術探測工作單；另有「後台用戶統計」待排程 |
+| 目前階段 | S1 / C1 / I1a / I1b-A / J7d-A / 忘記密碼 / M1a / admin 刪除草稿 / M1b 第一批 + 第二批 + M1b-3（75 個 active idol）/ trust_level 單一真相 / Supabase SSR middleware / 後台 4 頁 filter tabs + 搜尋 pilot / 後台 idols「缺資料」tab / I1b-B AI 搜圖（Wikimedia + 可重搜）/ I1b-C avatar 來源紀錄 + 多色 placeholder / 前台 polish 6 改動 / #45 description + color 補齊 / Source Inventory A / YG crawler 工作單 / YG artist schedule crawler / 中文顯示 + 快閃店資料模型 / 後台中文欄位 / 前台中文顯示 / 活動類型 icon / 摘要 fallback / 中文生成工作單 / 候選 + 草稿單筆繁中生成 / 繁中欄位標記已審閱 / WAKEONE crawler 工作單 完成。下一步建議：SMTOWN notice 工作單完成後，接 Weverse 技術探測工作單；另有「後台用戶統計」待排程 |
 | 輔助參考 | `ADMIN_ROADMAP.md`（後台分階段開發路線）、`AI_PIPELINE_PLAN.md`（爬蟲架構設計文件）、`SOURCE_INVENTORY_A.md`（官方來源盤點研究附件；不是流程索引，流程仍以本檔為準）、`MAINSTREAM_ARTIST_SEED_WORK_ORDER.md`（主流漏網藝人 seed 工作單；只做規劃）、`CHINESE_GENERATION_WORK_ORDER.md`（繁中顯示文案生成工作單；只做規劃） |
 
 ---
@@ -92,7 +92,8 @@
 | 64 | 繁中顯示文案生成工作單 | `CHINESE_GENERATION_WORK_ORDER.md`：規劃 admin-only 單筆生成、manual/reviewed 保護、嚴格 JSON 驗證、crawler 不直接呼叫 AI；只做工作單，不改 DB / AI runtime / UI | ✅ PR #89 merged（無 migration）|
 | 65 | 候選 + 草稿單筆繁中生成 | 後台候選詳情與草稿活動詳情加 admin-only「產生繁中顯示文案」；共用 Claude JSON helper；保護 manual/reviewed 與既有中文欄位；不做 batch / overwrite / reviewed / 發布提示 / crawler | ✅ PR #90 merged（無 migration）|
 | 66 | 繁中欄位標記已審閱 | 後台候選詳情與草稿活動詳情加 admin-only「標記已審閱」；只允許 `translation_status = machine` 且已有中文欄位；只更新 `translation_status` / `translation_updated_at`，不改中文內容、不改 `translation_source`、不碰發布 / AI / crawler / schema | ✅ PR #91 merged（無 migration）|
-| 67 | WAKEONE crawler 工作單 | `CRAWLER_WORK_ORDER_WAKEONE.md`：規劃 WAKEONE 公開 notice crawler，第一版覆蓋 ZEROBASEONE / Kep1er / izna；共享 label notice feed，需保守 artist matching 與 event filter；只做工作單，不改 DB / crawler / migration | ⏳ PR #92 待驗收（無 migration）|
+| 67 | WAKEONE crawler 工作單 | `CRAWLER_WORK_ORDER_WAKEONE.md`：規劃 WAKEONE 公開 notice crawler，第一版覆蓋 ZEROBASEONE / Kep1er / izna；共享 label notice feed，需保守 artist matching 與 event filter；只做工作單，不改 DB / crawler / migration | ✅ PR #92 merged（無 migration）|
+| 68 | SMTOWN crawler 工作單 | `CRAWLER_WORK_ORDER_SMTOWN.md`：規劃 SMTOWN 公開 notice crawler，第一版先聚焦 aespa / RIIZE / Red Velvet / EXO / NCT 等高訊號群組；共享 label notice feed，需保守 artist matching 與 event filter，特別注意 NCT unit / solo overlap；只做工作單，不改 DB / crawler / migration | ⏳ PR 待建立（無 migration）|
 
 ---
 
