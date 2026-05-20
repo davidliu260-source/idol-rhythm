@@ -51,6 +51,9 @@ export type EventSubType =
   | 'release'
   | 'announcement'
   | 'magazine'
+  | 'popup_store'
+  | 'exhibition'
+  | 'brand_event'
 
 export type EventStatus = 'confirmed' | 'tentative' | 'cancelled' | 'postponed'
 
