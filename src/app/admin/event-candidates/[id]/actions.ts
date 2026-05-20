@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
+import { generateChineseDisplayWithClaude } from '@/lib/ai/generateChineseDisplay'
 
 // ── Guard ──────────────────────────────────────────────────────────────────────
 
@@ -19,6 +20,15 @@ async function requireActiveAdmin(): Promise<void> {
 function revalidateCandidatePaths(id: string): void {
   revalidatePath('/admin/event-candidates')
   revalidatePath(`/admin/event-candidates/${id}`)
+}
+
+function isProtectedTranslationStatus(status: unknown): boolean {
+  return status === 'manual' || status === 'reviewed'
+}
+
+export interface GenerateChineseActionResult {
+  ok: boolean
+  error?: string
 }
 
 // ── Actions ───────────────────────────────────────────────────────────────────
@@ -48,6 +58,92 @@ export async function rejectCandidate(id: string): Promise<void> {
 
   revalidateCandidatePaths(id)
   redirect(`/admin/event-candidates/${id}`)
+}
+
+export async function generateCandidateChineseDisplay(
+  id: string,
+): Promise<GenerateChineseActionResult> {
+  try {
+    await requireActiveAdmin()
+
+    const supabase = getSupabaseServerClient()
+    if (!supabase) throw new Error('Supabase 未設定')
+
+    const { data: candidate, error: fetchError } = await supabase
+      .from('event_candidates')
+      .select('*, idols(name)')
+      .eq('id', id)
+      .single()
+
+    if (fetchError || !candidate) {
+      throw new Error(`找不到候選活動：${fetchError?.message ?? '無資料'}`)
+    }
+
+    if (candidate.review_status !== 'pending') {
+      throw new Error('只有待審核候選可以產生繁中顯示文案')
+    }
+
+    if (isProtectedTranslationStatus(candidate.translation_status)) {
+      throw new Error('此候選的中文欄位已是人工編輯或已審閱狀態，為避免覆蓋不自動產生')
+    }
+
+    if (
+      candidate.display_title_zh ||
+      candidate.display_summary_zh ||
+      candidate.location_name_zh
+    ) {
+      throw new Error('此候選已有中文顯示欄位，第一版不支援覆蓋既有內容')
+    }
+
+    const dateText =
+      (candidate.detected_date_label as string | null) ||
+      [
+        candidate.detected_start_date as string | null,
+        candidate.detected_end_date as string | null,
+      ].filter(Boolean).join(' - ') ||
+      (candidate.detected_date as string | null)
+
+    const locationText = [
+      candidate.detected_city as string | null,
+      candidate.detected_venue_name as string | null,
+      candidate.detected_address as string | null,
+    ].filter(Boolean).join(' / ')
+
+    const generated = await generateChineseDisplayWithClaude({
+      title: candidate.raw_title as string,
+      content: candidate.raw_content as string | null,
+      idolName: ((candidate.idols as unknown) as { name: string } | null)?.name ?? null,
+      eventType: candidate.detected_event_type as string | null,
+      eventSubType: candidate.detected_event_sub_type as string | null,
+      dateText,
+      locationText,
+      sourceName: candidate.source_name as string | null,
+      sourceType: candidate.source_type as string | null,
+    })
+
+    const { error: updateError } = await supabase
+      .from('event_candidates')
+      .update({
+        display_title_zh: generated.displayTitleZh,
+        display_summary_zh: generated.displaySummaryZh,
+        location_name_zh: generated.locationNameZh,
+        translation_status: 'machine',
+        translation_source: 'ai',
+        translation_updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+
+    if (updateError) {
+      throw new Error(
+        `寫入繁中欄位失敗：${updateError.code ? `[${updateError.code}] ` : ''}${updateError.message}`,
+      )
+    }
+
+    revalidateCandidatePaths(id)
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
 }
 
 /**
