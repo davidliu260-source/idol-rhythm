@@ -27,6 +27,9 @@ const EVENT_SUBTYPE_OPTIONS = [
   { value: 'release', label: '專輯發行' },
   { value: 'announcement', label: '官方公告' },
   { value: 'magazine', label: '雜誌媒體' },
+  { value: 'popup_store', label: '快閃店' },
+  { value: 'exhibition', label: '展覽' },
+  { value: 'brand_event', label: '品牌活動' },
 ]
 
 const SOURCE_TYPE_OPTIONS = [
@@ -111,6 +114,7 @@ export default function NewEventForm({
         status,
         trust_level: trustLevel,
         date,
+        start_date: date,
         time: time || null,
         country: country.trim(),
         country_flag: countryFlag.trim() || null,

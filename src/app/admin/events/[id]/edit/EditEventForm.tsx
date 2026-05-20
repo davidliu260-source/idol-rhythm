@@ -28,6 +28,9 @@ const EVENT_SUBTYPE_OPTIONS = [
   { value: 'release',     label: '專輯發行' },
   { value: 'announcement', label: '官方公告' },
   { value: 'magazine',    label: '雜誌媒體' },
+  { value: 'popup_store', label: '快閃店' },
+  { value: 'exhibition',  label: '展覽' },
+  { value: 'brand_event', label: '品牌活動' },
 ]
 
 const SOURCE_TYPE_OPTIONS = [
@@ -37,6 +40,13 @@ const SOURCE_TYPE_OPTIONS = [
   { value: 'fan_account',      label: '粉絲帳號' },
   { value: 'community',        label: '社群討論' },
   { value: 'unknown',          label: '不明' },
+]
+
+const TRANSLATION_STATUS_OPTIONS = [
+  { value: 'none',     label: '未產生' },
+  { value: 'machine',  label: '機器產生' },
+  { value: 'reviewed', label: '已審閱' },
+  { value: 'manual',   label: '人工編輯' },
 ]
 
 // ── Prop types ────────────────────────────────────────────────────────────────
@@ -51,11 +61,22 @@ export interface EditEventFormProps {
     subType: string
     status: string
     date: string
+    startDate: string
+    endDate: string
+    dateLabel: string
     time: string
     country: string
     countryFlag: string
     location: string
+    city: string
+    venueName: string
+    address: string
+    mapUrl: string
     description: string
+    displayTitleZh: string
+    displaySummaryZh: string
+    locationNameZh: string
+    translationStatus: string
     tags: string        // comma-separated string for display
     ticketUrl: string
     streamUrl: string
@@ -85,11 +106,22 @@ export default function EditEventForm({ eventId, idols, initial }: EditEventForm
   const [subType,      setSubType]      = useState(initial.subType)
   const [status,       setStatus]       = useState(initial.status)
   const [date,         setDate]         = useState(initial.date)
+  const [startDate,    setStartDate]    = useState(initial.startDate)
+  const [endDate,      setEndDate]      = useState(initial.endDate)
+  const [dateLabel,    setDateLabel]    = useState(initial.dateLabel)
   const [time,         setTime]         = useState(initial.time)
   const [country,      setCountry]      = useState(initial.country)
   const [countryFlag,  setCountryFlag]  = useState(initial.countryFlag)
   const [location,     setLocation]     = useState(initial.location)
+  const [city,         setCity]         = useState(initial.city)
+  const [venueName,    setVenueName]    = useState(initial.venueName)
+  const [address,      setAddress]      = useState(initial.address)
+  const [mapUrl,       setMapUrl]       = useState(initial.mapUrl)
   const [description,  setDescription]  = useState(initial.description)
+  const [displayTitleZh,   setDisplayTitleZh]   = useState(initial.displayTitleZh)
+  const [displaySummaryZh, setDisplaySummaryZh] = useState(initial.displaySummaryZh)
+  const [locationNameZh,   setLocationNameZh]   = useState(initial.locationNameZh)
+  const [translationStatus, setTranslationStatus] = useState(initial.translationStatus)
   const [tags,         setTags]         = useState(initial.tags)
   const [ticketUrl,    setTicketUrl]    = useState(initial.ticketUrl)
   const [streamUrl,    setStreamUrl]    = useState(initial.streamUrl)
@@ -121,11 +153,22 @@ export default function EditEventForm({ eventId, idols, initial }: EditEventForm
       subType,
       status,
       date,
+      startDate,
+      endDate,
+      dateLabel,
       time,
       country,
       countryFlag,
       location,
+      city,
+      venueName,
+      address,
+      mapUrl,
       description,
+      displayTitleZh,
+      displaySummaryZh,
+      locationNameZh,
+      translationStatus,
       tags:        tagArray,
       ticketUrl,
       streamUrl,
@@ -168,6 +211,19 @@ export default function EditEventForm({ eventId, idols, initial }: EditEventForm
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="例：BTS WORLD TOUR 台北站"
+            className={inputCls}
+          />
+        </Field>
+
+        <Field label="中文顯示標題">
+          <input
+            type="text"
+            value={displayTitleZh}
+            onChange={(e) => {
+              setDisplayTitleZh(e.target.value)
+              if (e.target.value.trim()) setTranslationStatus('manual')
+            }}
+            placeholder="例：ITZY 杭州簽名會"
             className={inputCls}
           />
         </Field>
@@ -216,12 +272,15 @@ export default function EditEventForm({ eventId, idols, initial }: EditEventForm
       {/* 時間 / 地點 */}
       <Section title="時間 / 地點">
         <div className="grid grid-cols-2 gap-3">
-          <Field label="日期" required>
+          <Field label="主要日期" required>
             <input
               type="date"
               required
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              onChange={(e) => {
+                setDate(e.target.value)
+                setStartDate(e.target.value)
+              }}
               className={inputCls}
             />
           </Field>
@@ -235,6 +294,36 @@ export default function EditEventForm({ eventId, idols, initial }: EditEventForm
             />
           </Field>
         </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="開始日期">
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className={inputCls}
+            />
+          </Field>
+
+          <Field label="結束日期">
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className={inputCls}
+            />
+          </Field>
+        </div>
+
+        <Field label="日期顯示文字">
+          <input
+            type="text"
+            value={dateLabel}
+            onChange={(e) => setDateLabel(e.target.value)}
+            placeholder="例：2026.06.01 - 06.15"
+            className={inputCls}
+          />
+        </Field>
 
         <div className="grid grid-cols-3 gap-3">
           <Field label="國旗">
@@ -270,6 +359,63 @@ export default function EditEventForm({ eventId, idols, initial }: EditEventForm
             className={inputCls}
           />
         </Field>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="城市">
+            <input
+              type="text"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              placeholder="Seoul"
+              className={inputCls}
+            />
+          </Field>
+
+          <Field label="場館 / 店名">
+            <input
+              type="text"
+              value={venueName}
+              onChange={(e) => setVenueName(e.target.value)}
+              placeholder="例：THE HYUNDAI SEOUL"
+              className={inputCls}
+            />
+          </Field>
+        </div>
+
+        <Field label="地址">
+          <input
+            type="text"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="官方提供的完整地址（選填）"
+            className={inputCls}
+          />
+        </Field>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="中文地點">
+            <input
+              type="text"
+              value={locationNameZh}
+              onChange={(e) => {
+                setLocationNameZh(e.target.value)
+                if (e.target.value.trim()) setTranslationStatus('manual')
+              }}
+              placeholder="例：首爾現代百貨"
+              className={inputCls}
+            />
+          </Field>
+
+          <Field label="地圖 URL">
+            <input
+              type="url"
+              value={mapUrl}
+              onChange={(e) => setMapUrl(e.target.value)}
+              placeholder="https://…"
+              className={inputCls}
+            />
+          </Field>
+        </div>
       </Section>
 
       {/* 來源資訊 */}
@@ -360,6 +506,31 @@ export default function EditEventForm({ eventId, idols, initial }: EditEventForm
             placeholder="活動說明（選填）"
             className={inputCls + ' resize-none'}
           />
+        </Field>
+
+        <Field label="中文摘要">
+          <textarea
+            rows={3}
+            value={displaySummaryZh}
+            onChange={(e) => {
+              setDisplaySummaryZh(e.target.value)
+              if (e.target.value.trim()) setTranslationStatus('manual')
+            }}
+            placeholder="短中文摘要（選填，前台之後會優先使用）"
+            className={inputCls + ' resize-none'}
+          />
+        </Field>
+
+        <Field label="中文狀態">
+          <select
+            value={translationStatus}
+            onChange={(e) => setTranslationStatus(e.target.value)}
+            className={selectCls}
+          >
+            {TRANSLATION_STATUS_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
         </Field>
       </Section>
 
