@@ -208,3 +208,56 @@ export async function generateEventChineseDisplay(
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
   }
 }
+
+export async function markEventChineseReviewed(
+  id: string,
+): Promise<GenerateChineseActionResult> {
+  try {
+    await requireActiveAdmin()
+
+    const supabase = getSupabaseServerClient()
+    if (!supabase) throw new Error('Supabase 未設定')
+
+    const { data: event, error: fetchError } = await supabase
+      .from('events')
+      .select('translation_status, display_title_zh, display_summary_zh, location_name_zh')
+      .eq('id', id)
+      .single()
+
+    if (fetchError || !event) {
+      throw new Error(`找不到活動：${fetchError?.message ?? '無資料'}`)
+    }
+
+    if (event.translation_status !== 'machine') {
+      throw new Error('只有機器產生狀態可以標記已審閱')
+    }
+
+    if (
+      !event.display_title_zh &&
+      !event.display_summary_zh &&
+      !event.location_name_zh
+    ) {
+      throw new Error('缺少中文欄位，無法標記已審閱')
+    }
+
+    const { error: updateError } = await supabase
+      .from('events')
+      .update({
+        translation_status: 'reviewed',
+        translation_updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .eq('translation_status', 'machine')
+
+    if (updateError) {
+      throw new Error(
+        `標記已審閱失敗：${updateError.code ? `[${updateError.code}] ` : ''}${updateError.message}`,
+      )
+    }
+
+    revalidateEventPaths(id)
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+}

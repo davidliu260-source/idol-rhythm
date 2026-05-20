@@ -12,6 +12,7 @@ import type { TrustLevel, EventSubType, EventType, EventStatus, SourceType } fro
 import EventTypeBadge from '@/components/EventTypeBadge'
 import { publishEvent, unpublishEvent } from './actions'
 import GenerateChineseButton from './GenerateChineseButton'
+import MarkReviewedButton from './MarkReviewedButton'
 
 // ── Admin-only types (not exported — used only in this page) ──────────────────
 
@@ -200,6 +201,16 @@ function getEventChineseDisabledReason(event: AdminEventDetail): string | null {
   return null
 }
 
+function getEventReviewedDisabledReason(event: AdminEventDetail): string | null {
+  if (event.translationStatus !== 'machine') {
+    return '只有機器產生狀態可以標記已審閱'
+  }
+  if (!event.displayTitleZh && !event.displaySummaryZh && !event.locationNameZh) {
+    return '缺少中文欄位，無法標記已審閱'
+  }
+  return null
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function AdminEventDetailPage({
@@ -242,6 +253,7 @@ export default async function AdminEventDetailPage({
       ? `${event.startDate.slice(0, 10)} - ${event.endDate.slice(0, 10)}`
       : (event.startDate ?? event.date).slice(0, 10))
   const chineseDisabledReason = getEventChineseDisabledReason(event)
+  const reviewedDisabledReason = getEventReviewedDisabledReason(event)
 
   const statusColors: Record<string, string> = {
     confirmed: 'text-emerald-400',
@@ -413,6 +425,12 @@ export default async function AdminEventDetailPage({
                   eventId={event.id}
                   disabledReason={chineseDisabledReason}
                 />
+                {event.translationStatus === 'machine' && (
+                  <MarkReviewedButton
+                    eventId={event.id}
+                    disabledReason={reviewedDisabledReason}
+                  />
+                )}
                 <Divider />
               </>
             )}
