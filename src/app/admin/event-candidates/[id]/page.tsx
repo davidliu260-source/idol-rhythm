@@ -7,6 +7,7 @@ import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
 import { getReviewSourceInfo } from '@/lib/admin/sourceReview'
 import EventTypeBadge from '@/components/EventTypeBadge'
 import { approveCandidate, rejectCandidate } from './actions'
+import GenerateChineseButton from './GenerateChineseButton'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -158,6 +159,19 @@ const TRANSLATION_STATUS_LABELS: Record<string, string> = {
   manual: '人工編輯',
 }
 
+function getCandidateChineseDisabledReason(candidate: CandidateDetail): string | null {
+  if (candidate.reviewStatus !== 'pending') {
+    return '只有待審核候選可以產生繁中顯示文案'
+  }
+  if (candidate.translationStatus === 'manual' || candidate.translationStatus === 'reviewed') {
+    return '中文欄位已是人工編輯或已審閱狀態，不自動覆蓋'
+  }
+  if (candidate.displayTitleZh || candidate.displaySummaryZh || candidate.locationNameZh) {
+    return '已有中文顯示欄位，第一版不支援覆蓋既有內容'
+  }
+  return null
+}
+
 function sourceBadgeClass(risk: string): string {
   switch (risk) {
     case 'official':
@@ -208,6 +222,7 @@ export default async function AdminCandidateDetailPage({
   const isRejected = candidate.reviewStatus === 'rejected'
   const hasIdol    = !!candidate.detectedIdolId
   const sourceInfo = getReviewSourceInfo(candidate)
+  const chineseDisabledReason = getCandidateChineseDisabledReason(candidate)
 
   return (
     <div className="flex flex-col gap-0 pt-12 pb-6">
@@ -381,6 +396,15 @@ export default async function AdminCandidateDetailPage({
         {/* Chinese display metadata */}
         <div className="rounded-xl bg-card border border-card-border px-4 py-4 flex flex-col gap-3">
           <p className="text-xs font-semibold text-muted uppercase tracking-wide">中文顯示</p>
+          {isAdmin && (
+            <>
+              <GenerateChineseButton
+                candidateId={candidate.id}
+                disabledReason={chineseDisabledReason}
+              />
+              <Divider />
+            </>
+          )}
           <Field label="中文標題">{candidate.displayTitleZh || <span className="text-muted/60">尚未填寫</span>}</Field>
           {candidate.displaySummaryZh && (
             <>

@@ -11,6 +11,7 @@ import {
 import type { TrustLevel, EventSubType, EventType, EventStatus, SourceType } from '@/lib/types'
 import EventTypeBadge from '@/components/EventTypeBadge'
 import { publishEvent, unpublishEvent } from './actions'
+import GenerateChineseButton from './GenerateChineseButton'
 
 // ── Admin-only types (not exported — used only in this page) ──────────────────
 
@@ -179,6 +180,26 @@ function mockToAdminDetail(id: string): AdminEventDetail | null {
   }
 }
 
+const TRANSLATION_STATUS_LABELS: Record<string, string> = {
+  none: '未產生',
+  machine: '機器產生',
+  reviewed: '已審閱',
+  manual: '人工編輯',
+}
+
+function getEventChineseDisabledReason(event: AdminEventDetail): string | null {
+  if (event.isPublished) {
+    return '已發布活動不支援直接產生繁中欄位'
+  }
+  if (event.translationStatus === 'manual' || event.translationStatus === 'reviewed') {
+    return '中文欄位已是人工編輯或已審閱狀態，不自動覆蓋'
+  }
+  if (event.displayTitleZh || event.displaySummaryZh || event.locationNameZh) {
+    return '已有中文顯示欄位，第一版不支援覆蓋既有內容'
+  }
+  return null
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function AdminEventDetailPage({
@@ -220,6 +241,7 @@ export default async function AdminEventDetailPage({
     (event.startDate && event.endDate
       ? `${event.startDate.slice(0, 10)} - ${event.endDate.slice(0, 10)}`
       : (event.startDate ?? event.date).slice(0, 10))
+  const chineseDisabledReason = getEventChineseDisabledReason(event)
 
   const statusColors: Record<string, string> = {
     confirmed: 'text-emerald-400',
@@ -378,12 +400,31 @@ export default async function AdminEventDetailPage({
           )}
         </div>
 
-        {(event.displaySummaryZh || event.translationStatus !== 'none') && (
+        {(event.displayTitleZh ||
+          event.displaySummaryZh ||
+          event.locationNameZh ||
+          event.translationStatus !== 'none' ||
+          (isAdmin && !event.isPublished)) && (
           <div className="rounded-xl bg-card border border-card-border px-4 py-4 flex flex-col gap-3">
             <p className="text-xs font-semibold text-muted uppercase tracking-wide">中文顯示</p>
+            {isAdmin && !event.isPublished && (
+              <>
+                <GenerateChineseButton
+                  eventId={event.id}
+                  disabledReason={chineseDisabledReason}
+                />
+                <Divider />
+              </>
+            )}
+            {event.displayTitleZh && <Field label="中文標題">{event.displayTitleZh}</Field>}
+            {event.displayTitleZh && <Divider />}
             {event.displaySummaryZh && <Field label="中文摘要">{event.displaySummaryZh}</Field>}
             {event.displaySummaryZh && <Divider />}
-            <Field label="狀態">{event.translationStatus}</Field>
+            {event.locationNameZh && <Field label="中文地點">{event.locationNameZh}</Field>}
+            {event.locationNameZh && <Divider />}
+            <Field label="狀態">
+              {TRANSLATION_STATUS_LABELS[event.translationStatus] ?? event.translationStatus}
+            </Field>
           </div>
         )}
 
