@@ -15,6 +15,8 @@ interface Candidate {
   idolName: string | null
   detectedDate: string | null
   sourceName: string | null
+  sourceType: string | null
+  sourceUrl: string | null
   reviewStatus: 'pending' | 'approved' | 'rejected'
   aiConfidence: number | null
   hasIdol: boolean
@@ -32,7 +34,7 @@ async function getCandidates(): Promise<{ candidates: Candidate[]; error: string
 
   const { data, error } = await supabase
     .from('event_candidates')
-    .select('id, raw_title, detected_idol_id, detected_date, source_name, review_status, ai_confidence, created_at, needs_recheck, idols(name)')
+    .select('id, raw_title, detected_idol_id, detected_date, source_name, source_type, source_url, review_status, ai_confidence, created_at, needs_recheck, idols(name)')
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -50,6 +52,8 @@ async function getCandidates(): Promise<{ candidates: Candidate[]; error: string
     idolName: ((row.idols as unknown) as { name: string } | null)?.name ?? null,
     detectedDate: row.detected_date as string | null,
     sourceName: row.source_name as string | null,
+    sourceType: row.source_type as string | null,
+    sourceUrl: row.source_url as string | null,
     reviewStatus: row.review_status as 'pending' | 'approved' | 'rejected',
     aiConfidence: row.ai_confidence as number | null,
     hasIdol: !!row.detected_idol_id,

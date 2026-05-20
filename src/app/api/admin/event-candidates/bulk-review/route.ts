@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
+import { getReviewSourceInfo } from '@/lib/admin/sourceReview'
 
 interface BulkReviewRequest {
   ids: string[]
@@ -76,6 +77,18 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkRevie
         }
         if (!candidate.detected_idol_id) {
           errors.push({ id, message: `「${candidate.raw_title}」缺少偶像對應，無法批量核准` })
+          continue
+        }
+        const sourceInfo = getReviewSourceInfo({
+          sourceName: candidate.source_name as string | null,
+          sourceType: candidate.source_type as string | null,
+          sourceUrl: candidate.source_url as string | null,
+        })
+        if (sourceInfo.needsOriginalSource) {
+          errors.push({
+            id,
+            message: `「${candidate.raw_title}」是${sourceInfo.shortLabel}，請逐筆確認原始佐證後再核准`,
+          })
           continue
         }
 

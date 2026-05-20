@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { ArrowLeft, FileSearch, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
+import { getReviewSourceInfo } from '@/lib/admin/sourceReview'
 import { approveCandidate, rejectCandidate } from './actions'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -123,6 +124,19 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   official: '官方發布',
 }
 
+function sourceBadgeClass(risk: string): string {
+  switch (risk) {
+    case 'official':
+      return 'bg-sky-500/10 border-sky-500/25 text-sky-300'
+    case 'media':
+      return 'bg-teal-500/10 border-teal-500/25 text-teal-300'
+    case 'aggregator':
+      return 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+    default:
+      return 'bg-card border-card-border text-muted'
+  }
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function AdminCandidateDetailPage({
@@ -159,6 +173,7 @@ export default async function AdminCandidateDetailPage({
   const isApproved = candidate.reviewStatus === 'approved'
   const isRejected = candidate.reviewStatus === 'rejected'
   const hasIdol    = !!candidate.detectedIdolId
+  const sourceInfo = getReviewSourceInfo(candidate)
 
   return (
     <div className="flex flex-col gap-0 pt-12 pb-6">
@@ -207,6 +222,18 @@ export default async function AdminCandidateDetailPage({
             <p className="text-xs text-orange-300 leading-snug">
               <span className="font-semibold">內容已變更</span>
               ｜爬蟲偵測到此候選的來源內容在首次擷取後有更動，建議重新審核。詳細變更時間請見下方 reviewer note。
+            </p>
+          </div>
+        </div>
+      )}
+
+      {sourceInfo.needsOriginalSource && (
+        <div className="px-4 mb-4">
+          <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 px-3 py-2.5 flex items-start gap-2">
+            <AlertTriangle className="h-3.5 w-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-300 leading-snug">
+              <span className="font-semibold">{sourceInfo.shortLabel}</span>
+              ｜{sourceInfo.hint}
             </p>
           </div>
         </div>
@@ -362,7 +389,14 @@ export default async function AdminCandidateDetailPage({
           <p className="text-xs font-semibold text-muted uppercase tracking-wide">來源資訊</p>
           <Field label="來源名稱">{candidate.sourceName ?? '—'}</Field>
           {candidate.sourceType && (
-            <><Divider /><Field label="來源類型">{candidate.sourceType}</Field></>
+            <>
+              <Divider />
+              <Field label="來源類型">
+                <span className={`inline-flex rounded border px-1.5 py-0.5 text-[10px] font-semibold ${sourceBadgeClass(sourceInfo.risk)}`}>
+                  {sourceInfo.label}
+                </span>
+              </Field>
+            </>
           )}
           {candidate.sourceUrl && (
             <>
