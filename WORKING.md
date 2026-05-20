@@ -9,8 +9,8 @@
 
 | 項目 | 值 |
 |---|---|
-| 目前階段 | S1 / C1 / I1a / I1b-A / J7d-A / 忘記密碼 / M1a / admin 刪除草稿 / M1b 第一批 + 第二批 + M1b-3（75 個 active idol）/ trust_level 單一真相 / Supabase SSR middleware / 後台 4 頁 filter tabs + 搜尋 pilot / 後台 idols「缺資料」tab / I1b-B AI 搜圖（Wikimedia + 可重搜）/ I1b-C avatar 來源紀錄 + 多色 placeholder / 前台 polish 6 改動 / #45 description + color 補齊 / Source Inventory A / YG crawler 工作單 / YG artist schedule crawler / 中文顯示 + 快閃店資料模型 / 後台中文欄位 / 前台中文顯示 完成。下一步建議：活動類型 icon polish、WAKEONE / SM / Weverse crawler 工作單或技術探測；另有「後台用戶統計」待排程 |
-| 輔助參考 | `ADMIN_ROADMAP.md`（後台分階段開發路線）、`AI_PIPELINE_PLAN.md`（爬蟲架構設計文件）、`SOURCE_INVENTORY_A.md`（官方來源盤點研究附件；不是流程索引，流程仍以本檔為準）、`MAINSTREAM_ARTIST_SEED_WORK_ORDER.md`（主流漏網藝人 seed 工作單；只做規劃） |
+| 目前階段 | S1 / C1 / I1a / I1b-A / J7d-A / 忘記密碼 / M1a / admin 刪除草稿 / M1b 第一批 + 第二批 + M1b-3（75 個 active idol）/ trust_level 單一真相 / Supabase SSR middleware / 後台 4 頁 filter tabs + 搜尋 pilot / 後台 idols「缺資料」tab / I1b-B AI 搜圖（Wikimedia + 可重搜）/ I1b-C avatar 來源紀錄 + 多色 placeholder / 前台 polish 6 改動 / #45 description + color 補齊 / Source Inventory A / YG crawler 工作單 / YG artist schedule crawler / 中文顯示 + 快閃店資料模型 / 後台中文欄位 / 前台中文顯示 / 活動類型 icon / 摘要 fallback 完成。下一步建議：中文生成工作單驗收後實作、WAKEONE / SM / Weverse crawler 工作單或技術探測；另有「後台用戶統計」待排程 |
+| 輔助參考 | `ADMIN_ROADMAP.md`（後台分階段開發路線）、`AI_PIPELINE_PLAN.md`（爬蟲架構設計文件）、`SOURCE_INVENTORY_A.md`（官方來源盤點研究附件；不是流程索引，流程仍以本檔為準）、`MAINSTREAM_ARTIST_SEED_WORK_ORDER.md`（主流漏網藝人 seed 工作單；只做規劃）、`CHINESE_GENERATION_WORK_ORDER.md`（繁中顯示文案生成工作單；只做規劃） |
 
 ---
 
@@ -88,7 +88,8 @@
 | 60 | 後台中文欄位 + 快閃店 subtype UI | 候選詳情顯示中文展示欄位 / subtype / 日期區間；核准候選時帶入草稿；草稿活動編輯頁可手動補中文標題、中文摘要、日期區間與地點細節；新增活動支援 popup/exhibition/brand_event subtype | ✅ PR #85 merged（無 migration）|
 | 61 | 前台中文顯示 + 日期區間 | 公開活動卡片 / 詳情頁優先顯示 `display_title_zh`，保留原文標題；日期支援 `start_date` / `end_date` / `date_label`；地點可顯示中文地點與地址；不改 crawler / AI / schema | ✅ PR #86 merged（無 migration）|
 | 62 | 活動類型 icon 顯示 | 共用 `EventTypeBadge` 加 lucide icon mapping；前台卡片 / 詳情頁、後台活動列表 / 詳情、候選列表 / 詳情顯示 label-backed icon；不改 crawler / AI / schema | ✅ PR #87 merged（無 migration）|
-| 63 | 前台摘要 fallback 文案 | 活動詳情頁只有在 `display_summary_zh` 有值時顯示「AI 繁中摘要」；否則將原始 description 標為「原始摘要 / 原文」，避免誤導 | ⏳ PR #88 待驗收（無 migration）|
+| 63 | 前台摘要 fallback 文案 | 活動詳情頁只有在 `display_summary_zh` 有值時顯示「AI 繁中摘要」；否則將原始 description 標為「原始摘要 / 原文」，避免誤導 | ✅ PR #88 merged（無 migration）|
+| 64 | 繁中顯示文案生成工作單 | `CHINESE_GENERATION_WORK_ORDER.md`：規劃 admin-only 單筆生成、manual/reviewed 保護、嚴格 JSON 驗證、crawler 不直接呼叫 AI；只做工作單，不改 DB / AI runtime / UI | ⏳ PR #89 待驗收（無 migration）|
 
 ---
 
