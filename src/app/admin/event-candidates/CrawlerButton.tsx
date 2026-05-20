@@ -6,15 +6,29 @@ import { Download, Loader2 } from 'lucide-react'
 
 interface CrawlerResponse {
   ok: boolean
-  source: string
-  fetched: number
-  inserted: number
-  skipped: number
-  errors: string[]
+  summary?: {
+    totalSources: number
+    successCount: number
+    errorCount: number
+    totalFetched: number
+    totalInserted: number
+    totalSkipped: number
+    totalRecheck: number
+  }
+  results?: Array<{
+    sourceName: string | null
+    sourceKey: string | null
+    fetched: number
+    inserted: number
+    skipped: number
+    recheck: number
+    errors: string[]
+  }>
+  error?: string
 }
 
 /**
- * Admin-only button that triggers the BLACKPINK official tour fetcher.
+ * Admin-only button that triggers the active crawler-source fan-out.
  * Shows a Chinese summary of fetched / inserted / skipped / errors and
  * refreshes the route so the new candidates appear in the list.
  */
@@ -29,12 +43,12 @@ export default function CrawlerButton() {
     setError(null)
     setResult(null)
     try {
-      const res = await fetch('/api/admin/crawlers/blackpink-tour/run', {
+      const res = await fetch('/api/admin/crawlers/sync-all/run', {
         method: 'POST',
       })
       const body = (await res.json()) as CrawlerResponse
       setResult(body)
-      if (body.inserted > 0) {
+      if ((body.summary?.totalInserted ?? 0) > 0) {
         // Refresh the server component so new rows appear.
         router.refresh()
       }
@@ -58,7 +72,7 @@ export default function CrawlerButton() {
         ) : (
           <Download className="h-3.5 w-3.5" />
         )}
-        {running ? '抓取中…' : '抓取 BLACKPINK 官方巡演'}
+        {running ? '同步中…' : '手動同步所有資料來源'}
       </button>
 
       {error && (
@@ -75,26 +89,40 @@ export default function CrawlerButton() {
             result.ok
               ? 'bg-emerald-500/10 border-emerald-500/25'
               : 'bg-amber-500/10 border-amber-500/25'
-          }`}
-        >
-          <p
-            className={`text-xs font-semibold mb-1 ${
-              result.ok ? 'text-emerald-300' : 'text-amber-300'
             }`}
-          >
-            抓到 {result.fetched} 筆，新增 {result.inserted} 筆，略過{' '}
-            {result.skipped} 筆，錯誤 {result.errors.length} 筆
-          </p>
-          {result.errors.length > 0 && (
-            <ul className="text-[10px] text-amber-300/80 leading-relaxed list-disc list-inside space-y-0.5">
-              {result.errors.map((msg, i) => (
-                <li key={i} className="break-all">
-                  {msg}
-                </li>
-              ))}
-            </ul>
+        >
+          {result.summary ? (
+            <>
+              <p
+                className={`text-xs font-semibold mb-1 ${
+                  result.ok ? 'text-emerald-300' : 'text-amber-300'
+                }`}
+              >
+                跑完 {result.summary.totalSources} 個來源，成功{' '}
+                {result.summary.successCount} 個，錯誤{' '}
+                {result.summary.errorCount} 個；抓到{' '}
+                {result.summary.totalFetched} 筆，新增{' '}
+                {result.summary.totalInserted} 筆，略過{' '}
+                {result.summary.totalSkipped} 筆，需重審{' '}
+                {result.summary.totalRecheck} 筆
+              </p>
+              {(result.results ?? [])
+                .filter((r) => r.errors.length > 0)
+                .map((r) => (
+                  <div
+                    key={r.sourceKey ?? r.sourceName ?? 'unknown'}
+                    className="text-[10px] text-amber-300/80 leading-relaxed break-all mt-1"
+                  >
+                    {r.sourceName ?? r.sourceKey ?? '未知來源'}：{r.errors.join('；')}
+                  </div>
+                ))}
+            </>
+          ) : (
+            <p className="text-xs font-semibold mb-1 text-amber-300">
+              {result.error ?? '同步失敗'}
+            </p>
           )}
-          {result.inserted > 0 && (
+          {(result.summary?.totalInserted ?? 0) > 0 && (
             <p className="text-[10px] text-muted mt-1">
               新候選已加入下方列表（review_status = pending）。
             </p>
