@@ -6,14 +6,16 @@ import { useRouter } from 'next/navigation'
 import {
   ChevronRight, Check, X, CheckSquare, ShieldCheck, Trash2, Search,
 } from 'lucide-react'
-import { EVENT_TYPE_LABELS, SOURCE_CONFIG } from '@/lib/mockEvents'
+import { SOURCE_CONFIG } from '@/lib/mockEvents'
 import type { TrustLevel } from '@/lib/types'
+import EventTypeBadge from '@/components/EventTypeBadge'
 
 interface AdminEvent {
   id: string
   idolName: string
   title: string
   type: string
+  subType: string | null
   status: string
   trustLevel: TrustLevel
   date: string
@@ -400,7 +402,6 @@ function EventRow({
 }) {
   const isPast = new Date(event.date) < now
   const trustConfig = SOURCE_CONFIG[event.trustLevel] ?? SOURCE_CONFIG['official']
-  const typeLabel = EVENT_TYPE_LABELS[event.type as keyof typeof EVENT_TYPE_LABELS] ?? event.type
 
   const statusColors: Record<string, string> = {
     confirmed: 'text-emerald-400',
@@ -447,9 +448,7 @@ function EventRow({
           <span className={`text-[10px] font-semibold ${trustConfig.color}`}>
             {trustConfig.label}
           </span>
-          <span className="text-[10px] text-muted border border-card-border rounded px-1.5 py-0.5">
-            {typeLabel}
-          </span>
+          <EventTypeBadge type={event.type} subType={event.subType} />
           <span className="ml-auto text-[10px] text-muted tabular-nums">
             {event.countryFlag} {event.date.slice(0, 10)}
           </span>
