@@ -344,7 +344,13 @@ export default function EventsClient({ events, isAdmin }: Props) {
             {selectionInfo.kind === 'drafts' && (
               <div className="flex flex-col gap-2">
                 <button
-                  onClick={() => bulkAction('publish_auto')}
+                  onClick={() => {
+                    const ok = confirm(
+                      `確定要批量發布這 ${selected.size} 筆草稿嗎？\n\n系統會自動判斷來源；官方或可靠媒體會發布到前台，聚合、社群或未知來源會保持草稿。`,
+                    )
+                    if (!ok) return
+                    bulkAction('publish_auto')
+                  }}
                   disabled={isPending}
                   className="inline-flex items-center justify-center gap-1 rounded-lg bg-violet px-3 py-2 text-xs font-semibold text-white disabled:opacity-50 active:opacity-70 transition-opacity"
                 >
@@ -370,7 +376,10 @@ export default function EventsClient({ events, isAdmin }: Props) {
 
             {selectionInfo.kind === 'published' && (
               <button
-                onClick={() => bulkAction('unpublish')}
+                onClick={() => {
+                  if (!confirm(`確定要批量下架這 ${selected.size} 筆已發布活動嗎？下架後會回到草稿，不會出現在前台。`)) return
+                  bulkAction('unpublish')
+                }}
                 disabled={isPending}
                 className="inline-flex items-center justify-center gap-1 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-400 disabled:opacity-50 active:opacity-70 transition-opacity"
               >
