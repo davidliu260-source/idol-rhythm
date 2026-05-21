@@ -1,10 +1,11 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import clsx from 'clsx'
 import {
+  ChevronDown,
   ArrowUpRight,
   CalendarDays,
   Disc3,
@@ -44,6 +45,7 @@ function matchSearch(event: Event, query: string): boolean {
 export default function FavoritesClient({ events }: { events: Event[] }) {
   const { favorites, user, isUserLoading } = useAppState()
   const [query, setQuery] = useState('')
+  const [openArchivedMonths, setOpenArchivedMonths] = useState<string[]>([])
   const now = useMemo(() => new Date(), [])
 
   const favorited = useMemo(
@@ -71,6 +73,19 @@ export default function FavoritesClient({ events }: { events: Event[] }) {
 
   const upcomingCount = upcoming.length
   const pastCount = past.length
+  const upcomingGroups = useMemo(() => groupEventsByMonth(upcoming, 'asc'), [upcoming])
+  const pastGroups = useMemo(() => groupEventsByMonth(past, 'desc'), [past])
+  const latestArchivedMonthKey = pastGroups[0]?.key ?? null
+  const hasQuery = query.trim().length > 0
+
+  useEffect(() => {
+    if (!latestArchivedMonthKey || hasQuery) return
+
+    setOpenArchivedMonths((current) => {
+      if (current.length > 0) return current
+      return [latestArchivedMonthKey]
+    })
+  }, [latestArchivedMonthKey, hasQuery])
 
   if (isUserLoading) {
     return (
@@ -117,8 +132,16 @@ export default function FavoritesClient({ events }: { events: Event[] }) {
                   title="即將到來"
                   subtitle="READY TO SPIN"
                   count={upcoming.length}
-                  events={upcoming}
-                />
+                  groups={upcomingGroups}
+                >
+                  {(group) => (
+                    <MonthGroupBlock
+                      label={group.label}
+                      count={group.events.length}
+                      events={group.events}
+                    />
+                  )}
+                </ShelfSection>
               )}
 
               {past.length > 0 && (
@@ -127,9 +150,29 @@ export default function FavoritesClient({ events }: { events: Event[] }) {
                   title="已歸檔"
                   subtitle="ARCHIVED CUTS"
                   count={past.length}
-                  events={past}
                   dimmed
-                />
+                  groups={pastGroups}
+                >
+                  {(group) => {
+                    const isOpen = hasQuery || openArchivedMonths.includes(group.key)
+                    return (
+                      <ArchivedMonthBlock
+                        key={group.key}
+                        label={group.label}
+                        count={group.events.length}
+                        events={group.events}
+                        isOpen={isOpen}
+                        onToggle={() =>
+                          setOpenArchivedMonths((current) =>
+                            current.includes(group.key)
+                              ? current.filter((key) => key !== group.key)
+                              : [...current, group.key],
+                          )
+                        }
+                      />
+                    )
+                  }}
+                </ShelfSection>
               )}
             </div>
           )}
@@ -264,14 +307,16 @@ function ShelfSection({
   title,
   subtitle,
   count,
-  events,
+  groups,
+  children,
   dimmed = false,
 }: {
   side: string
   title: string
   subtitle: string
   count: number
-  events: Event[]
+  groups: MonthGroup[]
+  children: (group: MonthGroup) => React.ReactNode
   dimmed?: boolean
 }) {
   return (
@@ -296,11 +341,95 @@ function ShelfSection({
       </div>
 
       <div className={clsx('space-y-3', dimmed && 'opacity-70')}>
+        {groups.map((group) => (
+          <div key={group.key}>{children(group)}</div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function MonthGroupBlock({
+  label,
+  count,
+  events,
+}: {
+  label: string
+  count: number
+  events: Event[]
+}) {
+  return (
+    <div className="rounded-[22px] border border-white/8 bg-black/10 p-3">
+      <div className="mb-3 flex items-center justify-between gap-3 rounded-[18px] border border-white/8 bg-white/[0.035] px-3 py-3">
+        <div>
+          <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-white/40">
+            MONTH INDEX
+          </p>
+          <h3 className="mt-1 text-xl font-black leading-none text-white">{label}</h3>
+        </div>
+        <div className="rounded-full border border-white/8 bg-white/[0.04] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/52">
+          {count} TRACKS
+        </div>
+      </div>
+
+      <div className="space-y-3">
         {events.map((event, index) => (
           <FavoriteShelfCard key={event.id} event={event} trackNumber={index + 1} />
         ))}
       </div>
-    </section>
+    </div>
+  )
+}
+
+function ArchivedMonthBlock({
+  label,
+  count,
+  events,
+  isOpen,
+  onToggle,
+}: {
+  label: string
+  count: number
+  events: Event[]
+  isOpen: boolean
+  onToggle: () => void
+}) {
+  return (
+    <div className="rounded-[22px] border border-white/8 bg-black/10 p-3">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between gap-3 rounded-[18px] border border-white/8 bg-white/[0.035] px-3 py-3 text-left"
+      >
+        <div>
+          <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-white/40">
+            MONTH INDEX
+          </p>
+          <h3 className="mt-1 text-xl font-black leading-none text-white">{label}</h3>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="rounded-full border border-white/8 bg-white/[0.04] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/52">
+            {count} TRACKS
+          </div>
+          <span
+            className={clsx(
+              'flex h-10 w-10 items-center justify-center rounded-full border border-white/8 bg-white/[0.04] text-white/60 transition-transform duration-200',
+              isOpen && 'rotate-180',
+            )}
+          >
+            <ChevronDown className="h-4 w-4" />
+          </span>
+        </div>
+      </button>
+
+      {isOpen && (
+        <div className="mt-3 space-y-3">
+          {events.map((event, index) => (
+            <FavoriteShelfCard key={event.id} event={event} trackNumber={index + 1} />
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -554,4 +683,35 @@ function idolPrimaryColor(idolId: string): string {
   }
 
   return colorMap[idolId] ?? '#6366f1'
+}
+
+interface MonthGroup {
+  key: string
+  label: string
+  events: Event[]
+}
+
+function groupEventsByMonth(events: Event[], direction: 'asc' | 'desc'): MonthGroup[] {
+  const groups = new Map<string, MonthGroup>()
+
+  for (const event of events) {
+    const date = new Date(event.date)
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+    const existing = groups.get(key)
+
+    if (existing) {
+      existing.events.push(event)
+      continue
+    }
+
+    groups.set(key, {
+      key,
+      label: `${date.getFullYear()} 年 ${date.getMonth() + 1} 月`,
+      events: [event],
+    })
+  }
+
+  return Array.from(groups.values()).sort((a, b) =>
+    direction === 'asc' ? a.key.localeCompare(b.key) : b.key.localeCompare(a.key),
+  )
 }
