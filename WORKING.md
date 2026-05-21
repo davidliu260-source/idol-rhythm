@@ -9,7 +9,7 @@
 
 | 項目 | 值 |
 |---|---|
-| 目前階段 | S1 / C1 / I1a / I1b-A / J7d-A / 忘記密碼 / M1a / admin 刪除草稿 / M1b 第一批 + 第二批 + M1b-3（75 個 active idol）/ trust_level 單一真相 / Supabase SSR middleware / 後台 4 頁 filter tabs + 搜尋 pilot / 後台 idols「缺資料」tab / I1b-B AI 搜圖（Wikimedia + 可重搜）/ I1b-C avatar 來源紀錄 + 多色 placeholder / 前台 polish 6 改動 / #45 description + color 補齊 / Source Inventory A / YG crawler 工作單 / YG artist schedule crawler / 中文顯示 + 快閃店資料模型 / 後台中文欄位 / 前台中文顯示 / 活動類型 icon / 摘要 fallback / 中文生成工作單 / 候選 + 草稿單筆繁中生成 / 繁中欄位標記已審閱 / WAKEONE crawler 工作單 / SMTOWN crawler 工作單 / UI-1 `/schedule` Cassette Archive v3 / UI-2 `/schedule` 搜尋 + 月份展開 + 小扁框活動列 / UI-3 `/events/[id]` Cassette Detail v1 / UI-4 `/favorites` Archive Shelf / UI-5 首頁 `/` Today Archive v1 follow-up / UI-6 `/me` Personal Console v1。下一步建議：`/idols` Archive Roster 視覺整理；另有 Weverse 技術探測工作單與「後台用戶統計」待排程 |
+| 目前階段 | S1 / C1 / I1a / I1b-A / J7d-A / 忘記密碼 / M1a / admin 刪除草稿 / M1b 第一批 + 第二批 + M1b-3（75 個 active idol）/ trust_level 單一真相 / Supabase SSR middleware / 後台 4 頁 filter tabs + 搜尋 pilot / 後台 idols「缺資料」tab / I1b-B AI 搜圖（Wikimedia + 可重搜）/ I1b-C avatar 來源紀錄 + 多色 placeholder / 前台 polish 6 改動 / #45 description + color 補齊 / Source Inventory A / YG crawler 工作單 / YG artist schedule crawler / 中文顯示 + 快閃店資料模型 / 後台中文欄位 / 前台中文顯示 / 活動類型 icon / 摘要 fallback / 中文生成工作單 / 候選 + 草稿單筆繁中生成 / 繁中欄位標記已審閱 / WAKEONE crawler 工作單 / SMTOWN crawler 工作單 / UI-1 `/schedule` Cassette Archive v3 / UI-2 `/schedule` 搜尋 + 月份展開 + 小扁框活動列 / UI-3 `/events/[id]` Cassette Detail v1 / UI-4 `/favorites` Archive Shelf / UI-5 首頁 `/` Today Archive v1 follow-up / UI-6 `/me` Personal Console v1 / UI-7 `/idols` Archive Roster v1。下一步建議：檢查 `/idols/[slug]` 是否要接同一套 detail 語言，或回頭整理通知系統工作單；另有 Weverse 技術探測工作單與「後台用戶統計」待排程 |
 | 輔助參考 | `ADMIN_ROADMAP.md`（後台分階段開發路線）、`AI_PIPELINE_PLAN.md`（爬蟲架構設計文件）、`SOURCE_INVENTORY_A.md`（官方來源盤點研究附件；不是流程索引，流程仍以本檔為準）、`MAINSTREAM_ARTIST_SEED_WORK_ORDER.md`（主流漏網藝人 seed 工作單；只做規劃）、`CHINESE_GENERATION_WORK_ORDER.md`（繁中顯示文案生成工作單；只做規劃） |
 
 ---
@@ -100,6 +100,7 @@
 | 72 | UI-4 `/favorites` Archive Shelf | 以 `/favorites` 為唯一範圍，將收藏頁升級成 archive shelf：暖紫黑 cassette 語言、收藏統計 header、搜尋保留、登入提示 / 空狀態升級、即將到來與已歸檔分區、收藏卡片層級重做；不改 query、DB、crawler、auth、其他頁 | ✅ PR #100 merged（無 migration）|
 | 73 | UI-5 首頁 `/` Today Archive v1 | 以首頁 `/` 為主範圍，將入口頁升級成 Today Archive / control deck：暖紫黑 cassette 語言、今日 spotlight、快速入口、個人化區塊與首頁 timeline 視覺統一；follow-up 另補首頁卡片同 `/schedule` 的小卡展開、詳情頁返回上一瀏覽進度、`/favorites` 月份分組版本接回；不改資料邏輯、query、DB、crawler、auth | ⏳ PR #101 待驗收 |
 | 74 | UI-6 `/me` Personal Console v1 | 以 `/me` 為唯一主範圍，將個人頁升級成 personal console：帳號總覽、追蹤 / 收藏 / 提醒 stats、提醒與通知落點、追蹤偶像與近期追蹤行程、收藏與提醒清單、未登入狀態重做；不改 auth 流程、query、DB、crawler、其他頁資料邏輯 | ⏳ PR #105 待驗收 |
+| 75 | UI-7 `/idols` Archive Roster v1 | 以 `/idols` 為唯一主範圍，將偶像列表升級成 archive roster：暖紫黑 roster header、搜尋與公司篩選重做、追蹤名單與繼續探索分區、卡片視覺接上 archive 語言；不改追蹤邏輯、query、DB、crawler、其他頁資料邏輯 | ⏳ PR #106 待驗收 |
 
 ---
 
