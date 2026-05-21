@@ -45,7 +45,13 @@ export default async function EventDetailPage({
   const hasLocalizedSummary = Boolean(event.displaySummaryZh?.trim())
   const typeLabel = getTypeLabel(event)
   const statusLabel = getStatusLabel(event)
-  const venueLabel = event.venueName || event.location || event.city || event.country
+  const venueLabel =
+    event.venueName ||
+    event.location ||
+    event.originalLocation ||
+    extractLocationFromSummary(event.description) ||
+    event.city ||
+    event.country
   const locationLine = [event.city, event.country].filter(Boolean).join(', ')
   const trackCode = getTrackCode(event.id)
   const coverTitle = getCoverTitle(event)
@@ -374,4 +380,9 @@ function getCoverTitle(event: Event): string {
     .replace(event.idolName, '')
     .replace(/^[\s·:-]+/, '')
     .trim() || event.title
+}
+
+function extractLocationFromSummary(description: string): string | undefined {
+  const match = description.match(/Location:\s*(.+?)(?:\s+Matched idol:|\s+Source:|$)/i)
+  return match?.[1]?.trim() || undefined
 }
