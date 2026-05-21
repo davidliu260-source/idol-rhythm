@@ -1,7 +1,8 @@
 export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
-import { ArrowLeft, Mail, ShieldCheck } from 'lucide-react'
+import { Mail, ShieldCheck } from 'lucide-react'
+import AuthArchiveLayout from '@/components/AuthArchiveLayout'
 import { getCurrentUser } from '@/lib/supabase/auth'
 import LoginForm from './LoginForm'
 
@@ -16,55 +17,79 @@ export default async function LoginPage({
   // Already signed in
   if (user) {
     return (
-      <div className="flex flex-col px-4 pt-12 pb-6 gap-4">
-        <Link
-          href="/me"
-          className="inline-flex items-center gap-1 text-xs text-muted hover:text-text-base"
-        >
-          <ArrowLeft className="h-3 w-3" />
-          回到個人頁
-        </Link>
-        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 flex items-start gap-3">
-          <ShieldCheck className="h-4 w-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-          <div className="flex flex-col gap-1">
-            <p className="text-sm font-semibold text-emerald-300">已登入</p>
-            <p className="text-xs text-emerald-300/70 break-all">{user.email ?? '—'}</p>
+      <AuthArchiveLayout
+        backHref="/me"
+        backLabel="回到個人頁"
+        eyebrow="ACCESS ARCHIVE"
+        title="會員入口"
+        description="你目前已經在 archive 內。若要查看提醒、收藏與通知入口，可以直接回到個人控制台。"
+        icon={<ShieldCheck className="h-5 w-5" />}
+        headerAside={
+          <>
+            <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-emerald-200/60">
+              Session
+            </p>
+            <p className="mt-1 text-xs font-semibold text-emerald-200">已登入</p>
+          </>
+        }
+      >
+        <div className="rounded-[24px] border border-emerald-400/18 bg-emerald-400/10 p-4">
+          <div className="flex items-start gap-3">
+            <ShieldCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-300" />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-emerald-100">已登入</p>
+              <p className="mt-1 break-all text-xs leading-6 text-emerald-100/72">
+                {user.email ?? '—'}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Link
+              href="/me"
+              className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/[0.1]"
+            >
+              前往我的控制台
+            </Link>
+            <Link
+              href={next}
+              className="inline-flex items-center rounded-full border border-[#ff6cb7]/24 bg-[#ff4ca1]/14 px-4 py-2 text-sm font-semibold text-[#ff9ed3] transition-colors hover:bg-[#ff4ca1]/20"
+            >
+              繼續原本流程
+            </Link>
           </div>
         </div>
-      </div>
+      </AuthArchiveLayout>
     )
   }
 
   return (
-    <div className="flex flex-col px-4 pt-12 pb-6 gap-4">
-      <Link
-        href="/me"
-        className="inline-flex items-center gap-1 text-xs text-muted hover:text-text-base"
-      >
-        <ArrowLeft className="h-3 w-3" />
-        回到個人頁
-      </Link>
-
-      <div className="flex items-center gap-2">
-        <Mail className="h-5 w-5 text-primary" />
-        <h1 className="text-xl font-bold text-text-base">登入會員</h1>
-      </div>
-
-      <p className="text-xs text-muted leading-relaxed">
-        透過 email 收信登入，免密碼。登入後可以將收藏活動同步到你的帳號，
-        更換裝置也能找到。
-      </p>
-
-      {searchParams.error && (
-        <div className="rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2.5">
-          <p className="text-xs text-red-400 leading-relaxed break-all">
+    <AuthArchiveLayout
+      backHref="/me"
+      backLabel="回到個人頁"
+      eyebrow="ACCESS ARCHIVE"
+      title="登入會員"
+      description="把你的收藏、追蹤、提醒和通知入口同步到帳號裡。之後換裝置、登入 app，都能回到同一份 archive。"
+      icon={<Mail className="h-5 w-5" />}
+      headerAside={
+        <>
+          <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-white/40">
+            Entry
+          </p>
+          <p className="mt-1 text-xs font-semibold text-white">Login / Signup</p>
+        </>
+      }
+    >
+      {searchParams.error ? (
+        <div className="mb-4 rounded-[22px] border border-red-400/25 bg-red-500/10 px-4 py-3">
+          <p className="text-xs leading-6 text-red-200">
             登入失敗：{searchParams.error}
           </p>
         </div>
-      )}
+      ) : null}
 
       <LoginForm nextPath={next} />
-    </div>
+    </AuthArchiveLayout>
   )
 }
 

@@ -8,7 +8,7 @@ import { getBrowserSupabaseClient } from '@/lib/supabase/browserClient'
 const PASSWORD_MIN = 8
 
 const inputCls =
-  'w-full rounded-xl border border-card-border bg-card px-4 py-3 text-sm text-text-base placeholder:text-muted/40 focus:outline-none focus:border-primary/60 transition-colors'
+  'w-full rounded-[20px] border border-white/10 bg-black/10 px-4 py-3.5 text-sm text-white placeholder:text-white/28 focus:border-[#ff6cb7]/40 focus:outline-none transition-colors'
 
 export default function ResetPasswordForm() {
   const router = useRouter()
@@ -58,22 +58,30 @@ export default function ResetPasswordForm() {
 
   if (done) {
     return (
-      <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 flex items-center gap-2.5">
-        <CheckCircle2 className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+      <div className="rounded-[24px] border border-emerald-400/18 bg-emerald-400/10 p-4 flex items-center gap-2.5">
+        <CheckCircle2 className="h-4 w-4 text-emerald-300 flex-shrink-0" />
         <div className="flex flex-col">
-          <p className="text-sm font-semibold text-emerald-300">密碼已更新</p>
-          <p className="text-[11px] text-emerald-300/70">即將為你轉跳至「我的」⋯</p>
+          <p className="text-sm font-semibold text-emerald-100">密碼已更新</p>
+          <p className="text-[11px] text-emerald-100/68">即將為你轉跳至「我的」⋯</p>
         </div>
       </div>
     )
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    <form
+      onSubmit={handleSubmit}
+      className="rounded-[24px] border border-white/8 bg-white/[0.035] p-4"
+    >
+      <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-white/40">
+        New Credentials
+      </p>
+
+      <div className="mt-4 flex flex-col gap-3">
       <label className="flex flex-col gap-1.5">
-        <span className="text-xs font-medium text-muted">
+        <span className="text-xs font-medium text-white/62">
           新密碼
-          <span className="text-muted/50 ml-1">（至少 {PASSWORD_MIN} 字元）</span>
+          <span className="ml-1 text-white/36">（至少 {PASSWORD_MIN} 字元）</span>
         </span>
         <input
           type="password"
@@ -88,7 +96,7 @@ export default function ResetPasswordForm() {
       </label>
 
       <label className="flex flex-col gap-1.5">
-        <span className="text-xs font-medium text-muted">確認新密碼</span>
+        <span className="text-xs font-medium text-white/62">確認新密碼</span>
         <input
           type="password"
           required
@@ -102,17 +110,18 @@ export default function ResetPasswordForm() {
       </label>
 
       {error && (
-        <p className="text-xs text-red-400 leading-relaxed break-all">{error}</p>
+        <p className="text-xs leading-6 text-red-200 break-all">{error}</p>
       )}
 
       <button
         type="submit"
         disabled={submitting}
-        className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
+        className="mt-1 flex items-center justify-center gap-2 rounded-[20px] bg-[#ff4ca1] px-4 py-3.5 text-sm font-semibold text-white shadow-[0_14px_40px_rgba(255,76,161,0.28)] transition-opacity disabled:opacity-60"
       >
         {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
         {submitting ? '更新中…' : '更新密碼'}
       </button>
+      </div>
     </form>
   )
 }

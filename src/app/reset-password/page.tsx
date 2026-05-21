@@ -1,8 +1,8 @@
 export const dynamic = 'force-dynamic'
 
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { ArrowLeft, KeyRound } from 'lucide-react'
+import { KeyRound } from 'lucide-react'
+import AuthArchiveLayout from '@/components/AuthArchiveLayout'
 import { getCurrentUser } from '@/lib/supabase/auth'
 import ResetPasswordForm from './ResetPasswordForm'
 
@@ -23,25 +23,28 @@ export default async function ResetPasswordPage() {
   }
 
   return (
-    <div className="flex flex-col pt-12 pb-6 px-4 max-w-md mx-auto gap-6">
-      <Link
-        href="/me"
-        className="inline-flex items-center gap-1 text-xs text-muted hover:text-text-base"
-      >
-        <ArrowLeft className="h-3 w-3" />
-        返回我的
-      </Link>
-
-      <div className="flex items-center gap-2">
-        <KeyRound className="h-5 w-5 text-primary" />
-        <h1 className="text-xl font-bold text-text-base">設定新密碼</h1>
-      </div>
-
-      <p className="text-xs text-muted leading-relaxed">
-        為 <span className="font-mono text-text-base break-all">{user.email}</span> 設定新密碼。設定後即會以此密碼登入。
-      </p>
-
+    <AuthArchiveLayout
+      backHref="/me"
+      backLabel="返回我的"
+      eyebrow="RECOVERY ACCESS"
+      title="設定新密碼"
+      description={
+        <>
+          為 <span className="break-all font-mono text-white">{user.email}</span>{' '}
+          設定新密碼。更新後會保留目前 session，並帶你回到個人控制台。
+        </>
+      }
+      icon={<KeyRound className="h-5 w-5" />}
+      headerAside={
+        <>
+          <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-white/40">
+            Session
+          </p>
+          <p className="mt-1 text-xs font-semibold text-white">Temporary Access</p>
+        </>
+      }
+    >
       <ResetPasswordForm />
-    </div>
+    </AuthArchiveLayout>
   )
 }
