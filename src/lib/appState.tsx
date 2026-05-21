@@ -15,6 +15,7 @@ import { getBrowserSupabaseClient } from './supabase/browserClient'
 const LEGACY_DEFAULT_FOLLOWING = MOCK_IDOLS.filter((i) => i.following)
   .map((i) => i.id)
   .sort()
+const FOLLOWING_STORAGE_KEY = 'idol-rhythm:following:v2'
 const DEFAULT_FOLLOWING: string[] = []
 const DEFAULT_FAVORITES = MOCK_EVENTS.filter((e) => e.isFavorited).map((e) => e.id)
 
@@ -452,7 +453,7 @@ function useFollowing(
   user: AuthUser | null,
   isUserLoading: boolean,
 ): FollowingController {
-  const local = useStoredSet('idol-rhythm:following', DEFAULT_FOLLOWING)
+  const local = useStoredSet(FOLLOWING_STORAGE_KEY, DEFAULT_FOLLOWING)
   const [cloudSlugs, setCloudSlugs] = useState<string[]>([])
   const [slugToUuid, setSlugToUuid] = useState<Record<string, string>>({})
   const [isCloudLoading, setIsCloudLoading] = useState(false)
