@@ -12,6 +12,7 @@ import {
 import { getPublishedEvents, getActiveIdols } from '@/lib/supabase/events'
 import { getEventDateLabel } from '@/lib/eventDisplay'
 import { type Event } from '@/lib/mockEvents'
+import HomeNotificationBell from '@/components/HomeNotificationBell'
 import HomePersonalized from '@/components/HomePersonalized'
 import HomeTimeline from '@/components/HomeTimeline'
 import { SCHEDULE_ARCHIVE_SHELL } from './schedule/scheduleTheme'
@@ -37,7 +38,7 @@ export default async function HomePage() {
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(180deg,rgba(255,255,255,0.018)_1px,transparent_1px)] bg-[size:34px_34px] opacity-24" />
 
       <div className="relative mx-auto flex w-full max-w-[520px] flex-col gap-5 px-4 pt-8">
-        <header className="flex items-center gap-4">
+        <header className="flex items-center justify-between gap-4">
           <div>
             <p className="text-[11px] font-medium uppercase tracking-[0.32em] text-white/34">
               IDOL · RHYTHM
@@ -47,6 +48,7 @@ export default async function HomePage() {
             </h1>
             <p className="mt-2 text-sm text-white/52">{dateStr}</p>
           </div>
+          <HomeNotificationBell />
         </header>
 
         <section className={clsx(SCHEDULE_ARCHIVE_SHELL, 'px-5 py-5')}>
