@@ -1,15 +1,12 @@
 export const dynamic = 'force-dynamic'
 
 import { Calendar } from 'lucide-react'
-import { getPublishedEvents, getActiveIdols } from '@/lib/supabase/events'
+import { getPublishedEvents } from '@/lib/supabase/events'
 import ScheduleClient from './ScheduleClient'
 import { SCHEDULE_ARCHIVE_SHELL } from './scheduleTheme'
 
 export default async function SchedulePage() {
-  const [events, idols] = await Promise.all([
-    getPublishedEvents(),
-    getActiveIdols(),
-  ])
+  const events = await getPublishedEvents()
 
   return (
     <div className="relative flex flex-col gap-0 overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(255,92,178,0.12),transparent_24%),linear-gradient(180deg,#140f18_0%,#0a0910_100%)] pt-8 pb-6">
@@ -30,23 +27,18 @@ export default async function SchedulePage() {
               </div>
             </div>
 
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-[#ff63bd]" />
-                  <h1 className="text-[34px] font-bold leading-none text-white">行程時間軸</h1>
-                </div>
-                <p className="mt-2 text-xs text-white/48">
-                  共 {events.length} 筆已確認活動
-                </p>
+            <div>
+              <div className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-[#ff63bd]" />
+                <h1 className="text-[34px] font-bold leading-none text-white">行程時間軸</h1>
               </div>
-              <div className="rounded-full border border-[#ff6dbd29] bg-[#ff63bd14] px-3 py-1.5 text-[11px] font-semibold text-[#ff8ecf] shadow-[0_0_24px_rgba(255,99,189,0.12)]">
-                {events.length} 場已歸檔
-              </div>
+              <p className="mt-2 text-xs text-white/48">
+                共 {events.length} 筆已確認活動
+              </p>
             </div>
           </div>
 
-          <ScheduleClient events={events} idols={idols} />
+          <ScheduleClient events={events} />
         </div>
       </div>
     </div>

@@ -95,7 +95,7 @@
 | 67 | WAKEONE crawler 工作單 | `CRAWLER_WORK_ORDER_WAKEONE.md`：規劃 WAKEONE 公開 notice crawler，第一版覆蓋 ZEROBASEONE / Kep1er / izna；共享 label notice feed，需保守 artist matching 與 event filter；只做工作單，不改 DB / crawler / migration | ✅ PR #92 merged（無 migration）|
 | 68 | SMTOWN crawler 工作單 | `CRAWLER_WORK_ORDER_SMTOWN.md`：規劃 SMTOWN 公開 notice crawler，第一版先聚焦 aespa / RIIZE / Red Velvet / EXO / NCT 等高訊號群組；共享 label notice feed，需保守 artist matching 與 event filter，特別注意 NCT unit / solo overlap；只做工作單，不改 DB / crawler / migration | ✅ PR #93 merged（無 migration）|
 | 69 | UI-1 `/schedule` Cassette Archive v3 | 以前台 `/schedule` 為唯一範圍，做 Cassette Archive v3 視覺試點：暖紫黑背景、archive header、cassette track cards、StatusPill / KindPill / HeartButton / TrackCode、小型 calendar/timeline 樣式升級；不改資料邏輯、query、DB、crawler、auth、其他頁 | ✅ PR #95 merged（無 migration）|
-| 70 | UI-2 `/schedule` 搜尋 + 月份展開 + 小扁框活動列 | 解決藝人 chip 過長：加入搜尋框，藝人 chip 改為活動分類篩選；timeline 只呈現未來活動，按月份 accordion 展開；活動預設為小扁框，點擊後替換成 Cassette Track Card；不改資料邏輯、query、DB、crawler、auth、其他頁 | ⏳ PR #96 merged；PR #97 驗收修正待驗收（無 migration）|
+| 70 | UI-2 `/schedule` 搜尋 + 月份展開 + 小扁框活動列 | 解決藝人 chip 過長：加入搜尋框，藝人 chip 改為活動分類篩選；timeline 只呈現未來活動，按月份 accordion 展開；活動預設為小扁框，點擊後替換成 Cassette Track Card；大卡右上補收合按鈕、hero 移除「已歸檔」數字，並預留 YouTube / Netflix 平台分類；不改資料邏輯、query、DB、crawler、auth、其他頁 | ⏳ PR #96 / #97 merged；PR #98 待驗收（無 migration）|
 
 ---
 

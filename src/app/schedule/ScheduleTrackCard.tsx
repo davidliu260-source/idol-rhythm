@@ -2,7 +2,7 @@
 
 import { type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
-import { Bell, Clock3, Heart, MapPin, Radio, Sparkles } from 'lucide-react'
+import { Bell, Clock3, Heart, MapPin, Minimize2, Radio, Sparkles } from 'lucide-react'
 import clsx from 'clsx'
 import IdolAvatar from '@/components/IdolAvatar'
 import { useAppState } from '@/lib/appState'
@@ -13,12 +13,14 @@ interface ScheduleTrackCardProps {
   event: Event
   trackNumber: number
   compact?: boolean
+  onCollapse?: () => void
 }
 
 export default function ScheduleTrackCard({
   event,
   trackNumber,
   compact = false,
+  onCollapse,
 }: ScheduleTrackCardProps) {
   const router = useRouter()
   const { favorites, reminders } = useAppState()
@@ -43,6 +45,11 @@ export default function ScheduleTrackCard({
   function handleFavorite(e: React.MouseEvent<HTMLButtonElement>) {
     e.stopPropagation()
     favorites.toggle(event.id)
+  }
+
+  function handleCollapse(e: React.MouseEvent<HTMLButtonElement>) {
+    e.stopPropagation()
+    onCollapse?.()
   }
 
   return (
@@ -91,7 +98,12 @@ export default function ScheduleTrackCard({
               </h3>
             </div>
 
-            <TrackCode trackNumber={trackNumber} />
+            <div className="flex items-center gap-2">
+              {onCollapse && (
+                <CollapseButton onClick={handleCollapse} />
+              )}
+              <TrackCode trackNumber={trackNumber} />
+            </div>
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -219,6 +231,23 @@ function HeartButton({
       )}
     >
       <Heart className={clsx('h-4.5 w-4.5', active && 'fill-current')} />
+    </button>
+  )
+}
+
+function CollapseButton({
+  onClick,
+}: {
+  onClick: (e: React.MouseEvent<HTMLButtonElement>) => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="收合卡片"
+      className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/44 transition-all hover:scale-105 hover:text-white/78 active:scale-95"
+    >
+      <Minimize2 className="h-4 w-4" />
     </button>
   )
 }
