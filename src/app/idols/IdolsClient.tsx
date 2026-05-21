@@ -253,6 +253,10 @@ function IdolRosterCard({
       />
 
       <div className="relative pl-3">
+        <span className="absolute right-0 top-0 rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/42">
+          roster
+        </span>
+
         <Link href={`/idols/${idol.id}`} className="block">
           <div className="flex items-start gap-3">
             <IdolAvatar
@@ -262,16 +266,17 @@ function IdolRosterCard({
               size="md"
             />
             <div className="min-w-0 flex-1">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-bold text-[#ff8bc8]">{idol.name}</p>
-                  <p className="mt-0.5 truncate text-xs text-white/48">{idol.koreanName}</p>
-                </div>
-                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/42">
-                  roster
-                </span>
+              <div className="pr-[74px]">
+                <h3 className="text-[18px] font-black leading-[1.12] text-white break-words">
+                  {idol.name}
+                </h3>
+                {idol.koreanName && (
+                  <p className="mt-1 text-xs text-white/48 break-words">
+                    {idol.koreanName}
+                  </p>
+                )}
               </div>
-              <p className="mt-2 line-clamp-2 text-xs leading-5 text-white/58">
+              <p className="mt-3 line-clamp-3 text-xs leading-5 text-white/58">
                 {idol.description}
               </p>
             </div>
