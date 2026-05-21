@@ -97,7 +97,7 @@
 | 69 | UI-1 `/schedule` Cassette Archive v3 | 以前台 `/schedule` 為唯一範圍，做 Cassette Archive v3 視覺試點：暖紫黑背景、archive header、cassette track cards、StatusPill / KindPill / HeartButton / TrackCode、小型 calendar/timeline 樣式升級；不改資料邏輯、query、DB、crawler、auth、其他頁 | ✅ PR #95 merged（無 migration）|
 | 70 | UI-2 `/schedule` 搜尋 + 月份展開 + 小扁框活動列 | 解決藝人 chip 過長：加入搜尋框，藝人 chip 改為活動分類篩選；timeline 只呈現未來活動，按月份 accordion 展開；活動預設為小扁框，點擊後替換成 Cassette Track Card；大卡右上補收合按鈕、hero 移除「已歸檔」數字，並預留 YouTube / Netflix 平台分類；不改資料邏輯、query、DB、crawler、auth、其他頁 | ✅ PR #96 + #97 + #98 merged（無 migration）|
 | 71 | UI-3 `/events/[id]` Cassette Detail v1 | 以活動詳情頁為唯一範圍，接上 cassette cover 式主視覺、TRK code、日期地點資訊條、本地化摘要 / 原文層級、資訊來源與票務 / 官方 / 分享 CTA；分享連結支援 Web Share API 與 copy link fallback；地點在結構化欄位缺漏時可從原始摘要 `Location:` fallback 補上；不改 query、DB、crawler、auth、其他頁 | ✅ PR #99 merged（無 migration）|
-| 72 | UI-4 `/favorites` Archive Shelf | 以 `/favorites` 為唯一範圍，將收藏頁升級成 archive shelf：暖紫黑 cassette 語言、收藏統計 header、搜尋保留、登入提示 / 空狀態升級、即將到來與已歸檔分區、收藏卡片層級重做；不改 query、DB、crawler、auth、其他頁 | ⏳ PR 待驗收 |
+| 72 | UI-4 `/favorites` Archive Shelf | 以 `/favorites` 為唯一範圍，將收藏頁升級成 archive shelf：暖紫黑 cassette 語言、收藏統計 header、搜尋保留、登入提示 / 空狀態升級、即將到來與已歸檔分區、收藏卡片層級重做；不改 query、DB、crawler、auth、其他頁 | ⏳ PR #100 待驗收 |
 
 ---
 
