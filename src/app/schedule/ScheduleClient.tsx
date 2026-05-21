@@ -1,11 +1,13 @@
 'use client'
 
-import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, CalendarDays, Waves } from 'lucide-react'
+import { type ReactNode, useEffect, useMemo, useState } from 'react'
+import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Clock3, Heart, MapPin, Music2, Search, Waves, X } from 'lucide-react'
 import clsx from 'clsx'
+import IdolAvatar from '@/components/IdolAvatar'
 import type { Event } from '@/lib/mockEvents'
 import type { Idol } from '@/lib/types'
 import { formatEventDate } from '@/lib/mockEvents'
+import { getEventDateLabel } from '@/lib/eventDisplay'
 import { useAppState } from '@/lib/appState'
 import ScheduleTrackCard from './ScheduleTrackCard'
 
@@ -18,12 +20,22 @@ type ViewMode = 'timeline' | 'calendar'
 
 export default function ScheduleClient({ events, idols }: Props) {
   const [activeIdolId, setActiveIdolId] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
   const [view, setView] = useState<ViewMode>('timeline')
 
-  const filtered = useMemo(
-    () => (activeIdolId === null ? events : events.filter((e) => e.idolId === activeIdolId)),
-    [events, activeIdolId],
-  )
+  const availableIdols = useMemo(() => {
+    const eventIdolIds = new Set(events.map((event) => event.idolId))
+    return idols.filter((idol) => eventIdolIds.has(idol.id))
+  }, [events, idols])
+
+  const filtered = useMemo(() => {
+    const normalizedSearch = normalizeSearch(searchQuery)
+    return events.filter((event) => {
+      if (activeIdolId !== null && event.idolId !== activeIdolId) return false
+      if (!normalizedSearch) return true
+      return getSearchHaystack(event).includes(normalizedSearch)
+    })
+  }, [events, activeIdolId, searchQuery])
 
   return (
     <div className="pb-4">
@@ -45,18 +57,20 @@ export default function ScheduleClient({ events, idols }: Props) {
         </div>
       </div>
 
-      {/* Idol filter (F-scroll): horizontal scroller with desktop arrow
-          buttons + mouse-wheel-to-horizontal + edge fade indicators. */}
-      <IdolFilterBar
-        idols={idols}
+      <ScheduleSearchPanel
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        idols={availableIdols}
         activeIdolId={activeIdolId}
         onSelect={(id) =>
           setActiveIdolId(id === activeIdolId ? null : id)
         }
+        resultCount={filtered.length}
+        totalCount={events.length}
       />
 
       {view === 'timeline' ? (
-        <TimelineView events={filtered} activeIdolId={activeIdolId} />
+        <TimelineView events={filtered} activeIdolId={activeIdolId} searchQuery={searchQuery} />
       ) : (
         <CalendarView events={filtered} activeIdolId={activeIdolId} />
       )}
@@ -92,133 +106,213 @@ function ViewToggleButton({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Timeline view (unchanged from S1)
+// Timeline view
 // ─────────────────────────────────────────────────────────────────────────────
 
 function TimelineView({
   events,
   activeIdolId,
+  searchQuery,
 }: {
   events: Event[]
   activeIdolId: string | null
+  searchQuery: string
 }) {
-  const now = new Date()
+  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set())
+  const monthGroups = useMemo(() => buildFutureMonthGroups(events), [events])
+  const monthKeys = monthGroups.map((group) => group.key).join('|')
 
-  const groups: Record<string, Event[]> = {}
-  for (const event of events) {
-    const key = formatEventDate(event.date)
-    if (!groups[key]) groups[key] = []
-    groups[key].push(event)
+  useEffect(() => {
+    if (monthGroups.length === 0) return
+    setExpandedMonths((current) => {
+      if (monthGroups.some((group) => current.has(group.key))) return current
+      return new Set([monthGroups[0].key])
+    })
+  }, [monthGroups, monthKeys])
+
+  function toggleMonth(monthKey: string) {
+    setExpandedMonths((current) => {
+      const next = new Set(current)
+      if (next.has(monthKey)) next.delete(monthKey)
+      else next.add(monthKey)
+      return next
+    })
   }
-
-  const orderedGroups = Object.entries(groups).sort(
-    (a, b) => new Date(a[1][0]?.date ?? '').getTime() - new Date(b[1][0]?.date ?? '').getTime(),
-  )
-  const upcomingGroups = orderedGroups.filter(([, evs]) =>
-    evs.some((e) => new Date(e.date) >= now),
-  )
-  const pastGroups = orderedGroups.filter(([, evs]) =>
-    evs.every((e) => new Date(e.date) < now),
-  )
-
-  let trackCounter = 1
 
   return (
     <div className="px-4 flex flex-col gap-5">
-      {events.length === 0 && (
+      {monthGroups.length === 0 && (
         <div className="rounded-[22px] border border-white/8 bg-white/[0.03] py-12 text-center text-sm text-white/52">
-          {activeIdolId !== null ? '該偶像目前沒有公開活動' : '尚無活動資料'}
+          {activeIdolId !== null || searchQuery.trim()
+            ? '沒有符合條件的未來活動'
+            : '尚無未來活動資料'}
         </div>
       )}
 
-      {upcomingGroups.map(([label, evs], index) => {
-        const startTrack = trackCounter
-        trackCounter += evs.length
+      {monthGroups.map((group, index) => {
+        const previousCount = monthGroups
+          .slice(0, index)
+          .reduce((sum, item) => sum + item.events.length, 0)
         return (
-          <DateGroup
-            key={label}
-            label={label}
-            events={evs}
-            startTrack={startTrack}
+          <MonthGroup
+            key={group.key}
+            group={group}
+            startTrack={previousCount + 1}
             sideLabel={index % 2 === 0 ? 'SIDE A' : 'SIDE B'}
-            isToday={label.startsWith('今天')}
+            expanded={expandedMonths.has(group.key)}
+            onToggle={() => toggleMonth(group.key)}
           />
         )
       })}
-
-      {pastGroups.length > 0 && (
-        <>
-          <div className="flex items-center gap-3">
-            <div className="h-px flex-1 bg-white/8" />
-            <span className="text-[10px] font-medium uppercase tracking-[0.28em] text-white/28">archive closed</span>
-            <div className="h-px flex-1 bg-white/8" />
-          </div>
-          {pastGroups.map(([label, evs], index) => {
-            const startTrack = trackCounter
-            trackCounter += evs.length
-            return (
-              <DateGroup
-                key={label}
-                label={label}
-                events={evs}
-                startTrack={startTrack}
-                sideLabel={index % 2 === 0 ? 'SIDE B' : 'SIDE A'}
-                isPast
-              />
-            )
-          })}
-        </>
-      )}
     </div>
   )
 }
 
-function DateGroup({
-  label,
-  events,
+function MonthGroup({
+  group,
   startTrack,
   sideLabel,
-  isToday = false,
-  isPast = false,
+  expanded,
+  onToggle,
 }: {
-  label: string
-  events: Event[]
+  group: MonthArchiveGroup
   startTrack: number
   sideLabel: string
-  isToday?: boolean
-  isPast?: boolean
+  expanded: boolean
+  onToggle: () => void
 }) {
   return (
-    <section className={clsx('pb-1', isPast && 'opacity-55')}>
-      <div className="mb-3 flex items-end justify-between gap-3">
-        <div className="flex min-w-0 items-end gap-3">
-          <span className="rounded-full border border-white/10 bg-white/[0.035] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-white/46">
+    <section className="pb-1">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="mb-3 flex w-full items-center justify-between gap-3 rounded-[22px] border border-white/8 bg-white/[0.035] px-3 py-3 text-left transition-colors hover:bg-white/[0.055]"
+      >
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-white/50">
             {sideLabel}
           </span>
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <p className={clsx('text-[24px] font-bold leading-none', isToday ? 'text-white' : 'text-white/88')}>
-                {label}
-              </p>
-              {isToday && <span className="rounded-full bg-[#ff5db8]/14 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#ff88cc]">now spinning</span>}
-            </div>
+            <p className="truncate text-[20px] font-bold leading-none text-white/90">{group.label}</p>
+            <p className="mt-1 text-[10px] uppercase tracking-[0.24em] text-[#ff88cc]/70">future archive</p>
           </div>
         </div>
-        <div className="text-[10px] font-medium uppercase tracking-[0.22em] text-white/26">
-          {events.length} tracks
+        <div className="flex items-center gap-2">
+          <span className="rounded-full border border-[#ff6dbd24] bg-[#ff63bd10] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#ff8ecf]">
+            {group.events.length} tracks
+          </span>
+          <ChevronDown className={clsx('h-4 w-4 text-white/45 transition-transform', expanded && 'rotate-180')} />
         </div>
-      </div>
-      <div className="flex flex-col gap-3">
-        {events.map((event, index) => (
-          <ScheduleTrackCard
+      </button>
+      {expanded && (
+        <div className="flex flex-col gap-2">
+          {group.events.map((event, index) => (
+            <TrackDisclosure
             key={event.id}
             event={event}
-            compact
             trackNumber={startTrack + index}
           />
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </section>
+  )
+}
+
+function TrackDisclosure({
+  event,
+  trackNumber,
+}: {
+  event: Event
+  trackNumber: number
+}) {
+  const { favorites } = useAppState()
+  const [expanded, setExpanded] = useState(false)
+  const isFavorited = favorites.has(event.id)
+  const dateLabel = getEventDateLabel(event)
+  const placeLabel = event.venueName || event.location || event.city || event.country
+
+  function toggleFavorite(e: React.MouseEvent<HTMLButtonElement>) {
+    e.stopPropagation()
+    favorites.toggle(event.id)
+  }
+
+  function toggleExpanded() {
+    setExpanded((value) => !value)
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      toggleExpanded()
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={toggleExpanded}
+        onKeyDown={handleKeyDown}
+        className={clsx(
+          'group flex w-full cursor-pointer items-center gap-3 rounded-[18px] border px-3 py-2.5 text-left transition-all active:scale-[0.99]',
+          expanded
+            ? 'border-[#ff63bd]/26 bg-[#ff63bd]/10 shadow-[0_0_22px_rgba(255,99,189,0.08)]'
+            : 'border-white/8 bg-white/[0.028] hover:border-[#ff63bd]/18 hover:bg-white/[0.045]',
+        )}
+      >
+        <div className="rounded-[14px] border border-white/8 bg-white/[0.035] p-1">
+          <IdolAvatar
+            name={event.idolName}
+            avatarUrl={event.idolAvatarUrl}
+            color={idolPrimaryColor(event.idolId)}
+            size="sm"
+            className="rounded-[10px]"
+          />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="truncate text-[12px] font-semibold text-[#ff73c1]">{event.idolName}</span>
+            <span className="rounded-full border border-white/8 bg-white/[0.04] px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.16em] text-white/38">
+              TRK {String(trackNumber).padStart(2, '0')}
+            </span>
+          </div>
+          <p className="mt-0.5 line-clamp-1 text-[14px] font-semibold leading-5 text-white/88">
+            {event.title}
+          </p>
+          <div className="mt-1 flex min-w-0 items-center gap-2 text-[10px] text-white/42">
+            <span className="inline-flex items-center gap-1">
+              <Clock3 className="h-3 w-3 text-[#ff92c7]" />
+              {dateLabel}
+            </span>
+            {placeLabel && (
+              <span className="inline-flex min-w-0 items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                <span className="truncate">{placeLabel}</span>
+              </span>
+            )}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={toggleFavorite}
+          aria-label={isFavorited ? '取消收藏' : '收藏'}
+          className={clsx(
+            'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border transition-all',
+            isFavorited
+              ? 'border-[#ff5db7]/30 bg-[#ff5db7]/18 text-[#ff78c4] shadow-[0_0_18px_rgba(255,93,183,0.22)]'
+              : 'border-white/8 bg-white/[0.03] text-white/36 group-hover:text-white/65',
+          )}
+        >
+          <Heart className={clsx('h-4 w-4', isFavorited && 'fill-current')} />
+        </button>
+      </div>
+
+      {expanded && (
+        <ScheduleTrackCard event={event} trackNumber={trackNumber} />
+      )}
+    </div>
   )
 }
 
@@ -449,110 +543,69 @@ function buildMonthCells(monthStart: Date): DayCell[] {
   return cells
 }
 
-// ── F-scroll: idol filter chip bar with scroll affordances ────────────────
-//
-// The chip row is horizontally scrollable but a plain `overflow-x-auto` gives
-// the user no visual cue on desktop (the trackpad / wheel scrolls vertically
-// only, and the scrollbar can be invisible). This component adds:
-//
-//   - Left / right chevron buttons that appear only when more chips exist
-//     in that direction. On click they scroll the row by 60% of the viewport
-//     width — enough to feel snappy but not skip past visible chips.
-//   - Edge fade gradients that intensify when content extends past the visible
-//     area, mirroring the chevron state.
-//   - Wheel handler that translates vertical scroll into horizontal so a
-//     trackpad swipe / mouse wheel feels native on desktop.
-//
-// Mobile is unaffected: touch-drag scrolling on the inner container still
-// works the same, and the chevron buttons are hidden when they'd overlap a
-// small viewport (>= sm: breakpoint).
-
-function IdolFilterBar({
+function ScheduleSearchPanel({
+  searchQuery,
+  onSearchChange,
   idols,
   activeIdolId,
   onSelect,
+  resultCount,
+  totalCount,
 }: {
+  searchQuery: string
+  onSearchChange: (value: string) => void
   idols: Idol[]
   activeIdolId: string | null
   onSelect: (idolId: string | null) => void
+  resultCount: number
+  totalCount: number
 }) {
-  const scrollRef = useRef<HTMLDivElement | null>(null)
-  const [canScrollLeft, setCanScrollLeft] = useState(false)
-  const [canScrollRight, setCanScrollRight] = useState(false)
-
-  function refreshAffordances() {
-    const el = scrollRef.current
-    if (!el) return
-    setCanScrollLeft(el.scrollLeft > 4)
-    setCanScrollRight(
-      el.scrollLeft + el.clientWidth < el.scrollWidth - 4,
-    )
-  }
-
-  useEffect(() => {
-    refreshAffordances()
-    const el = scrollRef.current
-    if (!el) return
-    el.addEventListener('scroll', refreshAffordances, { passive: true })
-    window.addEventListener('resize', refreshAffordances)
-    return () => {
-      el.removeEventListener('scroll', refreshAffordances)
-      window.removeEventListener('resize', refreshAffordances)
+  const quickIdols = useMemo(() => {
+    const selected = activeIdolId ? idols.find((idol) => idol.id === activeIdolId) : null
+    const firstIdols = idols.slice(0, 8)
+    if (selected && !firstIdols.some((idol) => idol.id === selected.id)) {
+      return [selected, ...firstIdols.slice(0, 7)]
     }
-  }, [idols.length])
-
-  function scrollByPage(direction: 1 | -1) {
-    const el = scrollRef.current
-    if (!el) return
-    el.scrollBy({
-      left: direction * Math.round(el.clientWidth * 0.6),
-      behavior: 'smooth',
-    })
-  }
-
-  function handleWheel(e: React.WheelEvent<HTMLDivElement>) {
-    const el = scrollRef.current
-    if (!el) return
-    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return
-    el.scrollLeft += e.deltaY
-  }
+    return firstIdols
+  }, [activeIdolId, idols])
 
   return (
-    <div className="relative px-4 mb-5">
-      {canScrollLeft && (
-        <button
-          type="button"
-          aria-label="向左捲動"
-          onClick={() => scrollByPage(-1)}
-          className="hidden sm:flex absolute left-1 top-1/2 -translate-y-1/2 z-10 h-8 w-8 items-center justify-center rounded-full border border-white/8 bg-white/[0.04] text-white/42 hover:text-white/82 shadow-sm"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
-      )}
-
-      <div
-        className={clsx(
-          'pointer-events-none absolute left-4 top-0 bottom-0 w-8 bg-gradient-to-r from-[rgba(19,14,23,0.98)] to-transparent transition-opacity',
-          canScrollLeft ? 'opacity-100' : 'opacity-0',
+    <div className="px-4 mb-5 space-y-3">
+      <label className="relative block">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#ff8ecf]/70" />
+        <input
+          value={searchQuery}
+          onChange={(event) => onSearchChange(event.target.value)}
+          placeholder="搜尋藝人、活動、場地、城市"
+          className="h-11 w-full rounded-[18px] border border-white/8 bg-white/[0.04] pl-9 pr-10 text-sm font-medium text-white outline-none transition-colors placeholder:text-white/30 focus:border-[#ff63bd]/38 focus:bg-white/[0.06]"
+        />
+        {searchQuery.trim() && (
+          <button
+            type="button"
+            onClick={() => onSearchChange('')}
+            aria-label="清除搜尋"
+            className="absolute right-2.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-white/8 bg-white/[0.04] text-white/45"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
         )}
-      />
-      <div
-        className={clsx(
-          'pointer-events-none absolute right-4 top-0 bottom-0 w-8 bg-gradient-to-l from-[rgba(19,14,23,0.98)] to-transparent transition-opacity',
-          canScrollRight ? 'opacity-100' : 'opacity-0',
-        )}
-      />
+      </label>
 
-      <div
-        ref={scrollRef}
-        onWheel={handleWheel}
-        className="overflow-x-auto scrollbar-none"
-      >
-        <div className="flex gap-2 pb-1">
+      <div>
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <div className="inline-flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.22em] text-white/34">
+            <Music2 className="h-3 w-3 text-[#ff8ecf]" />
+            quick idols
+          </div>
+          <div className="text-[10px] font-medium text-white/32">
+            {resultCount} / {totalCount} 筆
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={() => onSelect(null)}
             className={clsx(
-              'flex-shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all',
+              'rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all',
               activeIdolId === null
                 ? 'border-[#ff63bd]/30 bg-[#ff63bd]/16 text-[#ff94d3] shadow-[0_0_20px_rgba(255,99,189,0.12)]'
                 : 'border-white/8 bg-white/[0.03] text-white/52',
@@ -560,12 +613,12 @@ function IdolFilterBar({
           >
             全部
           </button>
-          {idols.map((idol) => (
+          {quickIdols.map((idol) => (
             <button
               key={idol.id}
               onClick={() => onSelect(idol.id)}
               className={clsx(
-                'flex-shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all',
+                'rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all',
                 activeIdolId === idol.id
                   ? 'border-[#ff63bd]/30 bg-[#ff63bd]/16 text-[#ff94d3] shadow-[0_0_20px_rgba(255,99,189,0.12)]'
                   : 'border-white/8 bg-white/[0.03] text-white/52',
@@ -576,17 +629,93 @@ function IdolFilterBar({
           ))}
         </div>
       </div>
-
-      {canScrollRight && (
-        <button
-          type="button"
-          aria-label="向右捲動"
-          onClick={() => scrollByPage(1)}
-          className="hidden sm:flex absolute right-1 top-1/2 -translate-y-1/2 z-10 h-8 w-8 items-center justify-center rounded-full border border-white/8 bg-white/[0.04] text-white/42 hover:text-white/82 shadow-sm"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
-      )}
     </div>
   )
+}
+
+interface MonthArchiveGroup {
+  key: string
+  label: string
+  events: Event[]
+}
+
+function buildFutureMonthGroups(events: Event[]): MonthArchiveGroup[] {
+  const today = startOfToday()
+  const groups = new Map<string, MonthArchiveGroup>()
+
+  for (const event of events) {
+    const date = new Date(event.date)
+    if (date < today) continue
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+    const label = `${date.getFullYear()} 年 ${date.getMonth() + 1} 月`
+    const group = groups.get(key)
+    if (group) group.events.push(event)
+    else groups.set(key, { key, label, events: [event] })
+  }
+
+  return Array.from(groups.values())
+    .map((group) => ({
+      ...group,
+      events: [...group.events].sort(sortEventsByDate),
+    }))
+    .sort((a, b) => sortEventsByDate(a.events[0], b.events[0]))
+}
+
+function sortEventsByDate(a: Event, b: Event): number {
+  return new Date(a.date).getTime() - new Date(b.date).getTime()
+}
+
+function startOfToday(): Date {
+  const today = new Date()
+  return new Date(today.getFullYear(), today.getMonth(), today.getDate())
+}
+
+function getSearchHaystack(event: Event): string {
+  return normalizeSearch(
+    [
+      event.title,
+      event.originalTitle,
+      event.idolName,
+      event.location,
+      event.originalLocation,
+      event.venueName,
+      event.city,
+      event.country,
+      event.source.label,
+      event.tags?.join(' '),
+    ]
+      .filter(Boolean)
+      .join(' '),
+  )
+}
+
+function normalizeSearch(value: string): string {
+  return value.trim().toLowerCase()
+}
+
+function idolPrimaryColor(idolId: string): string {
+  switch (idolId) {
+    case 'bts':
+      return '#8b5cf6'
+    case 'blackpink':
+      return '#ec4899'
+    case 'aespa':
+      return '#7c3aed'
+    case 'newjeans':
+      return '#14b8a6'
+    case 'stray-kids':
+      return '#ef4444'
+    case 'ive':
+      return '#f43f5e'
+    case 'twice':
+      return '#fb7185'
+    case 'lesserafim':
+      return '#f59e0b'
+    case 'txt':
+      return '#3b82f6'
+    case 'exo':
+      return '#6366f1'
+    default:
+      return '#7c3aed'
+  }
 }
