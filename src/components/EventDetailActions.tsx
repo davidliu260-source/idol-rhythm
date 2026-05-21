@@ -1,9 +1,34 @@
 'use client'
 
 import { useState } from 'react'
-import { Heart, Bell, Share2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { ArrowLeft, Bell, Heart, Share2 } from 'lucide-react'
 import { useAppState } from '@/lib/appState'
 import clsx from 'clsx'
+
+export function EventDetailBackBtn() {
+  const router = useRouter()
+
+  function handleBack() {
+    if (window.history.length > 1) {
+      router.back()
+      return
+    }
+    router.push('/')
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleBack}
+      className="inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.04] px-3 py-2 text-sm font-medium text-white/72 transition-colors hover:text-white"
+      aria-label="返回上一頁"
+    >
+      <ArrowLeft className="h-4 w-4" />
+      返回
+    </button>
+  )
+}
 
 export function EventDetailFavoriteBtn({ eventId }: { eventId: string }) {
   const { favorites } = useAppState()
