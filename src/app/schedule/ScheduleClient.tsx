@@ -1,7 +1,7 @@
 'use client'
 
 import { type ReactNode, useEffect, useMemo, useState } from 'react'
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Clock3, Heart, MapPin, Music2, Search, Waves, X } from 'lucide-react'
+import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Clock3, Heart, ListFilter, MapPin, Search, Waves, X } from 'lucide-react'
 import clsx from 'clsx'
 import IdolAvatar from '@/components/IdolAvatar'
 import type { Event } from '@/lib/mockEvents'
@@ -17,25 +17,38 @@ interface Props {
 }
 
 type ViewMode = 'timeline' | 'calendar'
+type ScheduleCategory = 'all' | 'concert' | 'musicshow' | 'media' | 'brand' | 'other'
 
-export default function ScheduleClient({ events, idols }: Props) {
-  const [activeIdolId, setActiveIdolId] = useState<string | null>(null)
+const SCHEDULE_CATEGORIES: Array<{ id: ScheduleCategory; label: string }> = [
+  { id: 'all', label: '全部' },
+  { id: 'concert', label: '演唱會' },
+  { id: 'musicshow', label: '音樂節目' },
+  { id: 'media', label: '媒體雜誌' },
+  { id: 'brand', label: '品牌快閃' },
+  { id: 'other', label: '其他行程' },
+]
+
+export default function ScheduleClient({ events }: Props) {
   const [searchQuery, setSearchQuery] = useState('')
+  const [activeCategory, setActiveCategory] = useState<ScheduleCategory>('all')
   const [view, setView] = useState<ViewMode>('timeline')
-
-  const availableIdols = useMemo(() => {
-    const eventIdolIds = new Set(events.map((event) => event.idolId))
-    return idols.filter((idol) => eventIdolIds.has(idol.id))
-  }, [events, idols])
 
   const filtered = useMemo(() => {
     const normalizedSearch = normalizeSearch(searchQuery)
     return events.filter((event) => {
-      if (activeIdolId !== null && event.idolId !== activeIdolId) return false
+      if (!matchesScheduleCategory(event, activeCategory)) return false
       if (!normalizedSearch) return true
       return getSearchHaystack(event).includes(normalizedSearch)
     })
-  }, [events, activeIdolId, searchQuery])
+  }, [events, activeCategory, searchQuery])
+
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<ScheduleCategory, number>()
+    for (const category of SCHEDULE_CATEGORIES) {
+      counts.set(category.id, events.filter((event) => matchesScheduleCategory(event, category.id)).length)
+    }
+    return counts
+  }, [events])
 
   return (
     <div className="pb-4">
@@ -60,19 +73,17 @@ export default function ScheduleClient({ events, idols }: Props) {
       <ScheduleSearchPanel
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
-        idols={availableIdols}
-        activeIdolId={activeIdolId}
-        onSelect={(id) =>
-          setActiveIdolId(id === activeIdolId ? null : id)
-        }
+        activeCategory={activeCategory}
+        onCategoryChange={setActiveCategory}
+        categoryCounts={categoryCounts}
         resultCount={filtered.length}
         totalCount={events.length}
       />
 
       {view === 'timeline' ? (
-        <TimelineView events={filtered} activeIdolId={activeIdolId} searchQuery={searchQuery} />
+        <TimelineView events={filtered} searchQuery={searchQuery} activeCategory={activeCategory} />
       ) : (
-        <CalendarView events={filtered} activeIdolId={activeIdolId} />
+        <CalendarView events={filtered} />
       )}
     </div>
   )
@@ -111,12 +122,12 @@ function ViewToggleButton({
 
 function TimelineView({
   events,
-  activeIdolId,
   searchQuery,
+  activeCategory,
 }: {
   events: Event[]
-  activeIdolId: string | null
   searchQuery: string
+  activeCategory: ScheduleCategory
 }) {
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set())
   const monthGroups = useMemo(() => buildFutureMonthGroups(events), [events])
@@ -143,7 +154,7 @@ function TimelineView({
     <div className="px-4 flex flex-col gap-5">
       {monthGroups.length === 0 && (
         <div className="rounded-[22px] border border-white/8 bg-white/[0.03] py-12 text-center text-sm text-white/52">
-          {activeIdolId !== null || searchQuery.trim()
+          {activeCategory !== 'all' || searchQuery.trim()
             ? '沒有符合條件的未來活動'
             : '尚無未來活動資料'}
         </div>
@@ -250,67 +261,62 @@ function TrackDisclosure({
 
   return (
     <div className="flex flex-col gap-2">
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={toggleExpanded}
-        onKeyDown={handleKeyDown}
-        className={clsx(
-          'group flex w-full cursor-pointer items-center gap-3 rounded-[18px] border px-3 py-2.5 text-left transition-all active:scale-[0.99]',
-          expanded
-            ? 'border-[#ff63bd]/26 bg-[#ff63bd]/10 shadow-[0_0_22px_rgba(255,99,189,0.08)]'
-            : 'border-white/8 bg-white/[0.028] hover:border-[#ff63bd]/18 hover:bg-white/[0.045]',
-        )}
-      >
-        <div className="rounded-[14px] border border-white/8 bg-white/[0.035] p-1">
-          <IdolAvatar
-            name={event.idolName}
-            avatarUrl={event.idolAvatarUrl}
-            color={idolPrimaryColor(event.idolId)}
-            size="sm"
-            className="rounded-[10px]"
-          />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="truncate text-[12px] font-semibold text-[#ff73c1]">{event.idolName}</span>
-            <span className="rounded-full border border-white/8 bg-white/[0.04] px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.16em] text-white/38">
-              TRK {String(trackNumber).padStart(2, '0')}
-            </span>
-          </div>
-          <p className="mt-0.5 line-clamp-1 text-[14px] font-semibold leading-5 text-white/88">
-            {event.title}
-          </p>
-          <div className="mt-1 flex min-w-0 items-center gap-2 text-[10px] text-white/42">
-            <span className="inline-flex items-center gap-1">
-              <Clock3 className="h-3 w-3 text-[#ff92c7]" />
-              {dateLabel}
-            </span>
-            {placeLabel && (
-              <span className="inline-flex min-w-0 items-center gap-1">
-                <MapPin className="h-3 w-3" />
-                <span className="truncate">{placeLabel}</span>
-              </span>
-            )}
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={toggleFavorite}
-          aria-label={isFavorited ? '取消收藏' : '收藏'}
-          className={clsx(
-            'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border transition-all',
-            isFavorited
-              ? 'border-[#ff5db7]/30 bg-[#ff5db7]/18 text-[#ff78c4] shadow-[0_0_18px_rgba(255,93,183,0.22)]'
-              : 'border-white/8 bg-white/[0.03] text-white/36 group-hover:text-white/65',
-          )}
-        >
-          <Heart className={clsx('h-4 w-4', isFavorited && 'fill-current')} />
-        </button>
-      </div>
-
-      {expanded && (
+      {expanded ? (
         <ScheduleTrackCard event={event} trackNumber={trackNumber} />
+      ) : (
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={toggleExpanded}
+          onKeyDown={handleKeyDown}
+          className="group flex w-full cursor-pointer items-center gap-3 rounded-[18px] border border-white/8 bg-white/[0.028] px-3 py-2.5 text-left transition-all hover:border-[#ff63bd]/18 hover:bg-white/[0.045] active:scale-[0.99]"
+        >
+          <div className="rounded-[14px] border border-white/8 bg-white/[0.035] p-1">
+            <IdolAvatar
+              name={event.idolName}
+              avatarUrl={event.idolAvatarUrl}
+              color={idolPrimaryColor(event.idolId)}
+              size="sm"
+              className="rounded-[10px]"
+            />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="truncate text-[12px] font-semibold text-[#ff73c1]">{event.idolName}</span>
+              <span className="rounded-full border border-white/8 bg-white/[0.04] px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.16em] text-white/38">
+                TRK {String(trackNumber).padStart(2, '0')}
+              </span>
+            </div>
+            <p className="mt-0.5 line-clamp-1 text-[14px] font-semibold leading-5 text-white/88">
+              {event.title}
+            </p>
+            <div className="mt-1 flex min-w-0 items-center gap-2 text-[10px] text-white/42">
+              <span className="inline-flex items-center gap-1">
+                <Clock3 className="h-3 w-3 text-[#ff92c7]" />
+                {dateLabel}
+              </span>
+              {placeLabel && (
+                <span className="inline-flex min-w-0 items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  <span className="truncate">{placeLabel}</span>
+                </span>
+              )}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={toggleFavorite}
+            aria-label={isFavorited ? '取消收藏' : '收藏'}
+            className={clsx(
+              'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border transition-all',
+              isFavorited
+                ? 'border-[#ff5db7]/30 bg-[#ff5db7]/18 text-[#ff78c4] shadow-[0_0_18px_rgba(255,93,183,0.22)]'
+                : 'border-white/8 bg-white/[0.03] text-white/36 group-hover:text-white/65',
+            )}
+          >
+            <Heart className={clsx('h-4 w-4', isFavorited && 'fill-current')} />
+          </button>
+        </div>
       )}
     </div>
   )
@@ -324,10 +330,8 @@ const WEEKDAY_LABELS = ['日', '一', '二', '三', '四', '五', '六']
 
 function CalendarView({
   events,
-  activeIdolId,
 }: {
   events: Event[]
-  activeIdolId: string | null
 }) {
   const { favorites, user } = useAppState()
   const today = useMemo(() => new Date(), [])
@@ -496,9 +500,7 @@ function CalendarView({
         ))}
         {!selectedDate && (
           <p className="rounded-[18px] border border-white/8 bg-white/[0.02] py-4 text-center text-xs text-white/38">
-            {activeIdolId !== null && events.length === 0
-              ? '該偶像目前沒有公開活動'
-              : '點選日期查看當天活動'}
+            {events.length === 0 ? '沒有符合條件的活動' : '點選日期查看當天活動'}
           </p>
         )}
       </div>
@@ -546,29 +548,20 @@ function buildMonthCells(monthStart: Date): DayCell[] {
 function ScheduleSearchPanel({
   searchQuery,
   onSearchChange,
-  idols,
-  activeIdolId,
-  onSelect,
+  activeCategory,
+  onCategoryChange,
+  categoryCounts,
   resultCount,
   totalCount,
 }: {
   searchQuery: string
   onSearchChange: (value: string) => void
-  idols: Idol[]
-  activeIdolId: string | null
-  onSelect: (idolId: string | null) => void
+  activeCategory: ScheduleCategory
+  onCategoryChange: (category: ScheduleCategory) => void
+  categoryCounts: Map<ScheduleCategory, number>
   resultCount: number
   totalCount: number
 }) {
-  const quickIdols = useMemo(() => {
-    const selected = activeIdolId ? idols.find((idol) => idol.id === activeIdolId) : null
-    const firstIdols = idols.slice(0, 8)
-    if (selected && !firstIdols.some((idol) => idol.id === selected.id)) {
-      return [selected, ...firstIdols.slice(0, 7)]
-    }
-    return firstIdols
-  }, [activeIdolId, idols])
-
   return (
     <div className="px-4 mb-5 space-y-3">
       <label className="relative block">
@@ -594,37 +587,31 @@ function ScheduleSearchPanel({
       <div>
         <div className="mb-2 flex items-center justify-between gap-3">
           <div className="inline-flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.22em] text-white/34">
-            <Music2 className="h-3 w-3 text-[#ff8ecf]" />
-            quick idols
+            <ListFilter className="h-3 w-3 text-[#ff8ecf]" />
+            activity filter
           </div>
           <div className="text-[10px] font-medium text-white/32">
             {resultCount} / {totalCount} 筆
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => onSelect(null)}
-            className={clsx(
-              'rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all',
-              activeIdolId === null
-                ? 'border-[#ff63bd]/30 bg-[#ff63bd]/16 text-[#ff94d3] shadow-[0_0_20px_rgba(255,99,189,0.12)]'
-                : 'border-white/8 bg-white/[0.03] text-white/52',
-            )}
-          >
-            全部
-          </button>
-          {quickIdols.map((idol) => (
+          {SCHEDULE_CATEGORIES.map((category) => (
             <button
-              key={idol.id}
-              onClick={() => onSelect(idol.id)}
+              key={category.id}
+              onClick={() => onCategoryChange(category.id)}
               className={clsx(
                 'rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all',
-                activeIdolId === idol.id
+                activeCategory === category.id
                   ? 'border-[#ff63bd]/30 bg-[#ff63bd]/16 text-[#ff94d3] shadow-[0_0_20px_rgba(255,99,189,0.12)]'
                   : 'border-white/8 bg-white/[0.03] text-white/52',
               )}
             >
-              {idol.name}
+              {category.label}
+              {category.id !== 'all' && (
+                <span className="ml-1.5 text-[10px] text-white/34">
+                  {categoryCounts.get(category.id) ?? 0}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -637,6 +624,41 @@ interface MonthArchiveGroup {
   key: string
   label: string
   events: Event[]
+}
+
+function matchesScheduleCategory(event: Event, category: ScheduleCategory): boolean {
+  switch (category) {
+    case 'all':
+      return true
+    case 'concert':
+      return (
+        event.type === 'concert' ||
+        event.subType === 'fanmeet' ||
+        event.subType === 'fansign' ||
+        event.subType === 'award'
+      )
+    case 'musicshow':
+      return event.subType === 'musicshow'
+    case 'media':
+      return (
+        event.type === 'media' &&
+        event.subType !== 'musicshow'
+      )
+    case 'brand':
+      return (
+        event.type === 'brand' ||
+        event.subType === 'popup_store' ||
+        event.subType === 'exhibition' ||
+        event.subType === 'brand_event'
+      )
+    case 'other':
+      return (
+        !matchesScheduleCategory(event, 'concert') &&
+        !matchesScheduleCategory(event, 'musicshow') &&
+        !matchesScheduleCategory(event, 'media') &&
+        !matchesScheduleCategory(event, 'brand')
+      )
+  }
 }
 
 function buildFutureMonthGroups(events: Event[]): MonthArchiveGroup[] {
