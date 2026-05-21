@@ -9,7 +9,7 @@
 
 | 項目 | 值 |
 |---|---|
-| 目前階段 | S1 / C1 / I1a / I1b-A / J7d-A / 忘記密碼 / M1a / admin 刪除草稿 / M1b 第一批 + 第二批 + M1b-3（75 個 active idol）/ trust_level 單一真相 / Supabase SSR middleware / 後台 4 頁 filter tabs + 搜尋 pilot / 後台 idols「缺資料」tab / I1b-B AI 搜圖（Wikimedia + 可重搜）/ I1b-C avatar 來源紀錄 + 多色 placeholder / 前台 polish 6 改動 / #45 description + color 補齊 / Source Inventory A / YG crawler 工作單 / YG artist schedule crawler / 中文顯示 + 快閃店資料模型 / 後台中文欄位 / 前台中文顯示 / 活動類型 icon / 摘要 fallback / 中文生成工作單 / 候選 + 草稿單筆繁中生成 / 繁中欄位標記已審閱 / WAKEONE crawler 工作單 / SMTOWN crawler 工作單 / UI-1 `/schedule` Cassette Archive v3 完成。下一步建議：UI-3 `/events/[id]` Cassette Detail v1，之後接 Weverse 技術探測工作單；另有「後台用戶統計」待排程 |
+| 目前階段 | S1 / C1 / I1a / I1b-A / J7d-A / 忘記密碼 / M1a / admin 刪除草稿 / M1b 第一批 + 第二批 + M1b-3（75 個 active idol）/ trust_level 單一真相 / Supabase SSR middleware / 後台 4 頁 filter tabs + 搜尋 pilot / 後台 idols「缺資料」tab / I1b-B AI 搜圖（Wikimedia + 可重搜）/ I1b-C avatar 來源紀錄 + 多色 placeholder / 前台 polish 6 改動 / #45 description + color 補齊 / Source Inventory A / YG crawler 工作單 / YG artist schedule crawler / 中文顯示 + 快閃店資料模型 / 後台中文欄位 / 前台中文顯示 / 活動類型 icon / 摘要 fallback / 中文生成工作單 / 候選 + 草稿單筆繁中生成 / 繁中欄位標記已審閱 / WAKEONE crawler 工作單 / SMTOWN crawler 工作單 / UI-1 `/schedule` Cassette Archive v3 / UI-2 `/schedule` 搜尋 + 月份展開 + 小扁框活動列 / UI-3 `/events/[id]` Cassette Detail v1 完成。下一步建議：UI-4 `/favorites` Archive Shelf，之後接 `/me` 個人控制台視覺整理；另有 Weverse 技術探測工作單與「後台用戶統計」待排程 |
 | 輔助參考 | `ADMIN_ROADMAP.md`（後台分階段開發路線）、`AI_PIPELINE_PLAN.md`（爬蟲架構設計文件）、`SOURCE_INVENTORY_A.md`（官方來源盤點研究附件；不是流程索引，流程仍以本檔為準）、`MAINSTREAM_ARTIST_SEED_WORK_ORDER.md`（主流漏網藝人 seed 工作單；只做規劃）、`CHINESE_GENERATION_WORK_ORDER.md`（繁中顯示文案生成工作單；只做規劃） |
 
 ---
@@ -95,8 +95,9 @@
 | 67 | WAKEONE crawler 工作單 | `CRAWLER_WORK_ORDER_WAKEONE.md`：規劃 WAKEONE 公開 notice crawler，第一版覆蓋 ZEROBASEONE / Kep1er / izna；共享 label notice feed，需保守 artist matching 與 event filter；只做工作單，不改 DB / crawler / migration | ✅ PR #92 merged（無 migration）|
 | 68 | SMTOWN crawler 工作單 | `CRAWLER_WORK_ORDER_SMTOWN.md`：規劃 SMTOWN 公開 notice crawler，第一版先聚焦 aespa / RIIZE / Red Velvet / EXO / NCT 等高訊號群組；共享 label notice feed，需保守 artist matching 與 event filter，特別注意 NCT unit / solo overlap；只做工作單，不改 DB / crawler / migration | ✅ PR #93 merged（無 migration）|
 | 69 | UI-1 `/schedule` Cassette Archive v3 | 以前台 `/schedule` 為唯一範圍，做 Cassette Archive v3 視覺試點：暖紫黑背景、archive header、cassette track cards、StatusPill / KindPill / HeartButton / TrackCode、小型 calendar/timeline 樣式升級；不改資料邏輯、query、DB、crawler、auth、其他頁 | ✅ PR #95 merged（無 migration）|
-| 70 | UI-2 `/schedule` 搜尋 + 月份展開 + 小扁框活動列 | 解決藝人 chip 過長：加入搜尋框，藝人 chip 改為活動分類篩選；timeline 只呈現未來活動，按月份 accordion 展開；活動預設為小扁框，點擊後替換成 Cassette Track Card；大卡右上補收合按鈕、hero 移除「已歸檔」數字，並預留 YouTube / Netflix 平台分類；不改資料邏輯、query、DB、crawler、auth、其他頁 | ✅ PR #96 / #97 / #98 merged（無 migration）|
-| 71 | UI-3 `/events/[id]` Cassette Detail v1 | 延續 `/schedule` cassette archive 視覺到活動詳情頁：文字封面 hero、日期/地點/狀態資訊條、本地化摘要與原文層級、來源區塊、票務/官方/分享 CTA；分享按鈕支援 native share 與複製連結 fallback；不改資料邏輯、query、DB、crawler、auth、其他頁 | ⏳ PR #99 待驗收（無 migration）|
+| 70 | UI-2 `/schedule` 搜尋 + 月份展開 + 小扁框活動列 | 解決藝人 chip 過長：加入搜尋框，藝人 chip 改為活動分類篩選；timeline 只呈現未來活動，按月份 accordion 展開；活動預設為小扁框，點擊後替換成 Cassette Track Card；大卡右上補收合按鈕、hero 移除「已歸檔」數字，並預留 YouTube / Netflix 平台分類；不改資料邏輯、query、DB、crawler、auth、其他頁 | ✅ PR #96 + #97 + #98 merged（無 migration）|
+| 71 | UI-3 `/events/[id]` Cassette Detail v1 | 以活動詳情頁為唯一範圍，接上 cassette cover 式主視覺、TRK code、日期地點資訊條、本地化摘要 / 原文層級、資訊來源與票務 / 官方 / 分享 CTA；分享連結支援 Web Share API 與 copy link fallback；地點在結構化欄位缺漏時可從原始摘要 `Location:` fallback 補上；不改 query、DB、crawler、auth、其他頁 | ✅ PR #99 merged（無 migration）|
+| 72 | UI-4 `/favorites` Archive Shelf | 以 `/favorites` 為唯一範圍，將收藏頁升級成 archive shelf：暖紫黑 cassette 語言、收藏統計 header、搜尋保留、登入提示 / 空狀態升級、即將到來與已歸檔分區、收藏卡片層級重做；不改 query、DB、crawler、auth、其他頁 | ⏳ PR #100 待驗收 |
 
 ---
 
