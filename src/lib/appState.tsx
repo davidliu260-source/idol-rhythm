@@ -12,7 +12,10 @@ import { MOCK_IDOLS } from './mockIdols'
 import { MOCK_EVENTS } from './mockEvents'
 import { getBrowserSupabaseClient } from './supabase/browserClient'
 
-const DEFAULT_FOLLOWING = MOCK_IDOLS.filter((i) => i.following).map((i) => i.id)
+const LEGACY_DEFAULT_FOLLOWING = MOCK_IDOLS.filter((i) => i.following)
+  .map((i) => i.id)
+  .sort()
+const DEFAULT_FOLLOWING: string[] = []
 const DEFAULT_FAVORITES = MOCK_EVENTS.filter((e) => e.isFavorited).map((e) => e.id)
 
 // Matches Postgres uuid_generate_v4() output (eight-four-four-four-twelve hex digits).
@@ -30,7 +33,21 @@ function useStoredSet(key: string, defaultIds: string[]) {
   useEffect(() => {
     try {
       const stored = localStorage.getItem(key)
-      if (stored !== null) setIds(JSON.parse(stored) as string[])
+      if (stored !== null) {
+        const parsed = JSON.parse(stored) as string[]
+
+        if (
+          key === 'idol-rhythm:following' &&
+          parsed.length === LEGACY_DEFAULT_FOLLOWING.length &&
+          [...parsed].sort().every((id, index) => id === LEGACY_DEFAULT_FOLLOWING[index])
+        ) {
+          localStorage.setItem(key, JSON.stringify([]))
+          setIds([])
+          return
+        }
+
+        setIds(parsed)
+      }
     } catch {}
   }, [key])
 

@@ -80,7 +80,7 @@ export default function HomeTimeline({
   const hasFollows = mounted && following.ids.length > 0
 
   if (hasFollows) {
-    return <FollowedView events={events} followedSlugs={following.ids} />
+    return <FollowedView events={events} followedIds={following.ids} />
   }
 
   return <DefaultView events={events} showFollowHint={mounted} />
@@ -90,12 +90,12 @@ export default function HomeTimeline({
 
 function FollowedView({
   events,
-  followedSlugs,
+  followedIds,
 }: {
   events: Event[]
-  followedSlugs: string[]
+  followedIds: string[]
 }) {
-  const followedSet = new Set(followedSlugs)
+  const followedSet = new Set(followedIds)
 
   // F2: keep the totals so we can show "查看全部 N 場 →" footers when truncated.
   const followedSorted = events
@@ -104,12 +104,12 @@ function FollowedView({
   const followedTotal = followedSorted.length
   const followedEvents = followedSorted.slice(0, MAX_FOLLOWED)
 
-  const followedIds = new Set(followedEvents.map((e) => e.id))
+  const followedEventIds = new Set(followedEvents.map((e) => e.id))
   const otherSorted = events
     .filter(
       (e) =>
         !followedSet.has(e.idolId) &&
-        !followedIds.has(e.id) &&
+        !followedEventIds.has(e.id) &&
         isFutureOrToday(e.date),
     )
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())

@@ -3,7 +3,6 @@ export const dynamic = 'force-dynamic'
 import Link from 'next/link'
 import {
   ArrowRight,
-  Bell,
   CalendarDays,
   Heart,
   ListMusic,
@@ -38,7 +37,7 @@ export default async function HomePage() {
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(180deg,rgba(255,255,255,0.018)_1px,transparent_1px)] bg-[size:34px_34px] opacity-24" />
 
       <div className="relative mx-auto flex w-full max-w-[520px] flex-col gap-5 px-4 pt-8">
-        <header className="flex items-center justify-between gap-4">
+        <header className="flex items-center gap-4">
           <div>
             <p className="text-[11px] font-medium uppercase tracking-[0.32em] text-white/34">
               IDOL · RHYTHM
@@ -48,14 +47,6 @@ export default async function HomePage() {
             </h1>
             <p className="mt-2 text-sm text-white/52">{dateStr}</p>
           </div>
-          <button
-            type="button"
-            aria-label="通知"
-            className="relative flex h-12 w-12 items-center justify-center rounded-full border border-white/8 bg-white/[0.045] text-white/64"
-          >
-            <Bell className="h-5 w-5" />
-            <span className="absolute right-3 top-3 h-1.5 w-1.5 rounded-full bg-[#ff4ca1]" />
-          </button>
         </header>
 
         <section className={clsx(SCHEDULE_ARCHIVE_SHELL, 'px-5 py-5')}>
