@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Sparkles, Star, Heart, Bell, ChevronRight, LogIn } from 'lucide-react'
+import { Bell, ChevronRight, Heart, LibraryBig, LogIn, Sparkles, Star } from 'lucide-react'
 import { type Event } from '@/lib/mockEvents'
 import { getIdolById, type Idol } from '@/lib/mockIdols'
 import { useAppState } from '@/lib/appState'
@@ -21,9 +21,8 @@ const MAX_FAVORITES = 3
  *   2. Upcoming reminded events — from useAppState().reminders
  *   3. Upcoming saved events    — from useAppState().favorites
  *
- * Both reminders and favorites are UI-only countdowns (per the explicit
- * product decision recorded in AGENTS.md section 14: no Email/Push/cron
- * dispatch is implemented or planned).
+ * Both reminders and favorites are UI-only countdowns: no Email/Push/cron
+ * dispatch is implemented here.
  *
  * Anonymous users still see the section with login encouragement.
  * Stat tiles render zeros during SSR, then update once the client picks up
@@ -82,14 +81,24 @@ export default function HomePersonalized({
   const showLoginPrompt = mounted && !isUserLoading && !user
 
   return (
-    <section className="flex flex-col gap-4">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <Sparkles className="h-4 w-4 text-primary" />
-        <h2 className="text-base font-bold text-text-base">我的星動時刻</h2>
+    <section className="rounded-[26px] border border-white/8 bg-white/[0.035] p-4">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full border border-white/8 bg-white/[0.045] text-[#ff8bc8]">
+            <LibraryBig className="h-4 w-4" />
+          </span>
+          <div>
+            <p className="text-[10px] font-medium uppercase tracking-[0.24em] text-white/36">
+              PRIVATE DECK
+            </p>
+            <h2 className="mt-1 text-xl font-black leading-none text-white">
+              我的星動時刻
+            </h2>
+          </div>
+        </div>
+        <Sparkles className="h-4 w-4 text-[#ff8bc8]" />
       </div>
 
-      {/* Three-stat summary */}
       <div className="grid grid-cols-3 gap-2">
         <StatTile
           icon={<Star className="h-3.5 w-3.5" />}
@@ -113,17 +122,17 @@ export default function HomePersonalized({
 
       {/* Login prompt for anon (with localStorage hint when there's local data) */}
       {showLoginPrompt && (
-        <div className="rounded-xl bg-violet/10 border border-violet/25 px-3 py-2.5 flex items-start gap-2">
-          <LogIn className="h-3.5 w-3.5 text-violet-400 flex-shrink-0 mt-0.5" />
+        <div className="mt-4 flex items-start gap-3 rounded-[20px] border border-violet-300/18 bg-violet-400/10 px-3 py-3">
+          <LogIn className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#b7a7ff]" />
           <div className="flex-1 flex flex-col gap-1.5">
-            <p className="text-xs text-muted leading-snug">
+            <p className="text-xs leading-5 text-white/58">
               {hasAnyData
                 ? '目前以本機儲存，登入後可同步收藏、提醒與追蹤偶像到你的帳號'
                 : '登入後可同步你的收藏、提醒與追蹤偶像'}
             </p>
             <Link
               href="/login?next=/"
-              className="self-start text-xs font-semibold text-primary underline underline-offset-2"
+              className="self-start text-xs font-semibold text-[#ff8bc8]"
             >
               登入 / 註冊 →
             </Link>
@@ -131,7 +140,6 @@ export default function HomePersonalized({
         </div>
       )}
 
-      {/* Following idols */}
       <Subsection
         title="已追蹤偶像"
         count={counts.following}
@@ -151,9 +159,9 @@ export default function HomePersonalized({
                   avatarUrl={idol.avatarUrl}
                   color={idol.color}
                   size="lg"
-                  className="!h-14 !w-14 !text-xl ring-2 ring-primary/30"
+                  className="!h-14 !w-14 !text-xl ring-2 ring-[#ff6cb7]/30"
                 />
-                <span className="text-xs text-muted max-w-[56px] truncate text-center">
+                <span className="max-w-[56px] truncate text-center text-xs text-white/54">
                   {idol.name}
                 </span>
               </Link>
@@ -162,10 +170,10 @@ export default function HomePersonalized({
               href="/idols"
               className="flex flex-col items-center gap-1.5 flex-shrink-0"
             >
-              <div className="h-14 w-14 rounded-2xl border-2 border-dashed border-card-border flex items-center justify-center text-muted text-xl">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-dashed border-white/16 text-xl text-white/42">
                 +
               </div>
-              <span className="text-xs text-muted">追蹤</span>
+              <span className="text-xs text-white/42">追蹤</span>
             </Link>
           </div>
         ) : (
@@ -177,7 +185,6 @@ export default function HomePersonalized({
         )}
       </Subsection>
 
-      {/* Upcoming reminders — UI countdown only */}
       <Subsection
         title="近期提醒"
         count={counts.reminders}
@@ -199,7 +206,6 @@ export default function HomePersonalized({
         )}
       </Subsection>
 
-      {/* Upcoming favorites */}
       <Subsection
         title="我的收藏"
         count={counts.favorites}
@@ -238,12 +244,12 @@ function StatTile({
   color: string
 }) {
   return (
-    <div className="rounded-xl border border-card-border bg-card px-2 py-2.5 flex flex-col items-center gap-1">
+    <div className="flex flex-col items-center gap-1 rounded-[18px] border border-white/8 bg-white/[0.035] px-2 py-3">
       <span className={color}>{icon}</span>
-      <p className="text-base font-bold text-text-base leading-none tabular-nums">
+      <p className="text-lg font-black leading-none text-white tabular-nums">
         {value}
       </p>
-      <p className="text-[10px] text-muted leading-none">{label}</p>
+      <p className="text-[10px] leading-none text-white/42">{label}</p>
     </div>
   )
 }
@@ -262,14 +268,14 @@ function Subsection({
   children: React.ReactNode
 }) {
   return (
-    <section>
-      <div className="flex items-center gap-2 mb-2">
+    <section className="mt-4">
+      <div className="mb-2 flex items-center gap-2">
         {icon}
-        <h3 className="text-xs font-semibold text-text-base">{title}</h3>
-        {count > 0 && <span className="text-xs text-muted">· {count}</span>}
+        <h3 className="text-xs font-semibold text-white">{title}</h3>
+        {count > 0 && <span className="text-xs text-white/42">· {count}</span>}
         <Link
           href={href}
-          className="ml-auto flex items-center gap-0.5 text-[10px] text-muted"
+          className="ml-auto flex items-center gap-0.5 text-[10px] font-medium text-white/42"
         >
           全部 <ChevronRight className="h-3 w-3" />
         </Link>
@@ -289,9 +295,9 @@ function EmptyHint({
   href: string
 }) {
   return (
-    <div className="rounded-xl border border-card-border bg-card px-3 py-3 flex flex-col items-start gap-1.5">
-      <p className="text-xs text-muted leading-snug">{text}</p>
-      <Link href={href} className="text-xs text-primary font-semibold">
+    <div className="flex flex-col items-start gap-1.5 rounded-[18px] border border-white/8 bg-white/[0.035] px-3 py-3">
+      <p className="text-xs leading-5 text-white/48">{text}</p>
+      <Link href={href} className="text-xs font-semibold text-[#ff8bc8]">
         {linkText} →
       </Link>
     </div>
@@ -307,7 +313,7 @@ function CountdownCard({ event, now }: { event: Event; now: Date }) {
 
   return (
     <Link href={`/events/${event.id}`} className="flex-shrink-0 w-40">
-      <div className="rounded-2xl border border-card-border bg-card p-3 flex flex-col gap-2 active:scale-[0.98] transition-transform h-full">
+      <div className="flex h-full flex-col gap-2 rounded-[20px] border border-white/8 bg-white/[0.04] p-3 transition-transform active:scale-[0.98]">
         <div className="flex items-center gap-2">
           <IdolAvatar
             name={event.idolName}
@@ -315,14 +321,14 @@ function CountdownCard({ event, now }: { event: Event; now: Date }) {
             color={idol?.color ?? '#6366f1'}
             size="xs"
           />
-          <span className="text-xs font-semibold text-primary truncate">
+          <span className="truncate text-xs font-semibold text-[#ff8bc8]">
             {event.idolName}
           </span>
         </div>
-        <p className="text-xs text-text-base line-clamp-2 leading-snug flex-1">
+        <p className="line-clamp-2 flex-1 text-xs leading-snug text-white/76">
           {event.title}
         </p>
-        <p className="text-sm font-bold text-primary leading-none">{label}</p>
+        <p className="text-sm font-black leading-none text-white">{label}</p>
       </div>
     </Link>
   )
