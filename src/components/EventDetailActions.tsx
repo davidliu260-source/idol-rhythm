@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Heart, Bell, Share2 } from 'lucide-react'
 import { useAppState } from '@/lib/appState'
 import clsx from 'clsx'
@@ -36,9 +37,60 @@ export function EventDetailReminderBtn({ eventId }: { eventId: string }) {
   )
 }
 
-export function EventDetailShareBtn() {
+export function EventDetailShareBtn({
+  title = 'Idol Rhythm 活動',
+  text,
+  variant = 'icon',
+}: {
+  title?: string
+  text?: string
+  variant?: 'icon' | 'inline'
+}) {
+  const [copied, setCopied] = useState(false)
+
+  async function handleShare() {
+    const url = window.location.href
+    const shareData = { title, text, url }
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData)
+        return
+      }
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1800)
+    } catch {
+      setCopied(false)
+    }
+  }
+
+  if (variant === 'inline') {
+    return (
+      <button
+        type="button"
+        onClick={handleShare}
+        className="flex w-full items-center gap-3 text-left"
+        aria-label="分享活動"
+      >
+        <span className="text-[#b6a9ff]">
+          <Share2 className="h-4 w-4" />
+        </span>
+        <span>
+          <span className="block text-sm font-semibold text-white">分享活動</span>
+          <span className="block text-xs text-white/38">{copied ? '已複製連結' : '分享給朋友'}</span>
+        </span>
+      </button>
+    )
+  }
+
   return (
-    <button className="rounded-full bg-white/10 backdrop-blur-sm p-2" aria-label="分享">
+    <button
+      type="button"
+      onClick={handleShare}
+      className="rounded-full bg-white/10 backdrop-blur-sm p-2"
+      aria-label={copied ? '已複製連結' : '分享'}
+    >
       <Share2 className="h-4 w-4 text-white" />
     </button>
   )

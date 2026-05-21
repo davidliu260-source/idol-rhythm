@@ -4,24 +4,25 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import {
   ArrowLeft,
-  MapPin,
-  Clock,
-  Globe,
+  CalendarDays,
+  Clock3,
   ExternalLink,
-  CheckCircle2,
+  Globe2,
+  MapPin,
+  Radio,
   Sparkles,
-  Tv,
   Ticket,
+  Tv,
 } from 'lucide-react'
 import {
+  EVENT_SUBTYPE_LABELS,
+  EVENT_TYPE_LABELS,
   getEventById as getMockEventById,
+  type Event,
 } from '@/lib/mockEvents'
 import { getIdolById } from '@/lib/mockIdols'
 import { getEventById as getSupabaseEventById } from '@/lib/supabase/events'
 import { getEventDateLabel } from '@/lib/eventDisplay'
-import SourceBadge from '@/components/SourceBadge'
-import EventTypeBadge from '@/components/EventTypeBadge'
-import IdolAvatar from '@/components/IdolAvatar'
 import {
   EventDetailFavoriteBtn,
   EventDetailReminderBtn,
@@ -33,268 +34,344 @@ export default async function EventDetailPage({
 }: {
   params: { id: string }
 }) {
-  // Try Supabase first (UUID ids); fall back to mock (ev-XXX ids).
-  // This lets old mock-based links keep working alongside Supabase UUIDs.
   const supabaseEvent = await getSupabaseEventById(params.id)
   const event = supabaseEvent ?? getMockEventById(params.id)
   if (!event) return notFound()
 
   const idol = getIdolById(event.idolId)
   const dateLabel = getEventDateLabel(event)
-  const isConfirmed = event.status === 'confirmed'
   const isDemoEvent = !supabaseEvent
   const summaryText = event.displaySummaryZh?.trim() || event.description.trim()
-  const hasTranslatedSummary = Boolean(event.displaySummaryZh?.trim())
+  const hasLocalizedSummary = Boolean(event.displaySummaryZh?.trim())
+  const typeLabel = getTypeLabel(event)
+  const statusLabel = getStatusLabel(event)
+  const venueLabel = event.venueName || event.location || event.city || event.country
+  const locationLine = [event.city, event.country].filter(Boolean).join(', ')
+  const trackCode = getTrackCode(event.id)
+  const coverTitle = getCoverTitle(event)
+  const shareText = `${event.idolName} · ${event.title}`
 
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* Hero banner */}
-      <div
-        className="relative h-52 flex flex-col justify-end px-4 pb-5 pt-12"
-        style={{
-          background: idol
-            ? `linear-gradient(135deg, ${idol.color}33, ${idol.color}88)`
-            : 'linear-gradient(135deg, #1e1b4b, #312e81)',
-        }}
-      >
-        <Link
-          href="/schedule"
-          className="absolute top-12 left-4 flex items-center gap-1.5 text-white/80"
-        >
-          <ArrowLeft className="h-5 w-5" />
-          <span className="text-sm">返回</span>
-        </Link>
+    <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_14%_0%,rgba(255,83,171,0.16),transparent_24%),linear-gradient(180deg,#141019_0%,#08070d_100%)] pb-8 text-white">
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(180deg,rgba(255,255,255,0.018)_1px,transparent_1px)] bg-[size:34px_34px] opacity-35" />
 
-        <div className="absolute top-12 right-4 flex items-center gap-2">
-          <EventDetailShareBtn />
-          <EventDetailReminderBtn eventId={event.id} />
-          <EventDetailFavoriteBtn eventId={event.id} />
-        </div>
+      <div className="relative mx-auto flex w-full max-w-[520px] flex-col gap-4 px-4 pt-10">
+        <div className="flex items-center justify-between gap-3">
+          <Link
+            href="/schedule"
+            className="inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.04] px-3 py-2 text-sm font-medium text-white/72 transition-colors hover:text-white"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            返回
+          </Link>
 
-        <div className="flex items-end gap-3">
-          <IdolAvatar
-            name={event.idolName}
-            avatarUrl={event.idolAvatarUrl}
-            color={idol?.color ?? '#6366f1'}
-            size="lg"
-            className="ring-2 ring-white/20"
-          />
-          <div>
-            <p className="text-xs text-white/60 font-medium">{event.idolName}</p>
-            <div className="flex items-center gap-2 mt-1">
-              <EventTypeBadge type={event.type} subType={event.subType} size="md" />
-            </div>
+          <div className="flex items-center gap-2">
+            <EventDetailShareBtn title={event.title} text={shareText} />
+            <EventDetailReminderBtn eventId={event.id} />
+            <EventDetailFavoriteBtn eventId={event.id} />
           </div>
         </div>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 px-4 py-5 flex flex-col gap-4">
 
         {isDemoEvent && (
-          <div className="flex items-start gap-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 px-3 py-2.5">
-            <span className="text-amber-400 text-sm leading-none mt-0.5">⚠️</span>
-            <p className="text-xs text-amber-300 leading-snug">
-              <span className="font-semibold">Demo 展示資料</span>
-              ｜非真實官方行程，請以官方 SNS 或購票平台公告為準
-            </p>
+          <div className="rounded-[18px] border border-amber-300/20 bg-amber-300/10 px-3.5 py-3 text-xs leading-relaxed text-amber-100">
+            <span className="font-semibold">Demo 展示資料</span>
+            <span className="text-amber-100/72"> ｜非真實官方行程，請以官方 SNS 或購票平台公告為準</span>
           </div>
         )}
 
-        {/* Title & status */}
-        <div>
-          <h1 className="text-lg font-bold text-text-base leading-snug">{event.title}</h1>
-          {event.originalTitle && (
-            <p className="mt-1 text-xs leading-snug text-muted">
-              原文：{event.originalTitle}
-            </p>
-          )}
-          <div className="flex items-center gap-2 mt-2">
-            {isConfirmed ? (
-              <span className="flex items-center gap-1 text-xs text-emerald-400">
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                已確認
-              </span>
-            ) : (
-              <span className="flex items-center gap-1 text-xs text-amber-400">
-                ⚠ 待確認，資訊可能變動
-              </span>
-            )}
-          </div>
-        </div>
+        <section className="relative overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(33,27,39,0.96),rgba(18,15,24,0.98))] p-4 shadow-[0_22px_80px_rgba(0,0,0,0.42)]">
+          <div className="pointer-events-none absolute inset-0 opacity-[0.16] [background-image:radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.8)_1px,transparent_0)] [background-size:13px_13px]" />
+          <div className="pointer-events-none absolute inset-0 rounded-[26px] border border-white/6" />
+          <div className="absolute inset-y-0 left-5 w-7 bg-[linear-gradient(180deg,rgba(255,96,154,0.86),rgba(148,92,255,0.74))]" />
 
-        {/* Info grid */}
-        <div className="rounded-2xl border border-card-border bg-card p-4 flex flex-col gap-3">
-          <InfoRow
-            icon={<Clock className="h-4 w-4" />}
-            label="日期時間"
+          <div className="relative pl-12">
+            <div className="mb-5 flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/52">IR-{trackCode}</p>
+                <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-white/38">IDOL · RHYTHM</p>
+              </div>
+              <div className="rounded-md border border-[#ff5aa8]/45 px-2 py-1 text-[11px] font-medium uppercase tracking-[0.22em] text-[#ff79bd]">
+                TRK · 01
+              </div>
+            </div>
+
+            <div className="mb-5">
+              <p className="text-[42px] font-black uppercase leading-none tracking-normal text-[#ff5f9f]">
+                {event.idolName}
+              </p>
+              <h1 className="mt-4 text-[34px] font-black uppercase leading-[1.03] tracking-normal text-white">
+                {coverTitle}
+              </h1>
+            </div>
+
+            <div className="border-t border-white/12 pt-4">
+              <p className="text-[22px] font-black uppercase tracking-normal text-[#a77bff]">
+                {event.city || event.country}
+              </p>
+              <p className="mt-1 text-sm font-semibold uppercase tracking-normal text-white/78">
+                {locationLine || venueLabel}
+              </p>
+            </div>
+
+            <div className="mt-4 rounded-lg border border-white/10 bg-white/[0.025] p-3">
+              <div className="flex items-start gap-2 text-xs text-white/74">
+                <CalendarDays className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-[#ff86c4]" />
+                <span>{dateLabel}{event.time ? ` · ${event.time}` : ''}</span>
+              </div>
+              {venueLabel && (
+                <div className="mt-2 flex items-start gap-2 text-xs text-white/62">
+                  <MapPin className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-[#ff86c4]" />
+                  <span>{venueLabel}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <CassetteSpec label="Status" value={statusLabel} tone="green" />
+              <CassetteSpec label="Type" value={typeLabel} tone="violet" />
+            </div>
+
+            <div className="mt-4 flex items-end justify-between gap-3 text-[10px] uppercase tracking-[0.16em] text-white/36">
+              <span>© 2026 Idol Rhythm</span>
+              <span>VOL.05 · 2026</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="grid grid-cols-1 gap-3 rounded-[22px] border border-white/8 bg-white/[0.035] p-4 sm:grid-cols-3">
+          <InfoTile
+            icon={<CalendarDays className="h-4 w-4" />}
+            label="日期 / 時間"
             value={`${dateLabel}${event.time ? ` · ${event.time}` : ''}`}
+            meta={event.endDate ? '多日行程' : undefined}
           />
-          <InfoRow
-            icon={<Globe className="h-4 w-4" />}
-            label="地區"
-            value={`${event.countryFlag} ${event.country}`}
+          <InfoTile
+            icon={<Globe2 className="h-4 w-4" />}
+            label="地點 / 場館"
+            value={venueLabel || event.country}
+            meta={locationLine || event.country}
           />
-          {event.location && (
-            <InfoRow
-              icon={<MapPin className="h-4 w-4" />}
-              label="地點"
-              value={event.location}
-            />
-          )}
-          {event.address && (
-            <InfoRow
-              icon={<MapPin className="h-4 w-4" />}
-              label="地址"
-              value={event.address}
-            />
-          )}
-        </div>
+          <InfoTile
+            icon={<Clock3 className="h-4 w-4" />}
+            label="狀態"
+            value={statusLabel}
+            meta={typeLabel}
+          />
+        </section>
 
         {summaryText && (
-          <div className="rounded-2xl border border-violet-500/25 bg-violet-500/5 p-4">
-            <div className="flex items-center gap-2 mb-2.5">
-              <Sparkles className="h-3.5 w-3.5 text-violet-400" />
-              <span className="text-xs font-semibold text-violet-400">
-                {hasTranslatedSummary ? 'AI 繁中摘要' : '原始摘要'}
-              </span>
-              <span className="ml-auto text-[10px] text-muted bg-card border border-card-border px-1.5 py-0.5 rounded-full">
-                {hasTranslatedSummary ? '繁中' : '原文'}
+          <section className="rounded-[22px] border border-white/8 bg-white/[0.035] p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="inline-flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-[#ff86c4]" />
+                <h2 className="text-sm font-semibold text-white">
+                  {hasLocalizedSummary ? '本地化摘要' : '原始摘要'}
+                </h2>
+              </div>
+              <span className="rounded-full border border-white/8 bg-white/[0.04] px-2 py-1 text-[10px] font-medium text-white/42">
+                {hasLocalizedSummary ? '依使用者語言顯示' : '原文'}
               </span>
             </div>
-            <p className="text-sm text-text-base leading-relaxed">{summaryText}</p>
-            {event.tags.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {event.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full bg-violet-500/10 border border-violet-500/20 px-2.5 py-0.5 text-xs text-violet-300"
-                  >
-                    #{tag}
-                  </span>
-                ))}
+            <p className="text-sm leading-6 text-white/78">{summaryText}</p>
+            {event.originalTitle && (
+              <div className="mt-4 rounded-2xl border border-white/8 bg-black/10 px-3 py-2.5">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/34">Original title</p>
+                <p className="mt-1 text-xs leading-5 text-white/58">{event.originalTitle}</p>
               </div>
             )}
-          </div>
+          </section>
         )}
 
-        {/* Source */}
-        <div className="rounded-2xl border border-card-border bg-card p-4">
-          <h2 className="text-xs font-semibold text-muted mb-2.5">資訊來源</h2>
-          <SourceBadge
-            source={event.source.level}
+        <section className="rounded-[22px] border border-white/8 bg-white/[0.035] p-4">
+          <h2 className="mb-3 text-sm font-semibold text-white">資訊來源</h2>
+          <SourceLine
+            tone={event.source.level === 'official' ? 'green' : 'blue'}
+            title={event.source.level === 'official' ? '官方確認' : '媒體確認'}
             label={event.source.label}
-            showDesc
-            size="md"
+            description={event.source.type ? getSourceTypeLabel(event.source.type) : '來源已通過前台顯示規則'}
           />
-        </div>
+          {event.source.url && (
+            <a
+              href={event.source.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-white/8 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-white/72"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              查看來源
+            </a>
+          )}
+        </section>
 
-        {/* Ticket info (F3): show whenever it makes sense for the event type,
-            with a "⏳ 連結待補" placeholder when the URL hasn't landed yet so
-            the section doesn't silently vanish. */}
-        {(event.ticketUrl ||
-          event.type === 'concert' ||
-          event.type === 'ticketing' ||
-          event.subType === 'fanmeet' ||
-          event.subType === 'fansign') && (
-          <TicketSection ticketUrl={event.ticketUrl} />
-        )}
-
-        {/* Streaming info (F3): same pattern — show for livestream/streaming
-            types and concerts that often have a live stream option. */}
-        {(event.streamUrl ||
-          event.type === 'livestream' ||
-          event.type === 'streaming' ||
-          event.type === 'concert') && (
-          <StreamSection streamUrl={event.streamUrl} />
-        )}
+        <section className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <ActionLink
+            icon={<Ticket className="h-4 w-4" />}
+            label="票務 & 購票"
+            subLabel={event.ticketUrl ? '前往連結' : '連結待補'}
+            href={event.ticketUrl}
+          />
+          <ActionLink
+            icon={<Tv className="h-4 w-4" />}
+            label="官方 & 更多"
+            subLabel={event.streamUrl || event.source.url ? '前往連結' : '連結待補'}
+            href={event.streamUrl || event.source.url}
+          />
+          <ShareAction title={event.title} text={shareText} />
+        </section>
       </div>
     </div>
   )
 }
 
-function InfoRow({
+function CassetteSpec({
+  label,
+  value,
+  tone,
+}: {
+  label: string
+  value: string
+  tone: 'green' | 'violet'
+}) {
+  return (
+    <div className="rounded-lg border border-white/10 bg-black/10 px-3 py-2.5">
+      <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-white/36">{label}</p>
+      <div className="mt-1 flex items-center gap-2">
+        <span className={tone === 'green' ? 'h-2 w-2 rounded-full bg-emerald-300' : 'h-2 w-2 rounded-full bg-violet-300'} />
+        <span className={tone === 'green' ? 'text-xs font-semibold text-emerald-300' : 'text-xs font-semibold text-violet-300'}>
+          {value}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function InfoTile({
   icon,
   label,
   value,
+  meta,
 }: {
   icon: React.ReactNode
   label: string
   value: string
+  meta?: string
 }) {
   return (
-    <div className="flex items-center gap-3">
-      <span className="text-muted flex-shrink-0">{icon}</span>
-      <div className="flex-1 flex items-center justify-between gap-2">
-        <span className="text-xs text-muted">{label}</span>
-        <span className="text-sm text-text-base font-medium text-right">{value}</span>
+    <div className="flex gap-3 sm:flex-col">
+      <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-white/8 bg-white/[0.04] text-[#b6a9ff]">
+        {icon}
+      </span>
+      <div className="min-w-0">
+        <p className="text-[11px] font-medium text-white/40">{label}</p>
+        <p className="mt-1 text-sm font-semibold leading-5 text-white">{value}</p>
+        {meta && <p className="mt-1 text-xs leading-4 text-white/42">{meta}</p>}
       </div>
     </div>
   )
 }
 
-// ── F3: Ticket / Stream sections with "連結待補" placeholder ────────────────
-//
-// When the event type suggests a ticket / streaming link SHOULD exist but the
-// URL hasn't landed yet, show the section with a grayed-out "⏳ 連結待補"
-// button instead of hiding the section entirely. This tells the user "we
-// know this should have a link, the admin is working on it" rather than
-// leaving an empty visual gap.
-
-function TicketSection({ ticketUrl }: { ticketUrl?: string }) {
+function SourceLine({
+  tone,
+  title,
+  label,
+  description,
+}: {
+  tone: 'green' | 'blue'
+  title: string
+  label: string
+  description: string
+}) {
   return (
-    <div className="rounded-2xl border border-orange-500/25 bg-orange-500/5 p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <Ticket className="h-4 w-4 text-orange-400" />
-        <h2 className="text-xs font-semibold text-orange-400">票務資訊</h2>
+    <div className="flex gap-3">
+      <span className={tone === 'green' ? 'mt-1 h-2.5 w-2.5 rounded-full bg-emerald-300' : 'mt-1 h-2.5 w-2.5 rounded-full bg-sky-300'} />
+      <div className="min-w-0">
+        <p className={tone === 'green' ? 'text-sm font-semibold text-emerald-300' : 'text-sm font-semibold text-sky-300'}>
+          {title}
+          <span className="font-normal text-white/44"> · {label}</span>
+        </p>
+        <p className="mt-1 text-xs leading-5 text-white/42">{description}</p>
       </div>
-      {ticketUrl ? (
-        <a
-          href={ticketUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-bold text-white"
-        >
-          <ExternalLink className="h-4 w-4" />
-          前往購票
-        </a>
-      ) : (
-        <div
-          className="flex items-center justify-center gap-2 rounded-xl bg-card border border-card-border py-3.5 text-sm font-medium text-muted cursor-not-allowed select-none"
-          aria-disabled="true"
-        >
-          ⏳ 購票連結待補
-        </div>
-      )}
     </div>
   )
 }
 
-function StreamSection({ streamUrl }: { streamUrl?: string }) {
-  return (
-    <div className="rounded-2xl border border-indigo-500/25 bg-indigo-500/5 p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <Tv className="h-4 w-4 text-indigo-400" />
-        <h2 className="text-xs font-semibold text-indigo-400">串流 / 直播資訊</h2>
-      </div>
-      {streamUrl ? (
-        <a
-          href={streamUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3.5 text-sm font-bold text-white"
-        >
-          <ExternalLink className="h-4 w-4" />
-          前往觀看
-        </a>
-      ) : (
-        <div
-          className="flex items-center justify-center gap-2 rounded-xl bg-card border border-card-border py-3.5 text-sm font-medium text-muted cursor-not-allowed select-none"
-          aria-disabled="true"
-        >
-          ⏳ 串流連結待補
+function ActionLink({
+  icon,
+  label,
+  subLabel,
+  href,
+}: {
+  icon: React.ReactNode
+  label: string
+  subLabel: string
+  href?: string
+}) {
+  const className = 'flex items-center gap-3 rounded-[18px] border border-white/8 bg-white/[0.035] px-3 py-3 text-left transition-colors'
+
+  if (!href) {
+    return (
+      <div className={`${className} cursor-not-allowed opacity-55`}>
+        <span className="text-[#b6a9ff]">{icon}</span>
+        <div>
+          <p className="text-sm font-semibold text-white">{label}</p>
+          <p className="text-xs text-white/38">{subLabel}</p>
         </div>
-      )}
+      </div>
+    )
+  }
+
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" className={`${className} hover:bg-white/[0.06]`}>
+      <span className="text-[#b6a9ff]">{icon}</span>
+      <div>
+        <p className="text-sm font-semibold text-white">{label}</p>
+        <p className="text-xs text-white/38">{subLabel}</p>
+      </div>
+    </a>
+  )
+}
+
+function ShareAction({ title, text }: { title: string; text: string }) {
+  return (
+    <div className="rounded-[18px] border border-white/8 bg-white/[0.035] px-3 py-3">
+      <EventDetailShareBtn title={title} text={text} variant="inline" />
     </div>
   )
+}
+
+function getTypeLabel(event: Event): string {
+  if (event.subType && event.subType in EVENT_SUBTYPE_LABELS) {
+    return EVENT_SUBTYPE_LABELS[event.subType]
+  }
+  return EVENT_TYPE_LABELS[event.type] || event.type
+}
+
+function getStatusLabel(event: Event): string {
+  if (event.status === 'confirmed') return '官方確認'
+  if (event.status === 'tentative') return '待確認'
+  if (event.status === 'postponed') return '延期'
+  return '已取消'
+}
+
+function getSourceTypeLabel(type: string): string {
+  const labels: Record<string, string> = {
+    official_sns: '官方社群平台公告',
+    official_website: '官方網站公告',
+    media_outlet: '媒體或平台資訊',
+    fan_account: '可靠粉絲帳號整理',
+    community: '社群來源',
+    unknown: '來源類型未標記',
+  }
+  return labels[type] ?? type
+}
+
+function getTrackCode(id: string): string {
+  return id.replace(/[^a-z0-9]/gi, '').slice(0, 6).toUpperCase().padEnd(6, '0')
+}
+
+function getCoverTitle(event: Event): string {
+  return event.title
+    .replace(event.idolName, '')
+    .replace(/^[\s·:-]+/, '')
+    .trim() || event.title
 }
