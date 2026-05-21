@@ -1,9 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { notFound } from 'next/navigation'
-import Link from 'next/link'
 import {
-  ArrowLeft,
   CalendarDays,
   Clock3,
   ExternalLink,
@@ -24,6 +22,7 @@ import { getIdolById } from '@/lib/mockIdols'
 import { getEventById as getSupabaseEventById } from '@/lib/supabase/events'
 import { getEventDateLabel } from '@/lib/eventDisplay'
 import {
+  EventDetailBackBtn,
   EventDetailFavoriteBtn,
   EventDetailReminderBtn,
   EventDetailShareBtn,
@@ -57,13 +56,7 @@ export default async function EventDetailPage({
 
       <div className="relative mx-auto flex w-full max-w-[520px] flex-col gap-4 px-4 pt-10">
         <div className="flex items-center justify-between gap-3">
-          <Link
-            href="/schedule"
-            className="inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.04] px-3 py-2 text-sm font-medium text-white/72 transition-colors hover:text-white"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            返回
-          </Link>
+          <EventDetailBackBtn />
 
           <div className="flex items-center gap-2">
             <EventDetailShareBtn title={event.title} text={shareText} />

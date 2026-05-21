@@ -62,7 +62,7 @@ export default async function HomePage() {
           <div className="pointer-events-none absolute inset-0 opacity-[0.12] [background-image:radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.85)_1px,transparent_0)] [background-size:13px_13px]" />
           <div className="pointer-events-none absolute inset-0 rounded-[28px] border border-white/6" />
 
-          <div className="relative flex items-start justify-between gap-4">
+          <div className="relative">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.26em] text-[#ff8bc8]">
                 TODAY ARCHIVE
@@ -75,9 +75,6 @@ export default async function HomePage() {
                   ? '先看最近一筆已公開確認行程，再往下掃你的追蹤、提醒和收藏。'
                   : '目前沒有可顯示的公開確認行程，資料更新後會出現在這裡。'}
               </p>
-            </div>
-            <div className="rounded-full border border-[#ff6cb7]/24 bg-[#ff4ca1]/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#ff8bc8]">
-              VOL.05
             </div>
           </div>
 

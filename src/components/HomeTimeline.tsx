@@ -1,10 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import clsx from 'clsx'
 import {
   CalendarDays,
   ChevronRight,
+  Clock3,
+  Heart,
   MapPin,
   Newspaper,
   Play,
@@ -23,6 +26,7 @@ import { type Idol } from '@/lib/mockIdols'
 import { useAppState } from '@/lib/appState'
 import { getEventDateLabel } from '@/lib/eventDisplay'
 import IdolAvatar from './IdolAvatar'
+import ScheduleTrackCard from '@/app/schedule/ScheduleTrackCard'
 
 const MAX_FOLLOWED = 8
 const MAX_MORE = 6
@@ -119,16 +123,17 @@ function FollowedView({
           icon={<Sparkles className="h-4 w-4 text-primary" />}
           title="我追蹤的近期行程"
           count={followedTotal}
-          href="/schedule"
+          href="/favorites"
         />
         {followedEvents.length > 0 ? (
           <div className="flex flex-col gap-3">
             {followedEvents.map((event, index) => (
-              <HomeEventRow key={event.id} event={event} trackNumber={index + 1} />
+              <HomeTrackDisclosure key={event.id} event={event} trackNumber={index + 1} />
             ))}
             <SeeAllFooter
               shown={followedEvents.length}
               total={followedTotal}
+              href="/favorites"
             />
           </div>
         ) : (
@@ -154,7 +159,7 @@ function FollowedView({
           />
           <div className="flex flex-col gap-3">
             {otherEvents.map((event, index) => (
-              <HomeEventRow key={event.id} event={event} trackNumber={index + 1} compact />
+              <HomeTrackDisclosure key={event.id} event={event} trackNumber={index + 1} />
             ))}
             <SeeAllFooter shown={otherEvents.length} total={otherTotal} />
           </div>
@@ -215,7 +220,7 @@ function DefaultView({
         {todayEvents.length > 0 ? (
           <div className="flex flex-col gap-3">
             {todayEvents.map((event, index) => (
-              <HomeEventRow key={event.id} event={event} trackNumber={index + 1} />
+              <HomeTrackDisclosure key={event.id} event={event} trackNumber={index + 1} />
             ))}
           </div>
         ) : (
@@ -241,7 +246,7 @@ function DefaultView({
           />
           <div className="flex flex-col gap-3">
             {weekHighlights.slice(0, 3).map((event, index) => (
-              <HomeEventRow key={event.id} event={event} trackNumber={index + 1} compact />
+              <HomeTrackDisclosure key={event.id} event={event} trackNumber={index + 1} />
             ))}
             <SeeAllFooter shown={Math.min(3, weekHighlights.length)} total={weekHighlights.length} />
           </div>
@@ -258,7 +263,7 @@ function DefaultView({
           />
           <div className="flex flex-col gap-3">
             {streamableEvents.slice(0, 3).map((event, index) => (
-              <HomeEventRow key={event.id} event={event} trackNumber={index + 1} compact />
+              <HomeTrackDisclosure key={event.id} event={event} trackNumber={index + 1} />
             ))}
             <SeeAllFooter shown={Math.min(3, streamableEvents.length)} total={streamableEvents.length} />
           </div>
@@ -275,7 +280,7 @@ function DefaultView({
           />
           <div className="flex flex-col gap-3">
             {newsEvents.slice(0, 3).map((event, index) => (
-              <HomeEventRow key={event.id} event={event} trackNumber={index + 1} compact />
+              <HomeTrackDisclosure key={event.id} event={event} trackNumber={index + 1} />
             ))}
             <SeeAllFooter shown={Math.min(3, newsEvents.length)} total={newsEvents.length} />
           </div>
@@ -290,11 +295,19 @@ function DefaultView({
  * full list fits inside the displayed slice (shown >= total) — keeps the
  * homepage uncluttered when traffic is low.
  */
-function SeeAllFooter({ shown, total }: { shown: number; total: number }) {
+function SeeAllFooter({
+  shown,
+  total,
+  href = '/schedule',
+}: {
+  shown: number
+  total: number
+  href?: string
+}) {
   if (shown >= total) return null
   return (
     <Link
-      href="/schedule"
+      href={href}
       className="rounded-[18px] border border-white/8 bg-white/[0.035] px-4 py-2.5 text-center text-xs font-semibold text-[#ff8bc8] transition-colors hover:bg-white/[0.055]"
     >
       查看全部 {total} 場 →
@@ -330,75 +343,138 @@ function SectionHeader({
   )
 }
 
-function HomeEventRow({
+function HomeTrackDisclosure({
   event,
   trackNumber,
-  compact = false,
 }: {
   event: Event
   trackNumber: number
-  compact?: boolean
 }) {
+  const { favorites } = useAppState()
+  const [expanded, setExpanded] = useState(false)
+  const [expandedVisible, setExpandedVisible] = useState(false)
+  const collapseTimerRef = useRef<number | null>(null)
+  const isFavorited = favorites.has(event.id)
   const dateLabel = getEventDateLabel(event)
-  const typeLabel = event.subType
-    ? EVENT_SUBTYPE_LABELS[event.subType]
-    : EVENT_TYPE_LABELS[event.type]
-  const sourceConfig = SOURCE_CONFIG[event.source.level]
   const locationLabel = event.venueName || event.location || event.city || event.country
 
+  useEffect(() => {
+    return () => {
+      if (collapseTimerRef.current !== null) {
+        window.clearTimeout(collapseTimerRef.current)
+      }
+    }
+  }, [])
+
+  function toggleFavorite(e: React.MouseEvent<HTMLButtonElement>) {
+    e.stopPropagation()
+    favorites.toggle(event.id)
+  }
+
+  function openExpandedCard() {
+    if (collapseTimerRef.current !== null) {
+      window.clearTimeout(collapseTimerRef.current)
+      collapseTimerRef.current = null
+    }
+    setExpanded(true)
+    window.requestAnimationFrame(() => {
+      setExpandedVisible(true)
+    })
+  }
+
+  function collapseExpandedCard() {
+    setExpandedVisible(false)
+    collapseTimerRef.current = window.setTimeout(() => {
+      setExpanded(false)
+      collapseTimerRef.current = null
+    }, 180)
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      openExpandedCard()
+    }
+  }
+
   return (
-    <Link
-      href={`/events/${event.id}`}
-      className="group relative overflow-hidden rounded-[22px] border border-[#ff6cb7]/14 bg-[linear-gradient(180deg,rgba(44,33,54,0.9),rgba(24,18,31,0.96))] p-3 transition-transform active:scale-[0.99]"
-    >
-      <div className="absolute inset-y-3 left-0 w-1 rounded-r-full bg-[linear-gradient(180deg,rgba(255,108,183,0.9),rgba(130,94,255,0.72))]" />
-      <div className="relative flex items-start gap-3 pl-3">
-        <IdolAvatar
-          name={event.idolName}
-          avatarUrl={event.idolAvatarUrl}
-          color="#6366f1"
-          size={compact ? 'sm' : 'md'}
-        />
-
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-xs font-bold uppercase tracking-normal text-[#ff6cb7]">
-                {event.idolName}
-              </p>
-              <h3 className={compact ? 'mt-1 line-clamp-1 text-sm font-black leading-snug text-white' : 'mt-1 line-clamp-2 text-base font-black leading-snug text-white'}>
-                {event.title}
-              </h3>
-            </div>
-            <span className="flex-shrink-0 rounded-full border border-white/16 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/48">
-              TRK {String(trackNumber).padStart(2, '0')}
-            </span>
-          </div>
-
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-[#ff6cb7]/18 bg-[#ff4ca1]/10 px-2.5 py-1 text-[11px] font-semibold text-[#ff93ca]">
-              {typeLabel}
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/14 bg-emerald-400/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-300">
-              <span className={event.source.level === 'official' ? 'h-1.5 w-1.5 rounded-full bg-emerald-300' : 'h-1.5 w-1.5 rounded-full bg-sky-300'} />
-              {sourceConfig.label}
-            </span>
-          </div>
-
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/50">
-            <span className="inline-flex items-center gap-1.5">
-              <CalendarDays className="h-3.5 w-3.5 text-[#ff8bc8]" />
-              {dateLabel}{event.time ? ` · ${event.time}` : ''}
-            </span>
-            {locationLabel && (
-              <span className="inline-flex min-w-0 items-center gap-1.5">
-                <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-[#b7a7ff]" />
-                <span className="truncate">{locationLabel}</span>
-              </span>
-            )}
-          </div>
+    <div className="flex flex-col gap-2">
+      {expanded ? (
+        <div
+          className={clsx(
+            'origin-top transition-all duration-200 ease-out',
+            expandedVisible ? 'scale-100 opacity-100' : 'scale-[0.98] opacity-0',
+          )}
+        >
+          <ScheduleTrackCard
+            event={event}
+            trackNumber={trackNumber}
+            onCollapse={collapseExpandedCard}
+          />
         </div>
-      </div>
-    </Link>
+      ) : (
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={openExpandedCard}
+          onKeyDown={handleKeyDown}
+          className="group flex w-full cursor-pointer items-center gap-3 rounded-[18px] border border-white/8 bg-white/[0.028] px-3 py-2.5 text-left transition-all hover:border-[#ff63bd]/18 hover:bg-white/[0.045] active:scale-[0.99]"
+        >
+          <div className="rounded-[14px] border border-white/8 bg-white/[0.035] p-1">
+            <IdolAvatar
+              name={event.idolName}
+              avatarUrl={event.idolAvatarUrl}
+              color={idolPrimaryColor(event.idolId)}
+              size="sm"
+              className="rounded-[10px]"
+            />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="truncate text-[12px] font-semibold text-[#ff73c1]">
+                {event.idolName}
+              </span>
+              <span className="rounded-full border border-white/8 bg-white/[0.04] px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.16em] text-white/38">
+                TRK {String(trackNumber).padStart(2, '0')}
+              </span>
+            </div>
+            <p className="mt-0.5 line-clamp-1 text-[14px] font-semibold leading-5 text-white/88">
+              {event.title}
+            </p>
+            <div className="mt-1 flex min-w-0 items-center gap-2 text-[10px] text-white/42">
+              <span className="inline-flex items-center gap-1">
+                <Clock3 className="h-3 w-3 text-[#ff92c7]" />
+                {dateLabel}
+              </span>
+              {locationLabel && (
+                <span className="inline-flex min-w-0 items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  <span className="truncate">{locationLabel}</span>
+                </span>
+              )}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={toggleFavorite}
+            aria-label={isFavorited ? '取消收藏' : '收藏'}
+            className={clsx(
+              'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border transition-all',
+              isFavorited
+                ? 'border-[#ff5db7]/30 bg-[#ff5db7]/18 text-[#ff78c4] shadow-[0_0_18px_rgba(255,93,183,0.22)]'
+                : 'border-white/8 bg-white/[0.03] text-white/36 group-hover:text-white/65',
+            )}
+          >
+            <Heart className={clsx('h-4 w-4', isFavorited && 'fill-current')} />
+          </button>
+        </div>
+      )}
+    </div>
   )
+}
+
+function idolPrimaryColor(idolId: string): string {
+  const palette = ['#6d4cff', '#ff5fae', '#00c2ff', '#7a5cff', '#4fd1a5', '#ff8d4d']
+  const hash = Array.from(idolId).reduce((sum, char) => sum + char.charCodeAt(0), 0)
+  return palette[hash % palette.length]
 }
