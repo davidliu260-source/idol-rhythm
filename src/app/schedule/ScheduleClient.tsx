@@ -1,11 +1,10 @@
 'use client'
 
-import { type ReactNode, useEffect, useMemo, useState } from 'react'
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Clock3, Heart, ListFilter, MapPin, Search, Waves, X } from 'lucide-react'
 import clsx from 'clsx'
 import IdolAvatar from '@/components/IdolAvatar'
 import type { Event } from '@/lib/mockEvents'
-import type { Idol } from '@/lib/types'
 import { formatEventDate } from '@/lib/mockEvents'
 import { getEventDateLabel } from '@/lib/eventDisplay'
 import { useAppState } from '@/lib/appState'
@@ -13,11 +12,10 @@ import ScheduleTrackCard from './ScheduleTrackCard'
 
 interface Props {
   events: Event[]
-  idols: Idol[]
 }
 
 type ViewMode = 'timeline' | 'calendar'
-type ScheduleCategory = 'all' | 'concert' | 'musicshow' | 'media' | 'brand' | 'other'
+type ScheduleCategory = 'all' | 'concert' | 'musicshow' | 'media' | 'brand' | 'youtube' | 'netflix' | 'other'
 
 const SCHEDULE_CATEGORIES: Array<{ id: ScheduleCategory; label: string }> = [
   { id: 'all', label: '全部' },
@@ -25,6 +23,8 @@ const SCHEDULE_CATEGORIES: Array<{ id: ScheduleCategory; label: string }> = [
   { id: 'musicshow', label: '音樂節目' },
   { id: 'media', label: '媒體雜誌' },
   { id: 'brand', label: '品牌快閃' },
+  { id: 'youtube', label: 'YouTube' },
+  { id: 'netflix', label: 'Netflix' },
   { id: 'other', label: '其他行程' },
 ]
 
@@ -219,10 +219,10 @@ function MonthGroup({
         <div className="flex flex-col gap-2">
           {group.events.map((event, index) => (
             <TrackDisclosure
-            key={event.id}
-            event={event}
-            trackNumber={startTrack + index}
-          />
+              key={event.id}
+              event={event}
+              trackNumber={startTrack + index}
+            />
           ))}
         </div>
       )}
@@ -239,9 +239,19 @@ function TrackDisclosure({
 }) {
   const { favorites } = useAppState()
   const [expanded, setExpanded] = useState(false)
+  const [expandedVisible, setExpandedVisible] = useState(false)
+  const collapseTimerRef = useRef<number | null>(null)
   const isFavorited = favorites.has(event.id)
   const dateLabel = getEventDateLabel(event)
   const placeLabel = event.venueName || event.location || event.city || event.country
+
+  useEffect(() => {
+    return () => {
+      if (collapseTimerRef.current !== null) {
+        window.clearTimeout(collapseTimerRef.current)
+      }
+    }
+  }, [])
 
   function toggleFavorite(e: React.MouseEvent<HTMLButtonElement>) {
     e.stopPropagation()
@@ -249,7 +259,22 @@ function TrackDisclosure({
   }
 
   function toggleExpanded() {
-    setExpanded((value) => !value)
+    if (collapseTimerRef.current !== null) {
+      window.clearTimeout(collapseTimerRef.current)
+      collapseTimerRef.current = null
+    }
+    setExpanded(true)
+    window.requestAnimationFrame(() => {
+      setExpandedVisible(true)
+    })
+  }
+
+  function collapseExpandedCard() {
+    setExpandedVisible(false)
+    collapseTimerRef.current = window.setTimeout(() => {
+      setExpanded(false)
+      collapseTimerRef.current = null
+    }, 180)
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
@@ -262,7 +287,18 @@ function TrackDisclosure({
   return (
     <div className="flex flex-col gap-2">
       {expanded ? (
-        <ScheduleTrackCard event={event} trackNumber={trackNumber} />
+        <div
+          className={clsx(
+            'origin-top transition-all duration-200 ease-out',
+            expandedVisible ? 'scale-100 opacity-100' : 'scale-[0.98] opacity-0',
+          )}
+        >
+          <ScheduleTrackCard
+            event={event}
+            trackNumber={trackNumber}
+            onCollapse={collapseExpandedCard}
+          />
+        </div>
       ) : (
         <div
           role="button"
@@ -562,6 +598,11 @@ function ScheduleSearchPanel({
   resultCount: number
   totalCount: number
 }) {
+  const visibleCategories = SCHEDULE_CATEGORIES.filter((category) => {
+    if (category.id === 'all' || category.id === activeCategory) return true
+    return (categoryCounts.get(category.id) ?? 0) > 0
+  })
+
   return (
     <div className="px-4 mb-5 space-y-3">
       <label className="relative block">
@@ -595,7 +636,7 @@ function ScheduleSearchPanel({
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          {SCHEDULE_CATEGORIES.map((category) => (
+          {visibleCategories.map((category) => (
             <button
               key={category.id}
               onClick={() => onCategoryChange(category.id)}
@@ -651,12 +692,18 @@ function matchesScheduleCategory(event: Event, category: ScheduleCategory): bool
         event.subType === 'exhibition' ||
         event.subType === 'brand_event'
       )
+    case 'youtube':
+      return matchesPlatformKeyword(event, 'youtube')
+    case 'netflix':
+      return matchesPlatformKeyword(event, 'netflix')
     case 'other':
       return (
         !matchesScheduleCategory(event, 'concert') &&
         !matchesScheduleCategory(event, 'musicshow') &&
         !matchesScheduleCategory(event, 'media') &&
-        !matchesScheduleCategory(event, 'brand')
+        !matchesScheduleCategory(event, 'brand') &&
+        !matchesScheduleCategory(event, 'youtube') &&
+        !matchesScheduleCategory(event, 'netflix')
       )
   }
 }
@@ -704,11 +751,16 @@ function getSearchHaystack(event: Event): string {
       event.city,
       event.country,
       event.source.label,
+      event.description,
       event.tags?.join(' '),
     ]
       .filter(Boolean)
       .join(' '),
   )
+}
+
+function matchesPlatformKeyword(event: Event, keyword: 'youtube' | 'netflix'): boolean {
+  return getSearchHaystack(event).includes(keyword)
 }
 
 function normalizeSearch(value: string): string {
