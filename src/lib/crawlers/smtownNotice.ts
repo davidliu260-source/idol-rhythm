@@ -95,9 +95,7 @@ export function parseSmtownNoticeHtml(
 
     // Body is the next sibling `div.noticeBox` (per probe).
     const $box = $top.next('.noticeBox')
-    const bodyText = $box.length
-      ? $box.text().replace(/\s+/g, ' ').trim()
-      : ''
+    const bodyText = $box.length ? $box.text().replace(/\s+/g, ' ').trim() : ''
 
     // Build a stable noticeId. Numeric → use as-is; non-numeric (pinned)
     // → derive from title slug so multiple pinned items don't collide.
@@ -138,9 +136,15 @@ export function parseSmtownDate(raw: string): string | null {
   const day = Number(m[3])
 
   if (
-    !Number.isFinite(year) || year < 2000 || year > 2099 ||
-    !Number.isFinite(month) || month < 1 || month > 12 ||
-    !Number.isFinite(day) || day < 1 || day > 31
+    !Number.isFinite(year) ||
+    year < 2000 ||
+    year > 2099 ||
+    !Number.isFinite(month) ||
+    month < 1 ||
+    month > 12 ||
+    !Number.isFinite(day) ||
+    day < 1 ||
+    day > 31
   ) {
     return null
   }
@@ -171,18 +175,18 @@ export function parseSmtownDate(raw: string): string | null {
  */
 const EVENT_KEYWORD_INCLUDE = [
   // Korean event terms
-  '콘서트',   // concert
-  '공연',     // performance/show
-  '팬미팅',   // fan meeting
-  '팬콘',     // fan concert
+  '콘서트', // concert
+  '공연', // performance/show
+  '팬미팅', // fan meeting
+  '팬콘', // fan concert
   '팬사인회', // fan sign
   '쇼케이스', // showcase
-  '투어',     // tour
+  '투어', // tour
   '페스티벌', // festival
   '음악방송', // music broadcast
-  '컴백',     // comeback
-  '팝업',     // popup
-  '전시',     // exhibition
+  '컴백', // comeback
+  '팝업', // popup
+  '전시', // exhibition
   // English event terms
   'concert',
   'tour',
@@ -197,23 +201,23 @@ const EVENT_KEYWORD_INCLUDE = [
   'pop-up',
   'exhibition',
   'comeback',
-  'super show',  // SM-specific (SUPER JUNIOR SUPER SHOW series)
+  'super show', // SM-specific (SUPER JUNIOR SUPER SHOW series)
 ] as const
 
 // Explicit exclusion terms override inclusion matches (prevent false positives)
 const EVENT_KEYWORD_EXCLUDE = [
   // Korean admin
-  '개인정보',     // personal information / privacy
-  '처리방침',     // privacy policy
-  '약관',         // terms of service
-  '점검',         // maintenance
-  '오디션',       // audition
-  '모집',         // recruitment
-  '계약',         // contract
-  '법적',         // legal
-  '권익',         // rights
-  '안내문',       // notice document
-  '시즌그리팅',   // season's greetings (merch)
+  '개인정보', // personal information / privacy
+  '처리방침', // privacy policy
+  '약관', // terms of service
+  '점검', // maintenance
+  '오디션', // audition
+  '모집', // recruitment
+  '계약', // contract
+  '법적', // legal
+  '권익', // rights
+  '안내문', // notice document
+  '시즌그리팅', // season's greetings (merch)
   // English admin / merch / app
   'privacy policy',
   'terms of service',
@@ -259,27 +263,41 @@ export function isEventNotice(title: string): boolean {
  * Map notice title to event_type enum values from the DB schema:
  *   concert | ticketing | livestream | streaming | media | brand | official
  */
-export type SmtownEventType = 'concert' | 'ticketing' | 'media' | 'brand' | 'official'
+export type SmtownEventType =
+  | 'concert'
+  | 'ticketing'
+  | 'media'
+  | 'brand'
+  | 'official'
 
 export function mapNoticeToEventType(title: string): SmtownEventType | null {
   const lower = title.toLowerCase()
 
   if (
-    lower.includes('콘서트') || lower.includes('공연') ||
-    lower.includes('팬미팅') || lower.includes('팬콘') ||
-    lower.includes('팬사인회') || lower.includes('쇼케이스') ||
-    lower.includes('투어') || lower.includes('페스티벌') ||
-    lower.includes('concert') || lower.includes('tour') ||
-    lower.includes('fan meet') || lower.includes('fanmeet') ||
-    lower.includes('showcase') || lower.includes('festival') ||
+    lower.includes('콘서트') ||
+    lower.includes('공연') ||
+    lower.includes('팬미팅') ||
+    lower.includes('팬콘') ||
+    lower.includes('팬사인회') ||
+    lower.includes('쇼케이스') ||
+    lower.includes('투어') ||
+    lower.includes('페스티벌') ||
+    lower.includes('concert') ||
+    lower.includes('tour') ||
+    lower.includes('fan meet') ||
+    lower.includes('fanmeet') ||
+    lower.includes('showcase') ||
+    lower.includes('festival') ||
     lower.includes('super show')
   ) {
     return 'concert'
   }
 
   if (
-    lower.includes('팝업') || lower.includes('전시') ||
-    lower.includes('popup') || lower.includes('pop-up') ||
+    lower.includes('팝업') ||
+    lower.includes('전시') ||
+    lower.includes('popup') ||
+    lower.includes('pop-up') ||
     lower.includes('exhibition')
   ) {
     return 'brand'
@@ -342,9 +360,10 @@ export function entryToCandidatePayload(
   const raw_title = entry.title
   const detected_event_type = mapNoticeToEventType(entry.title)
 
-  const bodyPreview = entry.bodyText.length > BODY_PREVIEW_MAX
-    ? `${entry.bodyText.slice(0, BODY_PREVIEW_MAX).trim()} …`
-    : entry.bodyText
+  const bodyPreview =
+    entry.bodyText.length > BODY_PREVIEW_MAX
+      ? `${entry.bodyText.slice(0, BODY_PREVIEW_MAX).trim()} …`
+      : entry.bodyText
 
   const lines: string[] = [
     `Title: ${entry.title}`,

@@ -58,8 +58,9 @@
 --     044_seed_wakeone_notice_crawler_sources.sql (pattern reference)
 --
 -- EXECUTION
---   Run in Supabase SQL Editor:
---     BEGIN; <paste this file>; COMMIT;
+--   Run the whole file in Supabase SQL Editor.
+--   This file already includes BEGIN and COMMIT.
+--   Do not wrap it in another transaction.
 --
 -- REVIEW CHECKLIST
 --   [ ] Confirm aespa / riize / red-velvet / exo / nct slugs exist in

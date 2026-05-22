@@ -198,7 +198,9 @@ export async function runCrawlerSource(
         wouldInsert: 0,
         skipped: 0,
         recheck: 0,
-        errors: [`未知 parser_type：${source.parser_type}（dispatch table 未註冊）`],
+        errors: [
+          `未知 parser_type：${source.parser_type}（dispatch table 未註冊）`,
+        ],
         status: 200,
       }
   }

@@ -99,7 +99,10 @@ export interface FetcherResult {
   status: number
 }
 
-async function fetchPageHtml(url: string, signal: AbortSignal): Promise<string | null> {
+async function fetchPageHtml(
+  url: string,
+  signal: AbortSignal,
+): Promise<string | null> {
   try {
     const res = await fetch(url, {
       headers: { 'User-Agent': USER_AGENT, Accept: 'text/html' },
@@ -154,7 +157,10 @@ export async function runSmtownNoticeFetcher(
 
   if (source.parser_type !== EXPECTED_PARSER_TYPE) {
     const msg = `parser_type 不符：crawler_sources=${source.parser_type}，預期=${EXPECTED_PARSER_TYPE}`
-    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
+    await updateRunStatus(supabase, source.id, {
+      last_status: 'error',
+      last_error: msg,
+    })
     return base({
       errors: [msg],
       crawlerSourceId: source.id,
@@ -165,7 +171,10 @@ export async function runSmtownNoticeFetcher(
 
   if (!source.is_active) {
     const msg = `來源已停用：${source.name}`
-    await updateRunStatus(supabase, source.id, { last_status: 'skipped', last_error: msg })
+    await updateRunStatus(supabase, source.id, {
+      last_status: 'skipped',
+      last_error: msg,
+    })
     return base({
       errors: [msg],
       crawlerSourceId: source.id,
@@ -176,7 +185,10 @@ export async function runSmtownNoticeFetcher(
 
   if (!source.idol_id) {
     const msg = `crawler_sources 缺少 idol_id：${source.name}（smtown_notice 必須設定對應 idol）`
-    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
+    await updateRunStatus(supabase, source.id, {
+      last_status: 'error',
+      last_error: msg,
+    })
     return base({
       errors: [msg],
       crawlerSourceId: source.id,
@@ -190,7 +202,10 @@ export async function runSmtownNoticeFetcher(
     new URL(pageUrl)
   } catch {
     const msg = `source_url 不是合法 URL：${pageUrl}`
-    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
+    await updateRunStatus(supabase, source.id, {
+      last_status: 'error',
+      last_error: msg,
+    })
     return base({
       errors: [msg],
       crawlerSourceId: source.id,
@@ -209,7 +224,10 @@ export async function runSmtownNoticeFetcher(
 
   if (idolError || !idolRow) {
     const msg = `找不到對應 idol（id: ${source.idol_id}）：${idolError?.message ?? '無資料'}`
-    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
+    await updateRunStatus(supabase, source.id, {
+      last_status: 'error',
+      last_error: msg,
+    })
     return base({
       errors: [msg],
       crawlerSourceId: source.id,
@@ -218,11 +236,16 @@ export async function runSmtownNoticeFetcher(
     })
   }
 
-  const idolSlug = (idolRow.slug as string | null) ?? source.source_key.split('-smtown-')[0] ?? ''
+  const idolSlug =
+    (idolRow.slug as string | null) ??
+    source.source_key.split('-smtown-')[0] ??
+    ''
   const targetIdol: IdolForMatching = {
     id: idolRow.id as string,
     name: idolRow.name as string,
-    alt_names: ((idolRow.alt_names ?? []) as string[]).filter((s) => typeof s === 'string'),
+    alt_names: ((idolRow.alt_names ?? []) as string[]).filter(
+      (s) => typeof s === 'string',
+    ),
   }
   const matchIndex = buildIdolMatchIndex([targetIdol])
   const isNctRoot = idolSlug === 'nct'
@@ -356,7 +379,10 @@ export async function runSmtownNoticeFetcher(
     if (hashRes.error || urlRes.error) {
       const err = hashRes.error ?? urlRes.error
       const msg = `去重查詢失敗：${err?.code ? `[${err.code}] ` : ''}${err?.message ?? '未知錯誤'}`
-      await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
+      await updateRunStatus(supabase, source.id, {
+        last_status: 'error',
+        last_error: msg,
+      })
       return base({
         fetched: allEntries.length,
         eventFiltered,
@@ -461,7 +487,8 @@ export async function runSmtownNoticeFetcher(
 
   if (!dryRun) wouldInsert = inserted
 
-  const lastStatus: RunStatus = errors.length === 0 ? 'success' : 'partial_error'
+  const lastStatus: RunStatus =
+    errors.length === 0 ? 'success' : 'partial_error'
   await updateRunStatus(supabase, source.id, {
     last_status: lastStatus,
     last_error: errors.length > 0 ? errors.join('\n') : null,
