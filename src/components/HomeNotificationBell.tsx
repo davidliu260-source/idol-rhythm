@@ -50,7 +50,7 @@ export default function HomeNotificationBell() {
 
   return (
     <Link
-      href="/me#notifications"
+      href={user ? '/notifications' : '/me#notifications'}
       aria-label={label}
       className="relative flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full border border-white/8 bg-white/[0.045] text-white/64 transition-colors hover:text-white"
     >
