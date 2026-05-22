@@ -1,6 +1,6 @@
 # N6 工作單：event_reminder 通知派送 Cron
 
-> **狀態：v2（修正 PR #117 GPT review 提出的 5 點）**
+> **狀態：v2，待 GPT review / 待 approve 實作**
 > **關聯進度：** WORKING.md Item 83 N6
 > **前置條件：** migration 042 已執行 ✅、N4 + N5 已 merge ✅、PR #117 v1 已 merge ✅
 
@@ -74,9 +74,7 @@ WHERE r.is_sent = false
   )
 ```
 
-> **時區策略（N6 v1）**：以 Supabase DB server `CURRENT_DATE` 為準，只做 **date-level reminder**。
-> 不宣稱完整涵蓋 Taipei timezone — 邊界（午夜前後）的時間誤差視為可接受。
-> Hour-level / timezone-aware 派送一律留到 **N6b**，本輪不處理。
+> **時區策略**：N6 v1 以 Supabase DB server `CURRENT_DATE` 為準，只做 date-level reminder；不宣稱完整涵蓋 Taipei timezone；hour-level / timezone-aware 留到 N6b。
 > `hour_before` 類型：本輪查詢條件不包含，這些 reminders 的 `is_sent` 維持 false，待 N6b 接手。
 
 ### 3. 通知文字格式
@@ -201,17 +199,4 @@ Response 500: { ok: false, error: '...' }
 
 ---
 
-*工作單 v1 草稿 by Claude Opus 4.5 — 2026-05-22*
-*工作單 v2 修正（PR #117 GPT audit）by Claude Opus 4.5 — 2026-05-22*
-
----
-
-## v2 修正摘要（vs PR #117 v1）
-
-| # | 項目 | v1 → v2 |
-|---|---|---|
-| 1 | dedupe_key | `event_reminder:{event_id}` → `event_reminder:{event_id}:{reminder_type}`（避免同活動 week/day 互擋） |
-| 2 | is_sent 更新規則 | 新增明確規則：insert 成功 ✅ / dedup 略過 ✅ / 真正錯誤 ❌（不標） |
-| 3 | 驗收條件 5 | 修正第二次呼叫的預期值（is_sent 已 true → 查不到，應為 0/0/0） |
-| 4 | 時區描述 | 收斂為 date-level only，不宣稱涵蓋 Taipei timezone |
-| 5 | 驗收條件 7 | 新增：同活動同 user 雙 reminder_type 不互擋 |
+*工作單 v2 by Claude Opus 4.5 — 2026-05-22*
