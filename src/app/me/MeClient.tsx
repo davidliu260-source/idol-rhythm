@@ -111,7 +111,7 @@ export default function MeClient({
           </div>
         </section>
 
-        <section className="rounded-[26px] border border-white/8 bg-white/[0.035] p-5 text-center">
+        <section id="notifications" className="rounded-[26px] border border-white/8 bg-white/[0.035] p-5 text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-white/8 bg-white/[0.04] text-white/72">
             <LibraryBig className="h-7 w-7" />
           </div>
