@@ -354,11 +354,13 @@ export default function MeClient({
             label="通知設定"
             desc="之後 app 化時，活動即將來臨的手機通知會從這裡延伸。"
           />
-          <MenuRow
-            icon={<Shield className="h-4 w-4" />}
-            label="隱私與帳號"
-            desc="維持目前登入狀態與個人資料同步。"
-          />
+          <Link href="/account/settings" className="block">
+            <MenuRow
+              icon={<Shield className="h-4 w-4" />}
+              label="帳號設定"
+              desc="變更 email、刪除帳號。"
+            />
+          </Link>
         </div>
         <div className="mt-4">
           <SignOutButton />
