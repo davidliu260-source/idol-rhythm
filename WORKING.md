@@ -9,8 +9,8 @@
 
 | 項目 | 值 |
 |---|---|
-| 目前階段 | S1 / C1 / I1a / I1b-A / J7d-A / 忘記密碼 / M1a / admin 刪除草稿 / M1b 第一批 + 第二批 + M1b-3（75 個 active idol）/ trust_level 單一真相 / Supabase SSR middleware / 後台 4 頁 filter tabs + 搜尋 pilot / 後台 idols「缺資料」tab / I1b-B AI 搜圖（Wikimedia + 可重搜）/ I1b-C avatar 來源紀錄 + 多色 placeholder / 前台 polish 6 改動 / #45 description + color 補齊 / Source Inventory A / YG crawler 工作單 / YG artist schedule crawler / 中文顯示 + 快閃店資料模型 / 後台中文欄位 / 前台中文顯示 / 活動類型 icon / 摘要 fallback / 中文生成工作單 / 候選 + 草稿單筆繁中生成 / 繁中欄位標記已審閱 / WAKEONE crawler 工作單 / SMTOWN crawler 工作單 / UI-1 `/schedule` Cassette Archive v3 / UI-2 `/schedule` 搜尋 + 月份展開 + 小扁框活動列 / UI-3 `/events/[id]` Cassette Detail v1 / UI-4 `/favorites` Archive Shelf / UI-5 首頁 `/` Today Archive v1 follow-up / UI-6 `/me` Personal Console v1 / UI-7 `/idols` Archive Roster v1 / UI-8 `/idols/[slug]` Archive Detail v1 / UI-9 auth pages visual pass。下一步建議：回頭整理通知系統工作單；另有 Weverse 技術探測工作單與「後台用戶統計」待排程 |
-| 輔助參考 | `ADMIN_ROADMAP.md`（後台分階段開發路線）、`AI_PIPELINE_PLAN.md`（爬蟲架構設計文件）、`SOURCE_INVENTORY_A.md`（官方來源盤點研究附件；不是流程索引，流程仍以本檔為準）、`MAINSTREAM_ARTIST_SEED_WORK_ORDER.md`（主流漏網藝人 seed 工作單；只做規劃）、`CHINESE_GENERATION_WORK_ORDER.md`（繁中顯示文案生成工作單；只做規劃） |
+| 目前階段 | S1 / C1 / I1a / I1b-A / J7d-A / 忘記密碼 / M1a / admin 刪除草稿 / M1b 第一批 + 第二批 + M1b-3（75 個 active idol）/ trust_level 單一真相 / Supabase SSR middleware / 後台 4 頁 filter tabs + 搜尋 pilot / 後台 idols「缺資料」tab / I1b-B AI 搜圖（Wikimedia + 可重搜）/ I1b-C avatar 來源紀錄 + 多色 placeholder / 前台 polish 6 改動 / #45 description + color 補齊 / Source Inventory A / YG crawler 工作單 / YG artist schedule crawler / 中文顯示 + 快閃店資料模型 / 後台中文欄位 / 前台中文顯示 / 活動類型 icon / 摘要 fallback / 中文生成工作單 / 候選 + 草稿單筆繁中生成 / 繁中欄位標記已審閱 / WAKEONE crawler 工作單 / SMTOWN crawler 工作單 / UI-1 `/schedule` Cassette Archive v3 / UI-2 `/schedule` 搜尋 + 月份展開 + 小扁框活動列 / UI-3 `/events/[id]` Cassette Detail v1 / UI-4 `/favorites` Archive Shelf / UI-5 首頁 `/` Today Archive v1 follow-up / UI-6 `/me` Personal Console v1 / UI-7 `/idols` Archive Roster v1 / UI-8 `/idols/[slug]` Archive Detail v1 / UI-9 auth pages visual pass / N1 通知系統工作單 v1。下一步建議：若 review 通過，先拆 notifications 資料模型工作單；另有 Weverse 技術探測工作單與「後台用戶統計」待排程 |
+| 輔助參考 | `ADMIN_ROADMAP.md`（後台分階段開發路線）、`AI_PIPELINE_PLAN.md`（爬蟲架構設計文件）、`SOURCE_INVENTORY_A.md`（官方來源盤點研究附件；不是流程索引，流程仍以本檔為準）、`MAINSTREAM_ARTIST_SEED_WORK_ORDER.md`（主流漏網藝人 seed 工作單；只做規劃）、`CHINESE_GENERATION_WORK_ORDER.md`（繁中顯示文案生成工作單；只做規劃）、`NOTIFICATION_SYSTEM_WORK_ORDER.md`（通知系統短版工作單；只做規劃） |
 
 ---
 
@@ -103,6 +103,7 @@
 | 75 | UI-7 `/idols` Archive Roster v1 | 以 `/idols` 為唯一主範圍，將偶像列表升級成 archive roster：暖紫黑 roster header、搜尋與公司篩選重做、追蹤名單與繼續探索分區、卡片視覺接上 archive 語言；不改追蹤邏輯、query、DB、crawler、其他頁資料邏輯 | ✅ PR #106 merged |
 | 76 | UI-8 `/idols/[slug]` Archive Detail v1 | 以 `/idols/[slug]` 為唯一主範圍，將偶像詳情頁升級成 archive detail：dossier hero、追蹤按鈕視覺對齊、檔案資訊 stats、描述分區、即將到來與已歸檔行程層級重做；後續用 PR #108 補 `/idols` roster card 名稱可見性；不改追蹤邏輯、query、DB、crawler、其他頁資料邏輯 | ✅ PR #107 + #108 merged |
 | 77 | UI-9 auth pages visual pass | 以 `/login`、`/forgot-password`、`/reset-password` 為唯一主範圍，將 auth 入口升級成 archive/control deck 語言：暖紫黑 shell、登入/恢復密碼 panel、tabs 與表單視覺重做、已登入與成功狀態整理；不改 auth 流程、query、DB、crawler、其他頁資料邏輯 | ✅ PR #109 merged |
+| 78 | N1 通知系統工作單 v1 | `NOTIFICATION_SYSTEM_WORK_ORDER.md`：短版定義 reminder vs notification 邊界、首頁鈴鐺與 `/me` 分工、v1 只支援活動提醒通知與追蹤偶像新活動通知、收藏不自動轉通知、建議未來拆 PR 為資料模型 / 通知頁 / 派送機制；只做工作單，不改 DB / UI / push runtime | ⏳ PR #111 待驗收 |
 
 ---
 
