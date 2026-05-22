@@ -24,8 +24,7 @@ interface CronErrResponse {
 // Internal types
 // ---------------------------------------------------------------------------
 
-// Supabase returns joined relations as arrays even for to-one joins with !inner
-type EventShape = {
+interface EventRow {
   id: string
   idol_id: string
   idol_name: string
@@ -35,9 +34,10 @@ type EventShape = {
   published_at: string
 }
 
-type RawRow = {
+interface FollowRow {
   user_id: string
-  events: EventShape | EventShape[]
+  idol_id: string
+  created_at: string
 }
 
 interface PendingDispatch {
@@ -75,13 +75,18 @@ function buildBody(eventTitle: string, eventDate: string): string {
  * Vercel Cron schedule (vercel.json): "0 2 * * *"  -- 10:00 Asia/Taipei daily
  * Runs 30 min after dispatch-reminders ("30 1 * * *") to avoid overlap.
  *
- * Scans events published in the last 25 hours, finds users who follow the
- * event's idol, and inserts followed_idol_new_event notifications.
+ * Step A: Query events published in the last 25 hours
+ *         (is_published, trust_level in official/media, published_at not null)
+ * Step B: Query user_follows by idol_id IN events.idol_id list
+ *         (must select created_at for the no-backfill guard)
+ * Step C: Pair events and follows by idol_id in JS, apply no-backfill rule
+ * Step D: Batch upsert notifications with ON CONFLICT DO NOTHING
  *
  * Key invariants:
- * - No backfill: only notifies if published_at >= user_follows.created_at
+ * - No backfill: only notifies if event.published_at >= user_follows.created_at
  * - Idempotent: ON CONFLICT (user_id, dedupe_key) DO NOTHING
  * - dedupe_key = followed_idol_new_event:{event_id}
+ *   (unique constraint is (user_id, dedupe_key), no need to embed user_id)
  *
  * Auth: Authorization: Bearer {CRON_SECRET}
  */
@@ -124,76 +129,99 @@ export async function GET(
     )
   }
 
-  // -- Step 1+2: Query new published events with followers -------------------
+  // -- Step A: Query recently published events ------------------------------
   // Scan window: past 25 hours (24h + 1h buffer for cron delay)
-  // No backfill: published_at >= user_follows.created_at
-  const { data: rawRows, error: queryError } = await supabase
-    .from('user_follows')
-    .select(`
-      user_id,
-      events!inner (
-        id,
-        idol_id,
-        idol_name,
-        title,
-        type,
-        date,
-        published_at,
-        is_published,
-        trust_level
-      )
-    `)
-    .not('events.published_at', 'is', null)
-    .eq('events.is_published', true)
-    .in('events.trust_level', ['official', 'media'])
+  const windowMs = 25 * 60 * 60 * 1000
+  const windowCutoffIso = new Date(Date.now() - windowMs).toISOString()
 
-  if (queryError) {
+  const { data: eventRows, error: eventErr } = await supabase
+    .from('events')
+    .select('id, idol_id, idol_name, title, type, date, published_at')
+    .eq('is_published', true)
+    .in('trust_level', ['official', 'media'])
+    .not('published_at', 'is', null)
+    .gte('published_at', windowCutoffIso)
+
+  if (eventErr) {
     return NextResponse.json(
       {
         ok: false,
         trigger: 'vercel-cron',
-        error: `查詢 user_follows 失敗: ${queryError.message}`,
+        error: `查詢 events 失敗: ${eventErr.message}`,
       },
       { status: 500 },
     )
   }
 
-  // Filter in JS: published within 25h window + no-backfill guard
-  const windowMs = 25 * 60 * 60 * 1000
-  const windowCutoff = new Date(Date.now() - windowMs)
+  const events: EventRow[] = (eventRows ?? []) as EventRow[]
 
-  type RawFollowRow = {
-    user_id: string
-    created_at: string
-    events: EventShape | EventShape[]
+  // No new events in window -> nothing to dispatch
+  if (events.length === 0) {
+    return NextResponse.json(
+      { ok: true, trigger: 'vercel-cron', dispatched: 0, skipped_dedup: 0 },
+      { status: 200 },
+    )
   }
 
-  const dispatches: PendingDispatch[] = ((rawRows ?? []) as unknown as RawFollowRow[])
-    .flatMap((row) => {
-      const e = Array.isArray(row.events) ? row.events[0] : row.events
-      if (!e) return []
-      if (!e.published_at) return []
+  // -- Step B: Query user_follows by idol_id list ---------------------------
+  // Must select created_at for the no-backfill guard.
+  const idolIds = Array.from(new Set(events.map((e) => e.idol_id)))
 
-      const publishedAt = new Date(e.published_at)
-      const followedAt = new Date(row.created_at)
+  const { data: followRows, error: followErr } = await supabase
+    .from('user_follows')
+    .select('user_id, idol_id, created_at')
+    .in('idol_id', idolIds)
 
-      // Must be within 25-hour scan window
-      if (publishedAt < windowCutoff) return []
+  if (followErr) {
+    return NextResponse.json(
+      {
+        ok: false,
+        trigger: 'vercel-cron',
+        error: `查詢 user_follows 失敗: ${followErr.message}`,
+      },
+      { status: 500 },
+    )
+  }
+
+  const follows: FollowRow[] = (followRows ?? []) as FollowRow[]
+
+  if (follows.length === 0) {
+    return NextResponse.json(
+      { ok: true, trigger: 'vercel-cron', dispatched: 0, skipped_dedup: 0 },
+      { status: 200 },
+    )
+  }
+
+  // -- Step C: Pair events and follows in JS --------------------------------
+  // Group follows by idol_id for O(1) lookup
+  const followsByIdol = new Map<string, FollowRow[]>()
+  for (const f of follows) {
+    const list = followsByIdol.get(f.idol_id) ?? []
+    list.push(f)
+    followsByIdol.set(f.idol_id, list)
+  }
+
+  const dispatches: PendingDispatch[] = []
+  for (const ev of events) {
+    const publishedAt = new Date(ev.published_at)
+    const matchingFollows = followsByIdol.get(ev.idol_id) ?? []
+    for (const f of matchingFollows) {
       // No backfill: skip if event was published before user followed
-      if (publishedAt < followedAt) return []
+      const followedAt = new Date(f.created_at)
+      if (publishedAt < followedAt) continue
 
-      return [{
-        user_id: row.user_id,
-        event_id: e.id,
-        idol_id: e.idol_id,
-        idol_name: e.idol_name,
-        event_title: e.title,
-        event_type: e.type,
-        event_date: e.date,
-      }]
-    })
+      dispatches.push({
+        user_id: f.user_id,
+        event_id: ev.id,
+        idol_id: ev.idol_id,
+        idol_name: ev.idol_name,
+        event_title: ev.title,
+        event_type: ev.type,
+        event_date: ev.date,
+      })
+    }
+  }
 
-  // -- Step 3: Nothing to dispatch ------------------------------------------
   if (dispatches.length === 0) {
     return NextResponse.json(
       { ok: true, trigger: 'vercel-cron', dispatched: 0, skipped_dedup: 0 },
@@ -203,7 +231,7 @@ export async function GET(
 
   const N = dispatches.length
 
-  // -- Step 4: Build notifications payload ----------------------------------
+  // -- Step D: Build notifications payload and upsert -----------------------
   // dedupe_key = followed_idol_new_event:{event_id}
   // unique constraint (user_id, dedupe_key) ensures one notification per user per event
   const notificationsPayload = dispatches.map((d) => ({
@@ -217,7 +245,6 @@ export async function GET(
     payload: { event_type: d.event_type, event_date: d.event_date },
   }))
 
-  // -- Step 5: Batch upsert (ON CONFLICT DO NOTHING) ------------------------
   // ignoreDuplicates: true  => ON CONFLICT DO NOTHING
   // .select('id')           => only inserted rows returned (not dedup-skipped)
   const { data: inserted, error: upsertError } = await supabase
@@ -241,7 +268,6 @@ export async function GET(
 
   const insertedCount = inserted?.length ?? 0
 
-  // -- Step 6: Return -------------------------------------------------------
   return NextResponse.json(
     {
       ok: true,
