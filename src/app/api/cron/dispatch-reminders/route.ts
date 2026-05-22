@@ -83,7 +83,8 @@ function utcDateOffsetString(days: number): string {
 /**
  * GET /api/cron/dispatch-reminders
  *
- * Vercel Cron schedule (vercel.json): "0 * * * *"  -- top of every hour (UTC)
+ * Vercel Cron schedule (vercel.json): "30 1 * * *"  -- 09:30 Asia/Taipei (UTC+8) daily
+ * Note: Vercel Hobby plan only allows daily cron jobs. date-level reminders run once/day.
  *
  * Scans reminders with is_sent=false and reminder_type in (day_before, week_before).
  * Inserts event_reminder notifications for events whose date matches the window.
