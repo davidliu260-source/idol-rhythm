@@ -3,6 +3,7 @@ import { runBlackpinkFetcher } from './runBlackpinkFetcher'
 import { runJypScheduleFetcher } from './runJypScheduleFetcher'
 import { runKpopofficialConcertsFetcher } from './runKpopofficialConcertsFetcher'
 import { runYgArtistScheduleFetcher } from './runYgArtistScheduleFetcher'
+import { runWakeoneNoticeFetcher } from './runWakeoneNoticeFetcher'
 
 export type CrawlerRunTrigger = 'vercel-cron' | 'admin-manual'
 
@@ -126,6 +127,26 @@ export async function runCrawlerSource(
     }
     case 'yg_artist_schedule': {
       const r = await runYgArtistScheduleFetcher(supabase, {
+        sourceKey: source.source_key,
+        dryRun,
+      })
+      return {
+        source: r.source,
+        sourceKey: r.sourceKey,
+        sourceName: r.sourceName ?? source.name,
+        parserType: source.parser_type,
+        mode: r.mode,
+        fetched: r.fetched,
+        inserted: r.inserted,
+        wouldInsert: r.wouldInsert,
+        skipped: r.skipped,
+        recheck: r.recheck,
+        errors: r.errors,
+        status: r.status,
+      }
+    }
+    case 'wakeone_notice': {
+      const r = await runWakeoneNoticeFetcher(supabase, {
         sourceKey: source.source_key,
         dryRun,
       })
