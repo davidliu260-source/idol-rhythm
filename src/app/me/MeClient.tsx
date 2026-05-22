@@ -226,11 +226,14 @@ export default function MeClient({
                 </p>
               </>
             )}
-            {/* 通知頁入口：N5 建立 /notifications 後啟用連結 */}
-            <div className="mt-4 flex items-center gap-2 rounded-xl border border-white/6 bg-white/[0.03] px-3 py-2.5 text-xs text-white/40">
+            <Link
+              href="/notifications"
+              className="mt-4 flex items-center gap-2 rounded-xl border border-white/8 bg-white/[0.045] px-3 py-2.5 text-xs font-semibold text-white/64 transition-colors hover:text-white"
+            >
               <Inbox className="h-3.5 w-3.5 flex-shrink-0" />
-              <span>完整通知列表即將推出</span>
-            </div>
+              <span>查看完整通知列表</span>
+              <ChevronRight className="ml-auto h-3.5 w-3.5 flex-shrink-0" />
+            </Link>
           </div>
           <div className="rounded-[22px] border border-white/8 bg-black/10 px-4 py-4">
             <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-white/40">
