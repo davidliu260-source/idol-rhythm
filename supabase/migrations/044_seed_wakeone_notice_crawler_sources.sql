@@ -33,8 +33,18 @@
 --   change. Safe to re-run.
 --
 -- DEPENDENCY
---   Must be run AFTER:
---     043_seed_mainstream_artists_m1b4.sql  (ensures izna, jo-yuri slugs exist)
+--   Requires the following idol slugs to already exist in public.idols:
+--     - zerobaseone
+--     - kep1er
+--     - izna
+--
+--   Of these three, only `izna` may have been added by migration 043
+--   (M1b-4 mainstream artist seed). ZEROBASEONE and Kep1er were seeded
+--   earlier (M1b second batch) and migration 043 does NOT guarantee them.
+--   If any slug is missing the matching INSERT silently inserts zero rows
+--   (no error), so always verify with the review checklist below.
+--
+--   Also requires:
 --     019_crawler_sources.sql              (crawler_sources table)
 --     040_seed_yg_artist_schedule_sources.sql (pattern reference)
 --
@@ -43,8 +53,8 @@
 --     BEGIN; <paste this file>; COMMIT;
 --
 -- REVIEW CHECKLIST
---   [ ] Confirm ZEROBASEONE, Kep1er, izna slugs exist in idols table.
---   [ ] Confirm 3 rows inserted in crawler_sources.
+--   [ ] Confirm zerobaseone, kep1er, izna slugs exist in idols table.
+--   [ ] Confirm 3 rows inserted in crawler_sources (one per slug).
 --   [ ] Confirm parser_type = 'wakeone_notice' for all 3 rows.
 --   [ ] Confirm idol_id IS NOT NULL for all 3 rows.
 --   [ ] Test manual run via POST /api/admin/crawlers/wakeone-notice/run
