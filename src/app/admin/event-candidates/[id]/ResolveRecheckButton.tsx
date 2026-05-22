@@ -17,24 +17,18 @@ export default function ResolveRecheckButton({
 }: ResolveRecheckButtonProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const [message, setMessage] = useState<{ type: 'ok' | 'warn' | 'error'; text: string } | null>(
-    null,
-  )
+  const [message, setMessage] = useState<{ type: 'ok' | 'error'; text: string } | null>(null)
 
   function run() {
     setMessage(null)
     startTransition(async () => {
       const result = await resolveRecheck(candidateId)
       if (!result.ok) {
-        setMessage({ type: 'error', text: result.error ?? '解決失敗' })
+        // Sync failed (approved path) or clear failed: show error, do not refresh
+        setMessage({ type: 'error', text: result.error ?? '操作失敗' })
         return
       }
-      // ok=true but sync failed (non-fatal) — result.error contains the detail
-      if (result.error) {
-        setMessage({ type: 'warn', text: result.error })
-        router.refresh()
-        return
-      }
+      // Success: flag cleared (and event synced if applicable)
       const text = result.synced
         ? '已解決：重審標記已清除，中文欄位已同步至活動'
         : '已解決：重審標記已清除'
@@ -67,9 +61,7 @@ export default function ResolveRecheckButton({
           className={
             message.type === 'ok'
               ? 'text-[10px] text-orange-400/80 leading-snug'
-              : message.type === 'warn'
-                ? 'text-[10px] text-amber-400 leading-snug break-all'
-                : 'text-[10px] text-red-400 leading-snug break-all'
+              : 'text-[10px] text-red-400 leading-snug break-all'
           }
         >
           {message.text}

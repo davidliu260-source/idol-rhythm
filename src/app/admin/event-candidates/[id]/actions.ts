@@ -362,16 +362,20 @@ export async function approveCandidate(id: string): Promise<void> {
 }
 
 /**
- * Resolves the needs_recheck flag on a candidate:
- *   1. Clears needs_recheck to false
- *   2. If the candidate is approved and has an approved_event_id, syncs
- *      Chinese display fields (display_title_zh, display_summary_zh,
- *      location_name_zh, translation_status, translation_source) from the
- *      candidate to the linked event — approved event auto-sync strategy.
+ * Resolves the needs_recheck flag on a candidate.
  *
- * Sync is unconditional for non-null candidate fields: the candidate is the
- * source of truth for display content; admin resolving the recheck implies
- * they have reviewed/updated the candidate and want the event to reflect it.
+ * Order of operations:
+ *   A. If review_status === 'approved' AND approved_event_id exists:
+ *      1. Sync Chinese display fields from candidate to the linked event FIRST.
+ *         Fields synced: display_title_zh, display_summary_zh, location_name_zh,
+ *         translation_status, translation_source, translation_updated_at.
+ *      2. If event sync fails: return ok:false + error. needs_recheck is NOT cleared.
+ *      3. If event sync succeeds: clear needs_recheck. Return ok:true, synced:true.
+ *   B. Otherwise (pending / rejected / no approved_event_id):
+ *      1. Clear needs_recheck directly. Return ok:true, synced:false.
+ *
+ * Clearing needs_recheck only happens after a successful event sync (when required),
+ * so a sync failure leaves the candidate in a retryable state.
  */
 export async function resolveRecheck(id: string): Promise<ResolveRecheckActionResult> {
   try {
@@ -380,7 +384,7 @@ export async function resolveRecheck(id: string): Promise<ResolveRecheckActionRe
     const supabase = getSupabaseServerClient()
     if (!supabase) throw new Error('Supabase 未設定')
 
-    // Fetch candidate fields needed for sync decision
+    // Fetch candidate fields needed for sync and flag-clear
     const { data: candidate, error: fetchError } = await supabase
       .from('event_candidates')
       .select(
@@ -393,24 +397,15 @@ export async function resolveRecheck(id: string): Promise<ResolveRecheckActionRe
       throw new Error(`找不到候選活動：${fetchError?.message ?? '無資料'}`)
     }
 
-    // Step 1: Clear needs_recheck flag
-    const { error: updateError } = await supabase
-      .from('event_candidates')
-      .update({ needs_recheck: false })
-      .eq('id', id)
-
-    if (updateError) {
-      throw new Error(
-        `清除重審標記失敗：${updateError.code ? `[${updateError.code}] ` : ''}${updateError.message}`,
-      )
-    }
-
-    // Step 2: Sync display fields to approved event (if applicable)
     let synced = false
+
+    // -- Path A: approved candidate with linked event -------------------------
     if (
       candidate.review_status === 'approved' &&
       candidate.approved_event_id
     ) {
+      const approvedEventId = candidate.approved_event_id as string
+
       // Build sync payload from non-null candidate display fields
       type EventUpdatePayload = {
         display_title_zh?: string | null
@@ -436,23 +431,35 @@ export async function resolveRecheck(id: string): Promise<ResolveRecheckActionRe
       if (Object.keys(syncPayload).length > 0) {
         syncPayload.translation_updated_at = new Date().toISOString()
 
+        // Step A-1: Sync event fields FIRST — if this fails, abort (do not clear flag)
         const { error: syncError } = await supabase
           .from('events')
           .update(syncPayload)
-          .eq('id', candidate.approved_event_id)
+          .eq('id', approvedEventId)
 
         if (syncError) {
-          // Non-fatal: candidate flag is already cleared; log in return value
-          revalidateCandidatePaths(id)
+          // Sync failed: needs_recheck is NOT cleared, candidate is retryable.
           return {
-            ok: true,
-            synced: false,
-            error: `已清除重審標記，但活動欄位同步失敗：${syncError.message}`,
+            ok: false,
+            error: `活動欄位同步失敗：${syncError.code ? `[${syncError.code}] ` : ''}${syncError.message}（重審標記未清除，可重試）`,
           }
         }
+
+        revalidatePath(`/admin/events/${approvedEventId}`)
         synced = true
-        revalidatePath(`/admin/events/${candidate.approved_event_id as string}`)
       }
+    }
+
+    // -- Step: Clear needs_recheck (sync already succeeded, or no sync needed) --
+    const { error: clearError } = await supabase
+      .from('event_candidates')
+      .update({ needs_recheck: false })
+      .eq('id', id)
+
+    if (clearError) {
+      throw new Error(
+        `清除重審標記失敗：${clearError.code ? `[${clearError.code}] ` : ''}${clearError.message}`,
+      )
     }
 
     revalidateCandidatePaths(id)
