@@ -102,7 +102,7 @@
 | 74 | UI-6 `/me` Personal Console v1 | 以 `/me` 為唯一主範圍，將個人頁升級成 personal console：帳號總覽、追蹤 / 收藏 / 提醒 stats、提醒與通知落點、追蹤偶像與近期追蹤行程、收藏與提醒清單、未登入狀態重做；不改 auth 流程、query、DB、crawler、其他頁資料邏輯 | ✅ PR #105 merged |
 | 75 | UI-7 `/idols` Archive Roster v1 | 以 `/idols` 為唯一主範圍，將偶像列表升級成 archive roster：暖紫黑 roster header、搜尋與公司篩選重做、追蹤名單與繼續探索分區、卡片視覺接上 archive 語言；不改追蹤邏輯、query、DB、crawler、其他頁資料邏輯 | ✅ PR #106 merged |
 | 76 | UI-8 `/idols/[slug]` Archive Detail v1 | 以 `/idols/[slug]` 為唯一主範圍，將偶像詳情頁升級成 archive detail：dossier hero、追蹤按鈕視覺對齊、檔案資訊 stats、描述分區、即將到來與已歸檔行程層級重做；後續用 PR #108 補 `/idols` roster card 名稱可見性；不改追蹤邏輯、query、DB、crawler、其他頁資料邏輯 | ✅ PR #107 + #108 merged |
-| 77 | UI-9 auth pages visual pass | 以 `/login`、`/forgot-password`、`/reset-password` 為唯一主範圍，將 auth 入口升級成 archive/control deck 語言：暖紫黑 shell、登入/恢復密碼 panel、tabs 與表單視覺重做、已登入與成功狀態整理；不改 auth 流程、query、DB、crawler、其他頁資料邏輯 | ⏳ PR #109 待驗收 |
+| 77 | UI-9 auth pages visual pass | 以 `/login`、`/forgot-password`、`/reset-password` 為唯一主範圍，將 auth 入口升級成 archive/control deck 語言：暖紫黑 shell、登入/恢復密碼 panel、tabs 與表單視覺重做、已登入與成功狀態整理；不改 auth 流程、query、DB、crawler、其他頁資料邏輯 | ✅ PR #109 merged |
 
 ---
 
