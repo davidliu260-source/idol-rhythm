@@ -1,13 +1,14 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import clsx from 'clsx'
 import {
   Bell,
   Calendar,
   ChevronRight,
   Heart,
+  Inbox,
   LibraryBig,
   Loader2,
   LogIn,
@@ -21,6 +22,7 @@ import IdolAvatar from '@/components/IdolAvatar'
 import { SCHEDULE_ARCHIVE_SHELL } from '@/app/schedule/scheduleTheme'
 import { useAppState } from '@/lib/appState'
 import { getBrowserSupabaseClient } from '@/lib/supabase/browserClient'
+import { getUnreadNotificationCount } from '@/lib/supabase/notifications'
 import { getEventDateLabel } from '@/lib/eventDisplay'
 import type { Idol } from '@/lib/mockIdols'
 import type { Event } from '@/lib/mockEvents'
@@ -37,6 +39,23 @@ export default function MeClient({
   events: Event[]
 }) {
   const { following, favorites, reminders, user, isUserLoading } = useAppState()
+  const [unreadCount, setUnreadCount] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!user) {
+      setUnreadCount(null)
+      return
+    }
+    let cancelled = false
+    async function fetchCount() {
+      const supabase = getBrowserSupabaseClient()
+      if (!supabase) return
+      const count = await getUnreadNotificationCount(supabase)
+      if (!cancelled) setUnreadCount(count)
+    }
+    fetchCount()
+    return () => { cancelled = true }
+  }, [user])
 
   if (isUserLoading) {
     return (
@@ -180,12 +199,38 @@ export default function MeClient({
             <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-white/40">
               Notification Deck
             </p>
-            <p className="mt-3 text-lg font-black text-white">
-              {reminders.ids.length > 0 ? `目前有 ${reminders.ids.length} 則活動提醒` : '目前還沒有活動提醒'}
-            </p>
-            <p className="mt-2 text-sm leading-6 text-white/56">
-              首頁右上角鈴鐺會先反映這裡的提醒數量。之後 app 化時，活動即將到來的手機通知也會從這個入口延伸。
-            </p>
+            {/* 登入後顯示真實 unread count，尚未載入時不顯示數字 */}
+            {unreadCount !== null && unreadCount > 0 ? (
+              <>
+                <p className="mt-3 text-lg font-black text-white">
+                  {unreadCount} 則未讀通知
+                </p>
+                <p className="mt-2 text-sm leading-6 text-white/56">
+                  包含活動提醒與追蹤偶像的新活動通知。
+                </p>
+              </>
+            ) : unreadCount === 0 ? (
+              <>
+                <p className="mt-3 text-lg font-black text-white">目前沒有未讀通知</p>
+                <p className="mt-2 text-sm leading-6 text-white/56">
+                  有新活動或即將到來的提醒時，通知會出現在這裡。
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="mt-3 text-lg font-black text-white">
+                  {reminders.ids.length > 0 ? `目前有 ${reminders.ids.length} 則活動提醒` : '目前還沒有活動提醒'}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-white/56">
+                  首頁右上角鈴鐺會反映未讀通知數量。之後 app 化時，活動即將到來的手機通知也會從這個入口延伸。
+                </p>
+              </>
+            )}
+            {/* 通知頁入口：N5 建立 /notifications 後啟用連結 */}
+            <div className="mt-4 flex items-center gap-2 rounded-xl border border-white/6 bg-white/[0.03] px-3 py-2.5 text-xs text-white/40">
+              <Inbox className="h-3.5 w-3.5 flex-shrink-0" />
+              <span>完整通知列表即將推出</span>
+            </div>
           </div>
           <div className="rounded-[22px] border border-white/8 bg-black/10 px-4 py-4">
             <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-white/40">
