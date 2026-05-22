@@ -31,6 +31,12 @@ export interface GenerateChineseActionResult {
   error?: string
 }
 
+export interface ResolveRecheckActionResult {
+  ok: boolean
+  error?: string
+  synced?: boolean // true when display fields were synced to the approved event
+}
+
 // ── Actions ───────────────────────────────────────────────────────────────────
 
 /**
@@ -353,4 +359,105 @@ export async function approveCandidate(id: string): Promise<void> {
 
   // redirect() throws a special Next.js error — must not be inside try/catch
   redirect(`/admin/events/${newEventId}`)
+}
+
+/**
+ * Resolves the needs_recheck flag on a candidate:
+ *   1. Clears needs_recheck to false
+ *   2. If the candidate is approved and has an approved_event_id, syncs
+ *      Chinese display fields (display_title_zh, display_summary_zh,
+ *      location_name_zh, translation_status, translation_source) from the
+ *      candidate to the linked event — approved event auto-sync strategy.
+ *
+ * Sync is unconditional for non-null candidate fields: the candidate is the
+ * source of truth for display content; admin resolving the recheck implies
+ * they have reviewed/updated the candidate and want the event to reflect it.
+ */
+export async function resolveRecheck(id: string): Promise<ResolveRecheckActionResult> {
+  try {
+    await requireActiveAdmin()
+
+    const supabase = getSupabaseServerClient()
+    if (!supabase) throw new Error('Supabase 未設定')
+
+    // Fetch candidate fields needed for sync decision
+    const { data: candidate, error: fetchError } = await supabase
+      .from('event_candidates')
+      .select(
+        'review_status, approved_event_id, display_title_zh, display_summary_zh, location_name_zh, translation_status, translation_source',
+      )
+      .eq('id', id)
+      .single()
+
+    if (fetchError || !candidate) {
+      throw new Error(`找不到候選活動：${fetchError?.message ?? '無資料'}`)
+    }
+
+    // Step 1: Clear needs_recheck flag
+    const { error: updateError } = await supabase
+      .from('event_candidates')
+      .update({ needs_recheck: false })
+      .eq('id', id)
+
+    if (updateError) {
+      throw new Error(
+        `清除重審標記失敗：${updateError.code ? `[${updateError.code}] ` : ''}${updateError.message}`,
+      )
+    }
+
+    // Step 2: Sync display fields to approved event (if applicable)
+    let synced = false
+    if (
+      candidate.review_status === 'approved' &&
+      candidate.approved_event_id
+    ) {
+      // Build sync payload from non-null candidate display fields
+      type EventUpdatePayload = {
+        display_title_zh?: string | null
+        display_summary_zh?: string | null
+        location_name_zh?: string | null
+        translation_status?: string | null
+        translation_source?: string | null
+        translation_updated_at?: string | null
+      }
+      const syncPayload: EventUpdatePayload = {}
+
+      if (candidate.display_title_zh != null)
+        syncPayload.display_title_zh = candidate.display_title_zh as string
+      if (candidate.display_summary_zh != null)
+        syncPayload.display_summary_zh = candidate.display_summary_zh as string
+      if (candidate.location_name_zh != null)
+        syncPayload.location_name_zh = candidate.location_name_zh as string
+      if (candidate.translation_status != null)
+        syncPayload.translation_status = candidate.translation_status as string
+      if (candidate.translation_source != null)
+        syncPayload.translation_source = candidate.translation_source as string
+
+      if (Object.keys(syncPayload).length > 0) {
+        syncPayload.translation_updated_at = new Date().toISOString()
+
+        const { error: syncError } = await supabase
+          .from('events')
+          .update(syncPayload)
+          .eq('id', candidate.approved_event_id)
+
+        if (syncError) {
+          // Non-fatal: candidate flag is already cleared; log in return value
+          revalidateCandidatePaths(id)
+          return {
+            ok: true,
+            synced: false,
+            error: `已清除重審標記，但活動欄位同步失敗：${syncError.message}`,
+          }
+        }
+        synced = true
+        revalidatePath(`/admin/events/${candidate.approved_event_id as string}`)
+      }
+    }
+
+    revalidateCandidatePaths(id)
+    return { ok: true, synced }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
 }
