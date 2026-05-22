@@ -4,6 +4,7 @@ import { runJypScheduleFetcher } from './runJypScheduleFetcher'
 import { runKpopofficialConcertsFetcher } from './runKpopofficialConcertsFetcher'
 import { runYgArtistScheduleFetcher } from './runYgArtistScheduleFetcher'
 import { runWakeoneNoticeFetcher } from './runWakeoneNoticeFetcher'
+import { runSmtownNoticeFetcher } from './runSmtownNoticeFetcher'
 
 export type CrawlerRunTrigger = 'vercel-cron' | 'admin-manual'
 
@@ -165,6 +166,26 @@ export async function runCrawlerSource(
         status: r.status,
       }
     }
+    case 'smtown_notice': {
+      const r = await runSmtownNoticeFetcher(supabase, {
+        sourceKey: source.source_key,
+        dryRun,
+      })
+      return {
+        source: r.source,
+        sourceKey: r.sourceKey,
+        sourceName: r.sourceName ?? source.name,
+        parserType: source.parser_type,
+        mode: r.mode,
+        fetched: r.fetched,
+        inserted: r.inserted,
+        wouldInsert: r.wouldInsert,
+        skipped: r.skipped,
+        recheck: r.recheck,
+        errors: r.errors,
+        status: r.status,
+      }
+    }
     default:
       return {
         source: 'unknown',
@@ -177,7 +198,9 @@ export async function runCrawlerSource(
         wouldInsert: 0,
         skipped: 0,
         recheck: 0,
-        errors: [`未知 parser_type：${source.parser_type}（dispatch table 未註冊）`],
+        errors: [
+          `未知 parser_type：${source.parser_type}（dispatch table 未註冊）`,
+        ],
         status: 200,
       }
   }
