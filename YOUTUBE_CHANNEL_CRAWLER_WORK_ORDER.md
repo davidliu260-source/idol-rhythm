@@ -1,6 +1,6 @@
 # YouTube Official Channel Crawler 工作單（P2-A）
 
-> **版本**：v2 — 2026-05-23（GPT audit patch：uploadsPlaylistId、source_type 統一、quota 估算修正、Fail Gracefully 改 403 catch、NewJeans 移 P1）  
+> **版本**：v3 — 2026-05-23（產品裁定 patch：YouTube 收錄邊界 A/B 級分類、metadata 補 youtube_content_type + content_priority）  
 > **範圍**：只做技術規劃，不寫 code、不申請 API key、不新增 migration、不改 schema、不新增 crawler_sources seed、不碰前台 UI。  
 > **上游**：Streaming / Video Source Inventory 工作單（`STREAMING_VIDEO_SOURCE_WORK_ORDER.md`，PR #144）已確立 YouTube 查詢流程：channelId → playlistItems.list → videos.list；不用 search.list。  
 > **下游**：本工作單 GPT audit 通過後，再開 YouTube crawler runtime PR + channelId seed migration。
@@ -169,37 +169,78 @@ P1 擴充至 50 個 channel 後正常約 100 units / 次，仍安全。
 
 ---
 
-## 六、title / description 分類過濾規則
+## 六、YouTube 收錄邊界裁定（產品決策）
 
-### 6-A. 應收 patterns（進 event_candidates）
+### 6-A. 產品定位
 
-**方法：** title 包含以下 keyword（大小寫不敏感）→ 進候選
+YouTube v1 **不做「官方頻道全影片同步」**，也不是把每支新影片都丟進排程。
 
-| keyword 群組 | 代表關鍵字 | 對應 EventType | EventSubType |
+YouTube crawler 的定位是：
+> **重大影音事件 / 發行節點 / 官方上架訊號來源**
+
+幫粉絲抓到重要資訊，而不是整理偶像頻道所有更新。
+
+### 6-B. A 級：高優先，應進 event_candidates，前台可凸顯
+
+這些內容有「發行感 / 上架感 / 行程感」，是 Idol Rhythm 的核心收錄目標。
+
+**以 liveStreamingDetails 判斷（優先於 title keyword）：**
+
+| 判斷條件 | youtube_content_type | EventType | EventSubType |
 |---|---|---|---|
-| MV | `MV`, `M/V`, `Music Video`, `뮤직비디오`, `퍼포먼스` | `official` | `release` |
-| Teaser | `Teaser`, `티저`, `Preview`, `Highlight` | `official` | `announcement` |
-| Comeback Showcase | `Comeback Showcase`, `컴백 쇼케이스`, `Showcase` | `official` | `release` |
-| Concert Film Trailer | `Concert Film`, `Concert Movie`, `Film Trailer`, `콘서트 필름` | `official` | `announcement` |
-| Album / Release | `Album`, `앨범`, `EP`, `Single`, `싱글`, `Release` | `official` | `release` |
-| Premiere | 由 `liveStreamingDetails.scheduledStartTime` 判斷（非 title keyword）| `official` | `announcement` |
-| Official Livestream | 由 `liveStreamingDetails.liveBroadcastContent = 'live'` 或 `'completed'` 判斷 | `streaming` | — |
+| `scheduledStartTime` 有值（Premiere 預排）| `premiere` | `official` | `announcement` |
+| `liveBroadcastContent = 'live'`（進行中直播）| `official_livestream` | `streaming` | — |
+| `liveBroadcastContent = 'completed'`（直播存檔）| `official_livestream_vod` | `streaming` | — |
 
-### 6-B. 排除 patterns（不進候選）
+**以 title keyword 判斷（大小寫不敏感）：**
 
-**方法：** 符合以下任一條件 → 跳過
+| keyword 群組 | 代表關鍵字 | youtube_content_type | EventType | EventSubType |
+|---|---|---|---|---|
+| Official MV | `MV`, `M/V`, `Music Video`, `뮤직비디오` | `official_mv` | `official` | `release` |
+| Title Track MV | title 含藝人名 + album 關鍵字 + MV | `official_mv` | `official` | `release` |
+| Comeback / Album Trailer | `Comeback Trailer`, `Album Trailer`, `컴백 트레일러` | `comeback_trailer` | `official` | `announcement` |
+| Comeback Live / Showcase Live | `Comeback Live`, `Showcase`, `쇼케이스`, `컴백 라이브` | `comeback_live` | `official` | `release` |
+| Anniversary Live | `Anniversary`, `주년`, `기념 콘서트` | `anniversary_live` | `streaming` | — |
+| Concert Film Trailer | `Concert Film`, `Concert Movie`, `Film Trailer`, `콘서트 필름` | `concert_film_trailer` | `official` | `announcement` |
+| Documentary Trailer | `Documentary`, `다큐멘터리` + `Trailer` | `documentary_trailer` | `official` | `announcement` |
+| Streaming Release Trailer | `Netflix`, `Disney+`, `Apple TV+` + `Trailer` / `Official` | `streaming_release_trailer` | `streaming` | — |
+| Official Album / EP Release | `Album`, `앨범`, `EP`, `Single`, `싱글`, `Release` | `album_release` | `official` | `release` |
+| Major Performance Video | `Special Stage`, `스페셜 스테이지`, `Stage Mix` + 視情況判斷 | `performance_video` | `official` | `release` |
+
+> **所有 A 級**：`content_priority = "high"`
+
+### 6-C. B 級：可收，低優先，不一定前台凸顯
+
+這些可以視情況進候選，但不當成主線重大事件。進候選時標記低優先。
+
+| 類型 | youtube_content_type | content_priority |
+|---|---|---|
+| MV Teaser | `mv_teaser` | `low` |
+| Album Teaser | `album_teaser` | `low` |
+| Concept Film | `concept_film` | `low` |
+| Visualizer | `visualizer` | `low` |
+| Lyric Video（官方頻道）| `lyric_video` | `low` |
+| Short Performance Clip | `performance_clip` | `low` |
+| Short Trailer（非 Comeback / Concert Film）| `short_trailer` | `low` |
+
+> B 級 keyword 判斷：`Teaser`, `티저`, `Concept`, `Visualizer`, `Lyric`, `가사`, `Clip`
+
+### 6-D. 明確排除（不進候選）
+
+**方法：** 符合以下任一條件 → 跳過，不進候選
 
 | 條件 | 說明 |
 |---|---|
-| `duration < PT60S`（Shorts）| YouTube Shorts 通常 ≤ 60 秒，v1 排除 |
-| title 含 `Lyric`, `Lyrics`, `가사` | lyric video，v1 保守排除 |
-| title 含 `Behind`, `Making`, `Vlog`, `Diary`, `브이로그` | behind / vlog，v1 保守排除 |
-| title 含 `Reaction`, `Cover`, `Dance Cover`, `Fan` | 非官方類內容，v1 排除 |
+| `duration < PT60S`（Shorts）| YouTube Shorts，v1 排除 |
+| title 含 `Behind`, `Making`, `Vlog`, `Diary`, `브이로그` | behind / vlog，非發行節點，v1 排除 |
+| title 含 `Reaction`, `Cover`, `Dance Cover` | 非官方類內容，排除 |
+| title 含 `Fan`, `Fanmade`, `Unofficial` | 非官方來源標誌，排除 |
 | channel 非 seeded channelId | 不信任任何非 seed 頻道 |
 
-### 6-C. 無法分類時的處理
+### 6-E. 無法分類時的處理
 
-若影片不符合任何 6-A keyword 群組，但來自官方頻道 → **仍進候選**，`detected_event_type = null`，交 admin 審核決定。這避免新 content type 一律漏掉。
+若影片不符合任何 6-B / 6-C keyword 群組，但來自官方頻道，且未觸發 6-D 排除：
+→ **仍進候選**，`detected_event_type = null`，`youtube_content_type = "unknown"`，`content_priority = "low"`，交 admin 審核決定。這避免新 content type 一律漏掉。
 
 ---
 
@@ -210,6 +251,8 @@ P1 擴充至 50 個 channel 後正常約 100 units / 次，仍安全。
 ```json
 {
   "platform": "youtube",
+  "youtube_content_type": "official_mv",
+  "content_priority": "high",
   "videoId": "dQw4w9WgXcQ",
   "channelId": "UCXXXXXXxxx",
   "channelTitle": "HYBE LABELS",
@@ -221,6 +264,13 @@ P1 擴充至 50 個 channel 後正常約 100 units / 次，仍安全。
   "crawledAt": "2026-05-23T10:30:00Z"
 }
 ```
+
+**`youtube_content_type` 可選值：**
+- A 級：`official_mv` / `comeback_trailer` / `comeback_live` / `anniversary_live` / `premiere` / `official_livestream` / `official_livestream_vod` / `concert_film_trailer` / `documentary_trailer` / `streaming_release_trailer` / `album_release` / `performance_video`
+- B 級：`mv_teaser` / `album_teaser` / `concept_film` / `visualizer` / `lyric_video` / `performance_clip` / `short_trailer`
+- 未分類：`unknown`
+
+**`content_priority` 可選值：** `"high"`（A 級）/ `"low"`（B 級 + unknown）
 
 `event_candidates.source_url` = `https://www.youtube.com/watch?v={videoId}`
 
