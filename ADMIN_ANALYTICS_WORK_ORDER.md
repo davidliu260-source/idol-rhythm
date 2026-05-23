@@ -1,6 +1,7 @@
 # Admin Analytics Work Order — 後台用戶統計儀表板
 
-> Status: **planning complete — awaiting GPT audit before implementation**.
+> Status: **GPT audit complete — patch applied, ready for merge**.
+> Patch: 2026-05-23 (RLS / service_role scope correction per GPT review)
 >
 > Created: 2026-05-23
 > Owner: idol-rhythm
@@ -35,23 +36,31 @@ in a separate runtime work order after GPT audit.
 | New users — last 7 days | `auth.users WHERE created_at >= now()-7d` COUNT | service_role |
 | New users — last 30 days | `auth.users WHERE created_at >= now()-30d` COUNT | service_role |
 
-#### Interactions (accessible to authenticated / server role)
+#### Interactions (likely require `service_role` for site-wide aggregate — verify RLS before implementation)
+
+> **RLS note**: `user_follows`, `saved_events`, `reminders`, and
+> `notifications` all have user-scoped RLS. A standard admin server
+> client (authenticated role) can only read the admin's own rows, not
+> every user's rows. Site-wide aggregate counts therefore likely require
+> the `service_role` client. **Confirm by auditing RLS policies before
+> the runtime PR; use `service_role` for these queries if the admin
+> role cannot perform a full-table COUNT.**
 
 | metric | source | note |
 |---|---|---|
-| Total user_follows rows | `user_follows` COUNT | total follows across all users |
-| Unique users with ≥1 follow | `user_follows` COUNT DISTINCT user_id | approx WAU-floor |
-| Total saved_events rows | `saved_events` COUNT | — |
-| Unique users with ≥1 save | `saved_events` COUNT DISTINCT user_id | — |
-| Total reminders rows | `reminders` COUNT | — |
-| Unique users with ≥1 reminder | `reminders` COUNT DISTINCT user_id | — |
+| Total user_follows rows | `user_follows` COUNT | site-wide — likely needs service_role; see RLS note above |
+| Unique users with ≥1 follow | `user_follows` COUNT DISTINCT user_id | same |
+| Total saved_events rows | `saved_events` COUNT | site-wide — likely needs service_role |
+| Unique users with ≥1 save | `saved_events` COUNT DISTINCT user_id | same |
+| Total reminders rows | `reminders` COUNT | site-wide — likely needs service_role |
+| Unique users with ≥1 reminder | `reminders` COUNT DISTINCT user_id | same |
 
-#### Notifications
+#### Notifications (likely require `service_role` for site-wide aggregate — verify RLS before implementation)
 
 | metric | source | note |
 |---|---|---|
-| Total notifications rows | `notifications` COUNT | all time |
-| Unread notifications | `notifications WHERE read_at IS NULL` COUNT | current backlog |
+| Total notifications rows | `notifications` COUNT | all users' notifications — likely needs service_role |
+| Unread notifications | `notifications WHERE read_at IS NULL` COUNT | site-wide backlog, not the current admin's unread — likely needs service_role |
 
 #### Content
 
@@ -161,10 +170,20 @@ the client side.
 ### Approximation fallback
 
 If `SUPABASE_SERVICE_ROLE_KEY` is unavailable in the runtime
-environment, the dashboard can show `—` for auth.users metrics and
-still render all other metrics from user-scoped tables (which are
-accessible to the server-side authenticated client). This fallback must
-be explicitly handled — do NOT throw or crash.
+environment:
+
+- `auth.users` metrics (total users, new 7d, new 30d) → display `—`
+- User-scoped site-wide aggregates (`user_follows`, `saved_events`,
+  `reminders`, `notifications`) that depend on `service_role` to bypass
+  user-scoped RLS → also display `—`
+- Public non-user tables (`events`, `event_candidates`,
+  `crawler_sources`, `admin_users`) have no user-scoped RLS and remain
+  readable via the regular server client → continue to display normally
+
+This fallback must be explicitly handled — do NOT throw or crash. The
+dashboard must degrade gracefully, showing `—` for the affected metrics
+and a brief inline note: "service_role unavailable — user metrics
+hidden".
 
 ---
 
@@ -172,15 +191,26 @@ be explicitly handled — do NOT throw or crash.
 
 | table | schema | metrics | needs service_role | personal data |
 |---|---|---|---|---|
-| `auth.users` | auth | total count, new 7d, new 30d | **yes** | email, provider, created_at — never exposed to browser |
-| `user_follows` | public | count, distinct user_id count | no | user_id (aggregate only) |
-| `saved_events` | public | count, distinct user_id count | no | user_id (aggregate only) |
-| `reminders` | public | count, distinct user_id count | no | user_id (aggregate only) |
-| `notifications` | public | total count, unread count | no | user_id (aggregate only) |
+| `auth.users` | auth | total count, new 7d, new 30d | **yes — always** | email, provider, created_at — never exposed to browser |
+| `user_follows` | public | count, distinct user_id count | **maybe — likely yes** for site-wide aggregate; verify RLS before implementation | user_id (aggregate only) |
+| `saved_events` | public | count, distinct user_id count | **maybe — likely yes** for site-wide aggregate; verify RLS before implementation | user_id (aggregate only) |
+| `reminders` | public | count, distinct user_id count | **maybe — likely yes** for site-wide aggregate; verify RLS before implementation | user_id (aggregate only) |
+| `notifications` | public | total count, site-wide unread count | **maybe — likely yes** for site-wide aggregate; verify RLS before implementation | user_id (aggregate only) |
 | `events` | public | published count, draft count | no | none |
 | `event_candidates` | public | grouped by review_status, by source_type | no | none |
 | `crawler_sources` | public | active count, total count, by parser_type | no | none |
 | `admin_users` | public | count | no | none |
+
+> **RLS audit required before runtime implementation**: The four
+> user-scoped tables (`user_follows`, `saved_events`, `reminders`,
+> `notifications`) all have RLS policies scoped to `auth.uid()`. An
+> admin server client operating under the `authenticated` role will be
+> filtered to the admin's own rows only, returning a count of 0 or 1
+> rather than a site-wide total. The runtime PR **must audit these
+> policies and use `service_role` for any table where the admin role
+> cannot perform a full-table COUNT**. Returning `—` is acceptable;
+> returning the admin's own row count as if it were a site-wide count
+> is not.
 
 All queries return scalars or group-by counts. No per-row data is
 fetched or passed to the browser.
@@ -194,11 +224,25 @@ fetched or passed to the browser.
 ```
 /admin/analytics/page.tsx          ← async Server Component
   await getCurrentAdmin()          ← guard; redirect if null
-  getSupabaseServiceClient()       ← service_role for auth.users
-  getSupabaseServerClient()        ← regular server client for public tables
+  getSupabaseServiceClient()       ← service_role for:
+                                       • auth.users (always required)
+                                       • user_follows / saved_events /
+                                         reminders / notifications
+                                         (required if RLS audit confirms
+                                          admin role cannot full-table COUNT)
+  getSupabaseServerClient()        ← regular server client for:
+                                       • events / event_candidates /
+                                         crawler_sources / admin_users
+                                         (no user-scoped RLS)
   parallel Promise.all([...])      ← all aggregate queries in parallel
   <AnalyticsDashboard stats={...} /> ← pure Client Component for rendering
 ```
+
+**Key constraint**: regardless of which client is used, every query
+must return only scalar counts or group-by counts. No `SELECT *`,
+no `SELECT user_id`, no `SELECT email` is permitted at any point in
+this feature. The `service_role` client bypasses RLS — this power must
+be confined to aggregate queries only.
 
 **Advantages**:
 - No additional API route needed
@@ -303,7 +347,8 @@ No chart library is required for v1 — plain numbers only. Charts are v2.
 
 | risk | mitigation |
 |---|---|
-| `service_role` key missing from env | Return `null` for auth.users metrics, display `—` in UI; never crash the page |
+| `service_role` key missing from env | Display `—` for auth.users metrics AND for user-scoped site-wide aggregates (user_follows / saved_events / reminders / notifications); public non-user tables still render; never crash the page |
+| Admin role blocked by user-scoped RLS on public tables | Audit `user_follows`, `saved_events`, `reminders`, `notifications` RLS policies before runtime implementation; use `service_role` for any table where full-table COUNT is blocked; fail safe to `—` rather than returning the admin's own row count as a site-wide figure |
 | `SUPABASE_SERVICE_ROLE_KEY` accidentally set with `NEXT_PUBLIC_` prefix | Block via lint rule or CI env check; document explicitly in runtime work order |
 | `service_role` set to `sb_secret_...` format instead of JWT `eyJ...` | Runtime check: if key does not start with `eyJ`, throw server-side with a clear error; never expose message to browser |
 | Dashboard slow if all queries run sequentially | Use `Promise.all([...])` for all aggregate queries |
@@ -323,8 +368,9 @@ This PR is acceptable if and only if:
 - [x] All v2 metrics explicitly deferred with reason
 - [x] Privacy boundary written (§3) with 6 hard limits
 - [x] auth.users access strategy written (§4) with both access paths documented
-- [x] Approximation fallback for missing service_role key documented
-- [x] Data source inventory (§5) covers all 9 tables with personal-data flag
+- [x] Approximation fallback for missing service_role key documented (auth.users → `—`; user-scoped aggregates → `—`; public non-user tables → still render)
+- [x] Data source inventory (§5) covers all 9 tables with personal-data flag and corrected service_role column (user-scoped tables marked "maybe — likely yes")
+- [x] RLS audit requirement documented: runtime PR must verify whether admin role can full-table COUNT user-scoped tables; use service_role if blocked
 - [x] Both technical approaches documented (§6) with trade-offs
 - [x] Approach A recommended with rationale
 - [x] UI sketch (§7) covers all metric sections
@@ -350,7 +396,14 @@ When GPT approves this document, the separate implementation PR must:
 3. Use `getSupabaseServiceClient()` for auth.users queries (behind
    `import 'server-only'`)
 4. Use parallel `Promise.all([...])` for all aggregate queries
-5. Handle `service_role` key missing — show `—` for auth.users metrics
+5. **Audit RLS policies** for `user_follows`, `saved_events`, `reminders`,
+   `notifications` before writing queries — confirm whether the admin
+   role (authenticated) can perform a full-table COUNT; if blocked by
+   user-scoped RLS, use `getSupabaseServiceClient()` for those tables too
+5a. Handle `service_role` key missing — show `—` for auth.users metrics
+   AND for any user-scoped table that requires service_role for site-wide
+   aggregation; public non-user tables (`events`, `event_candidates`,
+   `crawler_sources`, `admin_users`) still render via regular server client
 6. Create `AnalyticsDashboard` client component for rendering only
 7. Add link to `/admin/analytics` in the admin nav / sidebar
 8. Validate that `SUPABASE_SERVICE_ROLE_KEY` starts with `eyJ` at
@@ -379,7 +432,15 @@ When GPT approves this document, the separate implementation PR must:
    ```
    This is the only way to query `auth.users` via the JS client; raw
    SQL is not available through the SDK in this pattern.
-6. Per-table queries for `user_follows`, `saved_events`, `reminders`,
-   `notifications`, `events`, `event_candidates`, `crawler_sources`,
-   `admin_users` can use the regular server client (no service_role
-   needed for public schema tables with RLS configured).
+6. Table client selection for the runtime PR:
+   - `events`, `event_candidates`, `crawler_sources`, `admin_users` —
+     no user-scoped RLS; use regular server client.
+   - `user_follows`, `saved_events`, `reminders`, `notifications` —
+     have user-scoped RLS (`WHERE user_id = auth.uid()`); a standard
+     authenticated client will return only the admin's own rows.
+     **Audit these RLS policies first.** If full-table COUNT is blocked,
+     use `getSupabaseServiceClient()` and query aggregate counts only
+     (never SELECT user_id or row-level data). If the audit reveals an
+     existing admin SELECT policy that allows full-table access, the
+     regular server client may suffice — document the finding in the
+     runtime PR.
