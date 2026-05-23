@@ -1,6 +1,6 @@
 # Crawler Work Order — Starship Entertainment Phase A Probe
 
-**狀態:** Phase A 探測完成 → 建議 Google Discovery  
+**狀態:** Phase A 初探完成 → v1 暫不開官方 crawler（非永久放棄）  
 **日期:** 2026-05-23  
 **目標藝人:** IVE / MONSTA X / CRAVITY / KiiiKiii  
 **起草者:** Claude Code（自動生成）  
@@ -35,7 +35,7 @@ Starship Entertainment 旗下 4 個目標藝人目前均無 crawler_sources。
 | `starshipent.co.kr` | timeout | 同上 |
 | `iveofficial.com` | timeout | 網路環境無法到達 |
 
-**結論：** 韓國 Starship Entertainment 的官方通知頁面（若存在）在本環境下無法穩定 curl 到達，且主域名 `starshipent.com` 已設有 Cloudflare bot 保護。
+**本輪 probe 結果：** 韓國 Starship Entertainment 的官方通知頁面在本環境下無法穩定 curl 到達，主域名 `starshipent.com` 在本次探測中設有 Cloudflare bot 保護。這是 Phase A 初探的觀察結果，非對這些 domain 的永久定論；若未來使用者在瀏覽器確認到可存取的公告頁，可以重新啟動 Phase B 評估。
 
 ### 2-B. 平台生態分析
 
@@ -68,15 +68,21 @@ smtown_notice / wakeone_notice 模式成立的條件：
 
 ## 三、建議路徑
 
-### 建議：Google Discovery（方案 B）
+### v1 決策：暫不開 Starship 官方 crawler
 
 **理由：**
-- Starship 主站有 Cloudflare 保護，v1 crawler 不使用 headless browser（工作規範明確禁止）
+- Phase A 初探未找到穩定 no-login server-rendered notice feed（主站在本輪探測中有 Cloudflare 保護、個別藝人站 timeout）
+- v1 crawler 不使用 headless browser、不繞 Cloudflare（工作規範明確禁止）
 - Weverse 已定為 Verdict C，不再評估
 - kpopofficial.com 聚合已部分覆蓋 IVE 演唱會，但不含 MONSTA X / CRAVITY / KiiiKiii 粉絲活動型通知
-- Google PSE 方案（SEARCH_DISCOVERY_PROVIDER_WORK_ORDER.md）待決策後可統一覆蓋 Starship 全家族
 
-**Google Discovery query templates（建議）：**
+**v1 暫定覆蓋方式：Google Discovery + manual candidate**
+
+IVE / MONSTA X / CRAVITY / KiiiKiii 在 v1 走以下路徑：
+- **Google Discovery**：Google PSE 方案（SEARCH_DISCOVERY_PROVIDER_WORK_ORDER.md）待決策後可統一覆蓋 Starship 全家族
+- **manual candidate**：後台手動匯入工作單，維持候選審核流程
+
+**Google Discovery query templates（建議，供 PSE 決策後參考）：**
 
 ```
 "IVE" concert OR 팬미팅 OR showcase 2026
@@ -110,13 +116,21 @@ smtown_notice / wakeone_notice 模式成立的條件：
 | CRAVITY | 無 | 等 Google PSE 決策 |
 | KiiiKiii | 無 | 等 Google PSE 決策 |
 
-**Phase A 總結：Starship 目前無法透過低成本 server-rendered crawler 覆蓋，統一走 Google Discovery 路徑等待決策。**
+**Phase A 總結：本輪初探未找到穩定 no-login server-rendered notice feed，v1 暫不開 Starship 官方 crawler。IVE / MONSTA X / CRAVITY / KiiiKiii 暫走 Google Discovery + manual candidate 路徑，等待 SEARCH_DISCOVERY_PROVIDER_WORK_ORDER.md 決策。**
+
+> **注意：** 「v1 暫不開」≠「永久放棄 Starship 官方來源」。若未來 Google Discovery 找到穩定的 Starship 官方公告頁（server-rendered、無登入要求），可重新開 Starship crawler 工作單評估 Phase B。
 
 ---
 
 ## 六、不做的事（邊界確認）
 
-- ❌ 不做 Starship 官方站 crawler（Cloudflare 封鎖，headless browser 不在 v1 範圍）
-- ❌ 不做 Weverse crawler（Verdict C）
+- ❌ v1 不開 Starship 官方站 crawler（Phase A 初探未找到穩定 no-login feed；非永久放棄，未來可重新評估）
+- ❌ 不使用 headless browser（v1 工作規範明確禁止）
+- ❌ 不繞過 Cloudflare bot protection（不用任何 bypass 手段）
+- ❌ 不做 Weverse crawler（Verdict C，不抓 Weverse 登入內容）
+- ❌ 不使用 cookie / token / app API / login session
 - ❌ 不做個人 SNS scraping（Instagram/X/YouTube 均不在現有 parser 列表）
+- ❌ 不新增 parser_type（現有 parser 不擴充）
+- ❌ 不新增 crawler_sources（本工作單不 seed 任何 source）
+- ❌ 不新增 migration（本工作單不改 schema）
 - ❌ 不先開 Google PSE runtime（等 SEARCH_DISCOVERY_PROVIDER_WORK_ORDER.md 決策後再開）
