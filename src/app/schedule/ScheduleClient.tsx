@@ -5,7 +5,8 @@ import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Clock3, Heart, Li
 import clsx from 'clsx'
 import IdolAvatar from '@/components/IdolAvatar'
 import type { Event } from '@/lib/mockEvents'
-import { formatEventDate } from '@/lib/mockEvents'
+import { formatEventDate, EVENT_SUBTYPE_LABELS } from '@/lib/mockEvents'
+import type { EventSubType } from '@/lib/types'
 import { getEventDateLabel } from '@/lib/eventDisplay'
 import { useAppState } from '@/lib/appState'
 import ScheduleTrackCard from './ScheduleTrackCard'
@@ -15,18 +16,39 @@ interface Props {
 }
 
 type ViewMode = 'timeline' | 'calendar'
-type ScheduleCategory = 'all' | 'concert' | 'musicshow' | 'media' | 'brand' | 'youtube' | 'netflix' | 'other'
+type ScheduleCategory =
+  | 'all'
+  | 'concert'
+  | 'musicshow'
+  | 'media'
+  | 'popup_store'
+  | 'exhibition'
+  | 'brand_event'
+  | 'youtube'
+  | 'netflix'
+  | 'other'
 
 const SCHEDULE_CATEGORIES: Array<{ id: ScheduleCategory; label: string }> = [
   { id: 'all', label: '全部' },
   { id: 'concert', label: '演唱會' },
   { id: 'musicshow', label: '音樂節目' },
   { id: 'media', label: '媒體雜誌' },
-  { id: 'brand', label: '品牌快閃' },
+  { id: 'popup_store', label: '快閃店' },
+  { id: 'exhibition', label: '展覽' },
+  { id: 'brand_event', label: '品牌活動' },
   { id: 'youtube', label: 'YouTube' },
   { id: 'netflix', label: 'Netflix' },
   { id: 'other', label: '其他行程' },
 ]
+
+// ── Subtype keyword aliases for search (中英文關鍵字補充) ─────────────────────
+// Included in getSearchHaystack so "pop-up / popup / 快閃店 / 展覽 / 品牌活動"
+// all correctly match events by sub_type even when the title doesn't contain them.
+const SUBTYPE_SEARCH_KEYWORDS: Partial<Record<string, string>> = {
+  popup_store: '快閃店 快閃 pop-up popup pop up',
+  exhibition: '展覽 展 exhibition exhibit',
+  brand_event: '品牌活動 品牌 brand event brand_event',
+}
 
 export default function ScheduleClient({ events }: Props) {
   const [searchQuery, setSearchQuery] = useState('')
@@ -154,9 +176,7 @@ function TimelineView({
     <div className="px-4 flex flex-col gap-5">
       {monthGroups.length === 0 && (
         <div className="rounded-[22px] border border-white/8 bg-white/[0.03] py-12 text-center text-sm text-white/52">
-          {activeCategory !== 'all' || searchQuery.trim()
-            ? '沒有符合條件的未來活動'
-            : '尚無未來活動資料'}
+          {getEmptyStateMessage(activeCategory, searchQuery)}
         </div>
       )}
 
@@ -685,13 +705,13 @@ function matchesScheduleCategory(event: Event, category: ScheduleCategory): bool
         event.type === 'media' &&
         event.subType !== 'musicshow'
       )
-    case 'brand':
-      return (
-        event.type === 'brand' ||
-        event.subType === 'popup_store' ||
-        event.subType === 'exhibition' ||
-        event.subType === 'brand_event'
-      )
+    case 'popup_store':
+      return event.subType === 'popup_store'
+    case 'exhibition':
+      return event.subType === 'exhibition'
+    case 'brand_event':
+      // type=brand without a sub_type falls here as catch-all
+      return event.subType === 'brand_event' || event.type === 'brand'
     case 'youtube':
       return matchesPlatformKeyword(event, 'youtube')
     case 'netflix':
@@ -701,7 +721,9 @@ function matchesScheduleCategory(event: Event, category: ScheduleCategory): bool
         !matchesScheduleCategory(event, 'concert') &&
         !matchesScheduleCategory(event, 'musicshow') &&
         !matchesScheduleCategory(event, 'media') &&
-        !matchesScheduleCategory(event, 'brand') &&
+        !matchesScheduleCategory(event, 'popup_store') &&
+        !matchesScheduleCategory(event, 'exhibition') &&
+        !matchesScheduleCategory(event, 'brand_event') &&
         !matchesScheduleCategory(event, 'youtube') &&
         !matchesScheduleCategory(event, 'netflix')
       )
@@ -734,12 +756,35 @@ function sortEventsByDate(a: Event, b: Event): number {
   return new Date(a.date).getTime() - new Date(b.date).getTime()
 }
 
+function getEmptyStateMessage(category: ScheduleCategory, searchQuery: string): string {
+  if (searchQuery.trim()) return '沒有符合搜尋條件的活動'
+  switch (category) {
+    case 'popup_store':  return '目前沒有收錄快閃店活動'
+    case 'exhibition':   return '目前沒有收錄展覽活動'
+    case 'brand_event':  return '目前沒有收錄品牌活動'
+    case 'concert':      return '目前沒有演唱會行程'
+    case 'musicshow':    return '目前沒有音樂節目行程'
+    case 'media':        return '目前沒有媒體雜誌行程'
+    case 'youtube':      return '目前沒有 YouTube 相關行程'
+    case 'netflix':      return '目前沒有 Netflix 相關行程'
+    case 'other':        return '目前沒有其他行程'
+    default:             return '尚無未來活動資料'
+  }
+}
+
 function startOfToday(): Date {
   const today = new Date()
   return new Date(today.getFullYear(), today.getMonth(), today.getDate())
 }
 
 function getSearchHaystack(event: Event): string {
+  const subTypeLabel = event.subType
+    ? (EVENT_SUBTYPE_LABELS[event.subType as EventSubType] ?? '')
+    : ''
+  const subTypeKeywords = event.subType
+    ? (SUBTYPE_SEARCH_KEYWORDS[event.subType] ?? '')
+    : ''
+
   return normalizeSearch(
     [
       event.title,
@@ -753,6 +798,11 @@ function getSearchHaystack(event: Event): string {
       event.source.label,
       event.description,
       event.tags?.join(' '),
+      // Subtype label (e.g. '快閃店') + keyword aliases (e.g. 'pop-up popup')
+      // lets users search "快閃店" or "popup" and match the correct events
+      // even when the event title itself doesn't contain those words.
+      subTypeLabel,
+      subTypeKeywords,
     ]
       .filter(Boolean)
       .join(' '),
