@@ -39,6 +39,7 @@
 | 改 `event_candidates` 或 `events` schema | 本輪不動 |
 | 直接 publish 任何活動 | 永遠走候選審核流程 |
 | 評估串流平台（YouTube / Netflix / Disney+） | P2 工作單的範疇 |
+| 開 headless browser（Playwright / Puppeteer）爬蟲 | v1 不採用 headless browser 作為常規方案；SPA / JS-heavy 站點優先進 Google Discovery 或人工候選，詳見 §六 第 7 條 |
 
 ---
 
@@ -57,8 +58,8 @@
 | 來源 | URL | rendering | login | 結構 | sub-type 對應 | 爬蟲可行性 | 建議策略 | 備註 |
 |---|---|---|---|---|---|---|---|---|
 | **Ktown4u** | ktown4u.com/event | 待探測（疑似 SPA） | no（瀏覽）/ yes（購買） | 疑似 JSON API | `popup_store` / `brand_event` | 中 | `discovery` 優先 | K-pop 最大票務 + 周邊電商；有「EVENT」分頁，但列表結構未確認；無公開 RSS；官方活動資訊密度高，值得深入探測 |
-| **Soundwave** | soundwavekorea.com | 待探測（疑似混合） | no（瀏覽） | 待確認 | `brand_event`（팬簽 / 팬사인회）| 中 | `discovery` 優先 | 以 K-pop 팬簽 / 팬미팅為主；與 `brand_event` 對應；非快閃店類；探測需確認活動列表是否有固定 URL pattern |
-| **Music Plant** | musicplant.co.kr | 待探測（疑似混合） | no（瀏覽） | 待確認 | `brand_event`（팬簽）| 中 | `discovery` 優先 | 與 Soundwave 類似，K-pop 唱片行 팬簽活動；探測重點同上 |
+| **Soundwave** | soundwavekorea.com | 待探測（疑似混合） | no（瀏覽） | 待確認 | `brand_event`（팬사인회 / 簽售）| 中 | `discovery` 優先 | 以 K-pop 簽售（팬사인회 / 사인회）為主；簽售由唱片行主辦，歸 `brand_event` 合理；**팬미팅（fan meeting）不在此自動歸類範圍**，見 §五；探測需確認活動列表是否有固定 URL pattern |
+| **Music Plant** | musicplant.co.kr | 待探測（疑似混合） | no（瀏覽） | 待確認 | `brand_event`（팬사인회 / 簽售）| 中 | `discovery` 優先 | 與 Soundwave 類似，K-pop 唱片行簽售活動；팬미팅排除自動歸類；探測重點同上 |
 
 ### 3.2 品牌 / IP 官方場館
 
@@ -135,15 +136,18 @@
 
 下一輪 AI 解析 prompt 更新時的分類規則草案：
 
-| 判斷條件 | `event_sub_type` |
-|---|---|
-| 關鍵字含「팝업」「팝업스토어」「pop-up」「popup」「pop up」「limited store」「팝업샵」 | `popup_store` |
-| 關鍵字含「전시」「전시회」「exhibition」「展示」「갤러리」「gallery」 | `exhibition` |
-| 關鍵字含「팬사인회」「팬미팅」「사인회」「fansign」「fan sign」「brand event」「브랜드」（不含 popup / 전시）| `brand_event` |
-| 關鍵字含「콘서트」「concert」「투어」「tour」「공연」「live」 | → `event type = concert`（不是 brand 子類）|
-| 以上均不符 + 來源為品牌 / 商場 | `brand_event`（保守分類） |
+| 判斷條件 | `event_sub_type` | 備註 |
+|---|---|---|
+| 關鍵字含「팝업」「팝업스토어」「pop-up」「popup」「pop up」「limited store」「팝업샵」 | `popup_store` | |
+| 關鍵字含「전시」「전시회」「exhibition」「展示」「갤러리」「gallery」 | `exhibition` | |
+| 關鍵字含「팬사인회」「사인회」「fansign」「fan sign」「signing event」（明確簽售活動）| `brand_event` | 簽售為品牌 / 唱片行主辦的 fan-facing 活動，歸 `brand_event` 較合理；前提：來源確實是商家 / 平台主辦 |
+| 關鍵字含「브랜드 이벤트」「brand event」「launch event」「런칭」「콜라보」「collaboration」（且主辦為品牌方）| `brand_event` | |
+| 關鍵字含「팬미팅」「fan meeting」「팬콘」「fan-con」「fanmeet」 | **不直接歸 `brand_event`** | 一般 fan meeting 可能是 `concert` 子類 / `official` event，而非品牌活動；需依 `event_type` + `official context`（主辦方是否為藝人經紀公司）判斷；本工作單暫不替 fan meeting 分類，延後到另一個分類策略工作單處理 |
+| 關鍵字含「콘서트」「concert」「투어」「tour」「공연」「live」 | → `event type = concert`（不是 brand 子類）| |
+| 以上均不符 + 來源為品牌 / 商場 | `brand_event`（保守分類）| 仍須 admin 審核確認 |
 
 > 注意：以上為草案規則，實際 AI prompt 更新需在 AI 解析器工作單中細化與測試。
+> **關鍵原則**：「fan meeting / 팬미팅」是模糊地帶 — 既可能是經紀公司主辦的官方活動（趨近 concert / official），也可能是品牌合作（趨近 brand_event）。本工作單**明確不替 fan meeting 做自動分類**，避免大量誤判；應在獨立的分類策略工作單中以「主辦方判斷」為主要訊號處理。
 
 ---
 
@@ -157,6 +161,11 @@
 4. **爬蟲只負責 discovery + 初步欄位提取**；最終 trust_level 由 admin 審核時決定。
 5. **不得爬需要登入的頁面**（Weverse Verdict C，不例外）。
 6. **不得違反 robots.txt** 或明示禁止爬取的條款。
+7. **v1 不採用 headless browser 作為常規方案**：
+   - SPA / JS-heavy 站點（Ktown4u / LINE FRIENDS SQUARE / The Hyundai / Musinsa 等）**不直接開 Playwright / Puppeteer / browser crawler**。
+   - 這類站點優先進 **Google Discovery（P1）** 或 **manual 人工候選**，由搜尋結果 / 媒體報導 / 人工巡查產生 URL，再用 Claude 解析該 URL 對應頁面（若該頁面 server-rendered 可解析）或直接由人工填入候選欄位。
+   - 例外：若特定來源價值極高且確無替代方案，需在獨立工作單中說明 headless browser 的必要性、運維成本、anti-bot 風險、ToS 合規分析，等 GPT audit 通過後才能評估。
+   - 理由：headless browser 引入 Vercel 部署限制、CPU / 記憶體成本、anti-bot 對抗、ToS 模糊地帶，v1 階段不值得承擔。
 
 ---
 
@@ -180,10 +189,18 @@
 
 依本工作單盤點結果，建議的實作順序：
 
-1. **AI 解析 prompt 強化**（不需 migration / 不新增 parser_type）
+1. **AI 解析 prompt 強化**（不需 migration / 不新增 parser_type，但**不是 zero-cost**）
    - 更新 Claude 解析 prompt，加入快閃 / 展覽關鍵字識別規則
    - 目標：SMTOWN / WAKEONE / YG / JYP 的既有 notice 開始正確標 `event_sub_type`
-   - 這是 zero-cost 增量：不動 crawler 架構，只更新 prompt 字串
+   - **架構成本低，但資料品質風險中等**：
+     - prompt 變更會影響**所有既有來源**的 AI 解析輸出，不只快閃 / 展覽
+     - 加入「팝업 / 전시」識別後，可能誤將 concert / media / official 類 notice 重新分類為 `brand_event` 或子類
+     - 反向風險：原本正確分類為 concert 的「콘서트 팝업스토어 동시開幕」公告可能被錯誤拉到 `popup_store`
+   - **必須先開單獨的 prompt 工作單**，內容包含：
+     - 抽樣回測流程：從既有 `event_candidates` 隨機抽 N 筆 SMTOWN / WAKEONE / YG / JYP 已標分類的資料，跑新 prompt 比對差異
+     - 誤分類門檻：新 prompt 對既有正確分類的回測誤判率不得超過 X%（具體門檻於 prompt 工作單訂定）
+     - rollback 計畫：prompt 更新後若 admin 審核發現大量誤分類，可立即回退舊 prompt
+   - 不應視為「順手改」或「zero-cost 增量」
 
 2. **Visit Seoul 技術探測 PR**（類似 Weverse Phase A）
    - 若探測成功（server-rendered + 結構化）→ 開 `crawler_sources` seed + parser 工作單
