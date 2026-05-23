@@ -1,14 +1,17 @@
 # Crawler Work Order - Weverse Public Probe
 
-> Status: **proposal / research-only work order**.
+> Status: **probe complete — verdict C (abandoned for v1)**.
+> See `WEVERSE_PROBE_REPORT.md` for evidence.
 >
-> Scope: probe design only. Do NOT implement crawler runtime, do NOT add
-> parser_type, do NOT seed `crawler_sources`, do NOT add migration, do NOT
-> add API route, do NOT touch schema, do NOT touch front-end UI, do NOT
-> touch notifications cron. Do NOT design any cookie / login / token /
-> session emulation path. v1 considers **public no-login routes only**.
+> Original scope: probe design only. Do NOT implement crawler runtime,
+> do NOT add parser_type, do NOT seed `crawler_sources`, do NOT add
+> migration, do NOT add API route, do NOT touch schema, do NOT touch
+> front-end UI, do NOT touch notifications cron. Do NOT design any
+> cookie / login / token / session emulation path. v1 considers
+> **public no-login routes only**.
 >
 > Created: 2026-05-23
+> Probe executed: 2026-05-23
 > Owner: idol-rhythm
 
 ---
