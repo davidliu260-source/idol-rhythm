@@ -126,6 +126,19 @@
 
 ---
 
+## 後續工作排程（規劃中，尚未開工作單）
+
+按建議優先順序排列。每一項都是「先開工作單，不直接寫 runtime」的方向。實際開工前需使用者下令，並依 `CLAUDE.md` 高風險任務流程（涉 API key / 爬蟲 / schema 的須先工作單 PR、等 GPT audit）執行。
+
+| # | 方向 | 目的 / 範圍 | 工作單要回答 | 優先 | 依賴 |
+|---|---|---|---|---|---|
+| P1 | Search Discovery Provider 工作單 | 評估是否引入 **Google Programmable Search / Google Search / SerpAPI / Brave Search** 作為 discovery layer，補爬蟲沒覆蓋到的長尾來源（如 ktown4u / linefriendssquare / visitseoul 等定向 `site:` 查詢）。**只工作單**：不寫 code、不新增 API key、不改 crawler、不改 schema、不改 `event_candidates`、不碰前台 UI | (1) Google 搜尋是否比 Claude web search 更適合作 discovery？(2) 「Google 找 URL + Claude 判斷與抽欄位」是否為 v1 最佳分工？(3) 是否支援 `site:ktown4u.com` / `site:linefriendssquare.com` / `site:visitseoul.net` 定向搜尋？(4) 成本、配額、rate limit、查詢策略如何控管？(5) 搜尋結果如何進 `event_candidates`？(6) **搜尋結果不得直接 publish，必須走後台審核**（既有政策）(7) v1 是否先「人工搜尋 + Claude 判斷」、不急著接 API？ | 中高 | 建議在「快閃店來源盤點」完成後做（盤點先確定哪些來源需要 discovery 補洞） |
+| P2 | Streaming / Video Source Inventory 工作單 | 盤點 YouTube / Netflix / Disney+ / 其他串流平台，建立藝人影片來源策略。**只工作單**：不寫 code、不新增 crawler runtime、不接 YouTube API key、不抓 Netflix / Disney+ 私有 API、不做 login / cookie / app API、不改 schema | (1) YouTube 是否用官方 YouTube Data API 做 public search？(2) YouTube 可收哪些類型：MV / teaser / behind / live performance / premiere / livestream / concert film trailer / official channel upload？(3) Netflix / Disney+ 沒合適公開 API 時，是否只透過官方新聞稿 / 媒體文章 / Google discovery / 人工候選？(4) 哪些內容該進 `event type = streaming` / `media`？(5) 是否需要新增 `platform` 欄位或沿用既有 `event metadata`？(6) 如何記錄 availability region / platform link / release date？(7) 如何避免收錄盜版影片、非官方 reupload、fan upload？(8) **所有候選都必須進 `event_candidates`，不直接 publish** | 中高 | 建議在 P1 之後（YouTube 公開搜尋與 Google discovery 策略相關） |
+
+> 註：兩項皆「工作單先行」。任一項實際開工時，先依 `CLAUDE.md` § 高風險任務 開一個 `*_WORK_ORDER.md` 規劃 PR，等 GPT audit 通過再開 runtime 實作 PR。
+
+---
+
 ## Migration 索引
 
 | Migration | 說明 | 狀態 |
