@@ -66,6 +66,7 @@ export async function runCrawlerSource(
   supabase: SupabaseClient,
   source: ActiveSourceRow,
   dryRun: boolean,
+  trigger: CrawlerRunTrigger = 'vercel-cron',
 ): Promise<SourceRunResult> {
   const mode: 'insert' | 'dry-run' = dryRun ? 'dry-run' : 'insert'
 
@@ -188,6 +189,29 @@ export async function runCrawlerSource(
       }
     }
     case 'youtube_official_channel': {
+      // P2-A1 边界守门：youtube_official_channel 在本 phase 仅允许 admin
+      // 手动触发（POST /api/admin/crawlers/youtube-official/run 或
+      // POST /api/admin/crawlers/sync-all/run）。Vercel Cron 透过
+      // /api/cron/sync-candidates fan-out 时应略过，避免在 cron 排程
+      // 与配额策略（P2-A2）正式定案前意外消耗 YouTube quota。
+      if (trigger === 'vercel-cron') {
+        return {
+          source: 'youtube-official-channel',
+          sourceKey: source.source_key,
+          sourceName: source.name,
+          parserType: source.parser_type,
+          mode,
+          fetched: 0,
+          inserted: 0,
+          wouldInsert: 0,
+          skipped: 0,
+          recheck: 0,
+          errors: [
+            'youtube_official_channel is manual-only in P2-A1; cron is intentionally disabled until P2-A2',
+          ],
+          status: 200,
+        }
+      }
       const r = await runYoutubeOfficialChannelFetcher(supabase, {
         sourceKey: source.source_key,
         dryRun,
@@ -229,9 +253,13 @@ export async function runCrawlerSource(
 
 export async function runActiveCrawlerSources(
   supabase: SupabaseClient,
-  options: { dryRun?: boolean } = {},
+  options: { dryRun?: boolean; trigger?: CrawlerRunTrigger } = {},
 ): Promise<{ result: ActiveSourcesRunResult | null; error: string | null }> {
   const dryRun = options.dryRun === true
+  // Default to 'vercel-cron' so any future caller that forgets to set
+  // trigger errs on the side of cron-disabled behavior for manual-only
+  // parser_types (currently youtube_official_channel).
+  const trigger: CrawlerRunTrigger = options.trigger ?? 'vercel-cron'
 
   const { data: rows, error: listError } = await supabase
     .from('crawler_sources')
@@ -251,7 +279,7 @@ export async function runActiveCrawlerSources(
 
   for (const source of sources) {
     try {
-      results.push(await runCrawlerSource(supabase, source, dryRun))
+      results.push(await runCrawlerSource(supabase, source, dryRun, trigger))
     } catch (e) {
       results.push({
         source: 'unknown',
