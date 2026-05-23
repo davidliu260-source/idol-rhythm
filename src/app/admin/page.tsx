@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
-import { LayoutDashboard, Users, CalendarCheck, Clock, FileSearch, ChevronRight, Lock, ShieldCheck, Inbox, Database } from 'lucide-react'
+import { LayoutDashboard, Users, CalendarCheck, Clock, FileSearch, ChevronRight, Lock, ShieldCheck, Inbox, Database, BarChart2 } from 'lucide-react'
 import { getAdminStats } from '@/lib/supabase/adminStats'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
 
@@ -179,6 +179,16 @@ export default async function AdminPage() {
           <div className="flex items-center gap-2">
             <Database className="h-4 w-4 text-violet" />
             <span className="text-sm text-text-base">資料來源管理</span>
+          </div>
+          <ChevronRight className="h-4 w-4 text-muted" />
+        </Link>
+        <Link
+          href="/admin/analytics"
+          className="flex items-center justify-between rounded-xl bg-card border border-card-border px-4 py-3 hover:border-violet/40 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <BarChart2 className="h-4 w-4 text-violet" />
+            <span className="text-sm text-text-base">用戶統計</span>
           </div>
           <ChevronRight className="h-4 w-4 text-muted" />
         </Link>

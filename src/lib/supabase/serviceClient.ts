@@ -10,14 +10,19 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
  * bypassing RLS. ONLY for use in server-only route handlers that have
  * already verified a server-to-server secret (e.g. CRON_SECRET).
  *
- * Allowed callers (as of J5b):
- *   - GET /api/cron/sync-candidates  (CRON_SECRET-gated)
+ * Allowed callers:
+ *   - GET /api/cron/sync-candidates            (CRON_SECRET-gated)
+ *   - GET /api/cron/dispatch-reminders         (CRON_SECRET-gated)
+ *   - GET /api/cron/dispatch-new-event-*       (CRON_SECRET-gated)
+ *   - POST /api/account/delete                 (session-gated, user self-delete)
+ *   - src/lib/supabase/analyticsStats.ts       (admin-gated Server Component;
+ *       aggregate COUNT only — never returns row-level data or emails)
  *
  * NOT allowed:
  *   - Any client component
- *   - Any Server Component that renders user-facing pages
- *   - Any admin route (admin routes use getSupabaseServerClient() +
- *     getCurrentAdmin() session, which is the RLS-respecting path)
+ *   - Any Server Component that renders user-facing (non-admin) pages
+ *   - Any code path that returns user_id lists, email lists, or row-level
+ *     data to the browser (even in admin context)
  *
  * Env requirements:
  *   - NEXT_PUBLIC_SUPABASE_URL (existing, public is fine)
