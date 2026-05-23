@@ -710,8 +710,10 @@ function matchesScheduleCategory(event: Event, category: ScheduleCategory): bool
     case 'exhibition':
       return event.subType === 'exhibition'
     case 'brand_event':
-      // type=brand without a sub_type falls here as catch-all
-      return event.subType === 'brand_event' || event.type === 'brand'
+      // Legacy fallback: type=brand without a sub_type stays in this chip.
+      // type=brand WITH a sub_type (popup_store / exhibition) belongs to those chips,
+      // not here — otherwise the three chips would overlap.
+      return event.subType === 'brand_event' || (event.type === 'brand' && !event.subType)
     case 'youtube':
       return matchesPlatformKeyword(event, 'youtube')
     case 'netflix':
