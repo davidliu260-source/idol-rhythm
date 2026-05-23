@@ -5,6 +5,7 @@ import { runKpopofficialConcertsFetcher } from './runKpopofficialConcertsFetcher
 import { runYgArtistScheduleFetcher } from './runYgArtistScheduleFetcher'
 import { runWakeoneNoticeFetcher } from './runWakeoneNoticeFetcher'
 import { runSmtownNoticeFetcher } from './runSmtownNoticeFetcher'
+import { runYoutubeOfficialChannelFetcher } from './runYoutubeOfficialChannelFetcher'
 
 export type CrawlerRunTrigger = 'vercel-cron' | 'admin-manual'
 
@@ -168,6 +169,26 @@ export async function runCrawlerSource(
     }
     case 'smtown_notice': {
       const r = await runSmtownNoticeFetcher(supabase, {
+        sourceKey: source.source_key,
+        dryRun,
+      })
+      return {
+        source: r.source,
+        sourceKey: r.sourceKey,
+        sourceName: r.sourceName ?? source.name,
+        parserType: source.parser_type,
+        mode: r.mode,
+        fetched: r.fetched,
+        inserted: r.inserted,
+        wouldInsert: r.wouldInsert,
+        skipped: r.skipped,
+        recheck: r.recheck,
+        errors: r.errors,
+        status: r.status,
+      }
+    }
+    case 'youtube_official_channel': {
+      const r = await runYoutubeOfficialChannelFetcher(supabase, {
         sourceKey: source.source_key,
         dryRun,
       })
