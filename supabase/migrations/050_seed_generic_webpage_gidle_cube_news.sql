@@ -49,7 +49,7 @@
 --   only be changed intentionally via the admin UI.
 --
 -- DEPENDENCIES
---   • idols row with slug = 'g-i-dle' must exist (seeded in migration 036).
+--   • idols row with slug = 'gidle' must exist (seeded in migration 036).
 --   • crawler_sources table with source_key unique index (migration 019).
 --   • generic_webpage runtime: PRs #153 (preview) + #158 (commit) merged.
 --
@@ -117,7 +117,7 @@ SELECT
     'scouted',     '2026-05-24'
   )
 FROM public.idols
-WHERE idols.slug = 'g-i-dle'
+WHERE idols.slug = 'gidle'
 ON CONFLICT (source_key) DO UPDATE
 SET name        = EXCLUDED.name,
     source_url  = EXCLUDED.source_url,
