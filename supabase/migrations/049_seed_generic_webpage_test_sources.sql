@@ -8,14 +8,21 @@
 --   to verify the P1-B1 preview-only runtime works end-to-end.
 --
 --   These are NOT production discovery sources. They are infrastructure
---   probes intended to exercise:
---     1. baseline: a non-K-pop page → expect pageRelevance = "none"
---     2. K-pop group page → expect events extracted
---     3. K-pop solo artist page → expect events extracted
+--   probes intended ONLY to verify the end-to-end wiring works:
+--     1. baseline non-K-pop page → expect pageRelevance="none", events=[]
+--     2. K-pop group page (Wikipedia BLACKPINK) → only verifies fetch /
+--        clean / Claude preview do not crash. NO assertion on events count
+--        or pageRelevance value — Wikipedia is descriptive prose, not an
+--        official announcement page, so it may legitimately return few or
+--        zero events.
+--     3. K-pop solo artist page (Wikipedia IU) → same; only verifies the
+--        pipeline runs without crashing.
 --
---   Real production URLs (official announcement pages, ticketing, pop-up,
---   brand) will be added in follow-up migrations after P1-B1 is verified
---   and P1-B2 (commit path) is approved.
+--   Hit-quality acceptance (events > 0, useful titles, accurate dates) must
+--   be done against real official announcement / ticketing / pop-up pages
+--   added in a follow-up migration after P1-B1 wiring is verified and
+--   P1-B2 (commit path) is approved. Those URLs are intentionally NOT
+--   seeded here to keep the runtime-verification scope minimal.
 --
 -- SAFETY
 --   All 3 rows are seeded with is_active = false. The dispatch path in
@@ -104,8 +111,8 @@ VALUES (
   false,
   jsonb_build_object(
     'provider', 'generic_webpage',
-    'test_category', 'kpop_group',
-    'expected_page_relevance', 'high_or_medium'
+    'test_category', 'kpop_group_wiring_probe',
+    'assertion', 'pipeline must not crash; events / pageRelevance not asserted'
   )
 )
 ON CONFLICT (source_key) DO UPDATE
@@ -132,8 +139,8 @@ VALUES (
   false,
   jsonb_build_object(
     'provider', 'generic_webpage',
-    'test_category', 'kpop_solo',
-    'expected_page_relevance', 'high_or_medium'
+    'test_category', 'kpop_solo_wiring_probe',
+    'assertion', 'pipeline must not crash; events / pageRelevance not asserted'
   )
 )
 ON CONFLICT (source_key) DO UPDATE

@@ -26,6 +26,8 @@
 
 import Anthropic from '@anthropic-ai/sdk'
 import { load as cheerioLoad } from 'cheerio'
+import { lookup as dnsLookup } from 'node:dns/promises'
+import { isIP } from 'node:net'
 import { resolveAnthropicModel } from '@/lib/ai/parseCandidate'
 
 // ── Limits (kept as exported constants for visibility) ─────────────────────
@@ -97,6 +99,145 @@ export interface ClaudeParseResult {
   truncatedEvents: number
 }
 
+// ── 0. SSRF / internal URL guard ───────────────────────────────────────────
+
+/**
+ * Returns true if `ip` (a literal IPv4 or IPv6 address) belongs to a
+ * loopback, link-local, broadcast, or RFC1918 private range.
+ *
+ * Block list (P1-B1):
+ *   IPv4:
+ *     0.0.0.0/8          "this network" / wildcard
+ *     10.0.0.0/8         private (RFC 1918)
+ *     127.0.0.0/8        loopback
+ *     169.254.0.0/16     link-local (RFC 3927)
+ *     172.16.0.0/12      private (RFC 1918)
+ *     192.168.0.0/16     private (RFC 1918)
+ *   IPv6:
+ *     ::1                loopback
+ *     ::                 unspecified
+ *     ::ffff:a.b.c.d     IPv4-mapped — re-check via IPv4 rules
+ *     fc00::/7           unique local (RFC 4193)
+ *     fe80::/10          link-local (RFC 4291)
+ *
+ * Intentionally NOT in scope (returns false):
+ *   IPv4 multicast (224/4) and reserved (240/4) — these are not typical SSRF
+ *   pivots and blocking them adds little value beyond the loopback / private
+ *   set above. Re-evaluate if a future probe shows otherwise.
+ */
+function isPrivateOrLoopbackIp(ip: string): boolean {
+  const lower = ip.toLowerCase()
+
+  // IPv6 paths
+  if (lower === '::1' || lower === '::') return true
+  if (lower.startsWith('::ffff:')) {
+    const v4 = lower.slice(7)
+    if (isIP(v4) === 4) return isPrivateOrLoopbackIp(v4)
+    return true // malformed mapped — refuse out of caution
+  }
+  if (lower.startsWith('fe80:') || /^f[cd][0-9a-f]{2}:/.test(lower)) return true
+
+  // IPv4 paths
+  if (isIP(ip) !== 4) return false
+  const octets = ip.split('.').map((s) => Number(s))
+  if (octets.length !== 4 || octets.some((n) => !Number.isInteger(n))) {
+    return true // unparseable — refuse out of caution
+  }
+  const [a, b] = octets
+  if (a === 0) return true
+  if (a === 10) return true
+  if (a === 127) return true
+  if (a === 169 && b === 254) return true
+  if (a === 172 && b >= 16 && b <= 31) return true
+  if (a === 192 && b === 168) return true
+  return false
+}
+
+export interface UrlGuardResult {
+  ok: boolean
+  /** Reason for rejection (Chinese-friendly). null when ok. */
+  error: string | null
+}
+
+/**
+ * SSRF guard. Run before any fetch.
+ *
+ * Rejects:
+ *   - non-http/https schemes (file:, javascript:, data:, ftp:, gopher:, …)
+ *   - non-standard ports (P1-B1: only 80 and 443; the default empty port
+ *     string passes because URL omits it for the scheme's standard port)
+ *   - literal blocklist hostnames: localhost, *.localhost, *.local
+ *   - literal IP in URL that is private/loopback/link-local
+ *   - DNS-resolved IP (any address returned by lookup) that is
+ *     private/loopback/link-local
+ *
+ * Caveats:
+ *   - This is a TOCTOU check: the IP could change between this guard and
+ *     the actual fetch. For P1-B1 the source URLs are admin-curated via
+ *     migration so the attack surface is defense-in-depth, not user-input.
+ *     A future hardening pass can pin the resolved IP and pass it to fetch
+ *     via a custom Agent / Undici dispatcher.
+ */
+export async function assertUrlIsPublic(rawUrl: string): Promise<UrlGuardResult> {
+  let u: URL
+  try {
+    u = new URL(rawUrl)
+  } catch {
+    return { ok: false, error: `URL 解析失敗：${rawUrl}` }
+  }
+
+  // Scheme
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') {
+    return { ok: false, error: `不支援的 protocol：${u.protocol}（只允許 http / https）` }
+  }
+
+  // Port (only allow default 80 / 443; URL.port is '' when implicit)
+  if (u.port !== '' && u.port !== '80' && u.port !== '443') {
+    return { ok: false, error: `P1-B1 拒絕非標準 port：${u.port}` }
+  }
+
+  // Hostname literal blocklist
+  let host = u.hostname.toLowerCase()
+  // Strip IPv6 brackets if present (URL.hostname keeps them off, but be safe)
+  if (host.startsWith('[') && host.endsWith(']')) host = host.slice(1, -1)
+
+  if (host === '' || host === 'localhost' || host.endsWith('.localhost')) {
+    return { ok: false, error: `禁止的 hostname：${host || '(empty)'}` }
+  }
+  if (host.endsWith('.local')) {
+    return { ok: false, error: `禁止 mDNS / .local hostname：${host}` }
+  }
+
+  // If hostname is a literal IP, check directly.
+  const ipKind = isIP(host)
+  if (ipKind === 4 || ipKind === 6) {
+    if (isPrivateOrLoopbackIp(host)) {
+      return { ok: false, error: `禁止內網 / 回環 IP：${host}` }
+    }
+    return { ok: true, error: null }
+  }
+
+  // Otherwise DNS-resolve and check every returned address.
+  try {
+    const addrs = await dnsLookup(host, { all: true })
+    if (!addrs || addrs.length === 0) {
+      return { ok: false, error: `DNS 解析無結果：${host}` }
+    }
+    for (const a of addrs) {
+      if (isPrivateOrLoopbackIp(a.address)) {
+        return {
+          ok: false,
+          error: `${host} 解析到內網 / 回環 IP：${a.address}`,
+        }
+      }
+    }
+    return { ok: true, error: null }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    return { ok: false, error: `DNS lookup 失敗：${msg}` }
+  }
+}
+
 // ── 1. fetchPublicHtml ─────────────────────────────────────────────────────
 
 /**
@@ -113,6 +254,21 @@ export interface ClaudeParseResult {
  * identifies the bot.
  */
 export async function fetchPublicHtml(url: string): Promise<FetchResult> {
+  // SSRF / internal-URL guard — must run BEFORE any network I/O.
+  // Failing this also means we never call Claude / never touch the page.
+  const guard = await assertUrlIsPublic(url)
+  if (!guard.ok) {
+    return {
+      ok: false,
+      html: null,
+      status: 0,
+      finalUrl: url,
+      bytesRead: 0,
+      wasByteTruncated: false,
+      error: `URL 拒絕（SSRF guard）：${guard.error}`,
+    }
+  }
+
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
 
