@@ -35,7 +35,7 @@
 --   - INSERT 3 crawler_sources rows
 --   - parser_type = 'generic_webpage' (new, but parser_type is plain text;
 --     no schema migration required)
---   - source_type = 'other' (sticks to existing enum; no new enum value)
+--   - source_type = 'unknown' (sticks to existing enum; no new enum value)
 --   - idol_id = NULL (these are infrastructure probes, not idol-bound)
 --   - config jsonb with provider hint for future debugging
 --
@@ -60,7 +60,7 @@
 --   [ ] Run verification query below after COMMIT.
 --   [ ] Confirm 3 rows returned, all parser_type = 'generic_webpage'.
 --   [ ] Confirm all 3 rows have is_active = false.
---   [ ] Confirm source_type IN ('other').
+--   [ ] Confirm source_type IN ('unknown').
 --   [ ] Confirm idol_id IS NULL for all 3 rows.
 -- =============================================================================
 
@@ -78,7 +78,7 @@ VALUES (
   'generic-test-baseline-example-com',
   NULL,
   'https://example.com/',
-  'other'::source_type,
+  'unknown'::source_type,
   'generic_webpage',
   false,
   jsonb_build_object(
@@ -106,7 +106,7 @@ VALUES (
   'generic-test-wikipedia-blackpink',
   NULL,
   'https://en.wikipedia.org/wiki/BLACKPINK',
-  'other'::source_type,
+  'unknown'::source_type,
   'generic_webpage',
   false,
   jsonb_build_object(
@@ -134,7 +134,7 @@ VALUES (
   'generic-test-wikipedia-iu',
   NULL,
   'https://en.wikipedia.org/wiki/IU_(singer)',
-  'other'::source_type,
+  'unknown'::source_type,
   'generic_webpage',
   false,
   jsonb_build_object(
