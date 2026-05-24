@@ -171,6 +171,17 @@ export default function RunSourceButton({
 
   const isGenericWebpage = parserType === 'generic_webpage'
 
+  // Commit gate: only allow Commit when the most recent run was a SUCCESSFUL
+  // preview with zero errors. Forces admin to inspect preview output before
+  // any DB write. After a commit (or after switching sources / hard refresh /
+  // a failed preview) the gate closes again and the admin must re-preview.
+  const commitGateOpen =
+    isGenericWebpage &&
+    result !== null &&
+    result.mode === 'preview' &&
+    result.ok &&
+    result.errors.length === 0
+
   async function handleRun() {
     if (!plan) return
     setRunning(true)
@@ -198,7 +209,19 @@ export default function RunSourceButton({
     // Two-step confirmation — irreversible DB write (modulo dedupe).
     if (typeof window === 'undefined') return
     const confirmed = window.confirm(
-      `將執行 commit，把 Claude 解析的活動寫入 event_candidates（review_status=pending）。\n\nsource：${sourceName}\n\n繼續？`,
+      [
+        `即將 commit：${sourceName}`,
+        '',
+        '請先確認上方 Preview 結果（pageRelevance / events 內容）正確。',
+        '',
+        '本次 commit 規則：',
+        '・最多寫入 3 筆候選（超過會整批拒寫）',
+        '・只寫入 event_candidates，review_status=pending',
+        '・需於 /admin/event-candidates 人工審核才會發布',
+        '・重複資料（source_hash 相同）會自動 dedupe，不會重複寫入',
+        '',
+        '確認執行？',
+      ].join('\n'),
     )
     if (!confirmed) return
     setCommitting(true)
@@ -251,8 +274,13 @@ export default function RunSourceButton({
           <button
             type="button"
             onClick={handleCommit}
-            disabled={anyBusy}
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-xs font-semibold text-amber-200 disabled:opacity-60 active:opacity-80 transition-opacity"
+            disabled={anyBusy || !commitGateOpen}
+            title={
+              commitGateOpen
+                ? '把目前 Preview 結果寫入 event_candidates（review_status=pending）'
+                : '請先成功跑一次 Preview（無錯誤）才能寫入候選'
+            }
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-xs font-semibold text-amber-200 disabled:opacity-50 disabled:cursor-not-allowed active:opacity-80 transition-opacity"
           >
             {committing ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -263,6 +291,12 @@ export default function RunSourceButton({
           </button>
         )}
       </div>
+
+      {isGenericWebpage && !commitGateOpen && (
+        <p className="text-[10px] text-muted leading-relaxed">
+          ※ Commit 按鈕需先成功執行 Preview（且無錯誤）才會開放。
+        </p>
+      )}
 
       {error && (
         <div className="rounded-xl bg-red-500/10 border border-red-500/25 px-3 py-2">
