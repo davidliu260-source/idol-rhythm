@@ -7,10 +7,20 @@ import { Download, Loader2 } from 'lucide-react'
 interface CrawlerResponse {
   ok: boolean
   source: string
-  fetched: number
-  inserted: number
-  skipped: number
+  /** Standard crawlers: number of rows fetched from the upstream source.
+   *  generic_webpage preview: not used (omitted). */
+  fetched?: number
+  /** Standard crawlers: rows inserted into event_candidates.
+   *  generic_webpage preview: not used (omitted; P1-B1 never writes). */
+  inserted?: number
+  /** Standard crawlers: rows skipped due to dedupe / non-event filter.
+   *  generic_webpage preview: not used. */
+  skipped?: number
   errors: string[]
+  /** generic_webpage preview only: number of candidate events Claude proposed. */
+  previewEvents?: number
+  /** generic_webpage preview only: page relevance verdict. */
+  pageRelevance?: 'high' | 'medium' | 'low' | 'none' | null
 }
 
 interface RunPlan {
@@ -51,6 +61,13 @@ function planForSource(
       return {
         endpoint: '/api/admin/crawlers/yg-artist-schedule/run',
         body: { sourceKey },
+      }
+    case 'generic_webpage':
+      // P1-B1: preview-only. The route refuses any mode other than 'preview'.
+      // commit mode is reserved for P1-B2 (after GPT audit).
+      return {
+        endpoint: '/api/admin/crawlers/generic-webpage/run',
+        body: { sourceKey, mode: 'preview' },
       }
     default:
       return null
@@ -93,7 +110,34 @@ export default function RunSourceButton({
       }
       if (plan.body) init.body = JSON.stringify(plan.body)
       const res = await fetch(plan.endpoint, init)
-      const body = (await res.json()) as CrawlerResponse
+      const raw = (await res.json()) as Record<string, unknown>
+      // generic_webpage preview returns a rich shape (events, pageRelevance,
+      // pageTitle, …); the other crawlers return {fetched, inserted, skipped}.
+      // Normalise here so the display logic stays simple.
+      const body: CrawlerResponse = {
+        ok: raw.ok === true,
+        source: typeof raw.source === 'string' ? raw.source : 'unknown',
+        errors: Array.isArray(raw.errors)
+          ? (raw.errors as unknown[]).filter(
+              (x): x is string => typeof x === 'string',
+            )
+          : [],
+      }
+      if (typeof raw.fetched === 'number') body.fetched = raw.fetched
+      if (typeof raw.inserted === 'number') body.inserted = raw.inserted
+      if (typeof raw.skipped === 'number') body.skipped = raw.skipped
+      if (Array.isArray(raw.events)) {
+        body.previewEvents = (raw.events as unknown[]).length
+      }
+      if (
+        raw.pageRelevance === 'high' ||
+        raw.pageRelevance === 'medium' ||
+        raw.pageRelevance === 'low' ||
+        raw.pageRelevance === 'none' ||
+        raw.pageRelevance === null
+      ) {
+        body.pageRelevance = raw.pageRelevance
+      }
       setResult(body)
       router.refresh()
     } catch (e) {
@@ -140,8 +184,19 @@ export default function RunSourceButton({
               result.ok ? 'text-emerald-300' : 'text-amber-300'
             }`}
           >
-            抓到 {result.fetched} 筆，新增 {result.inserted} 筆，略過{' '}
-            {result.skipped} 筆，錯誤 {result.errors.length} 筆
+            {result.previewEvents !== undefined ? (
+              <>
+                Preview：pageRelevance={result.pageRelevance ?? '—'}，
+                {result.previewEvents} events 建議，
+                錯誤 {result.errors.length} 筆
+              </>
+            ) : (
+              <>
+                抓到 {result.fetched ?? 0} 筆，新增 {result.inserted ?? 0} 筆，
+                略過 {result.skipped ?? 0} 筆，
+                錯誤 {result.errors.length} 筆
+              </>
+            )}
           </p>
           {result.errors.length > 0 && (
             <ul className="text-[10px] text-amber-300/80 leading-relaxed list-disc list-inside space-y-0.5">
@@ -152,9 +207,15 @@ export default function RunSourceButton({
               ))}
             </ul>
           )}
-          {result.inserted > 0 && (
+          {(result.inserted ?? 0) > 0 && (
             <p className="text-[10px] text-muted mt-1">
               新候選已加入 /admin/event-candidates（review_status = pending）。
+            </p>
+          )}
+          {result.previewEvents !== undefined && (
+            <p className="text-[10px] text-muted mt-1">
+              P1-B1 preview only：未寫入 event_candidates。完整 JSON 請看
+              Network panel 或瀏覽器 console。
             </p>
           )}
         </div>
