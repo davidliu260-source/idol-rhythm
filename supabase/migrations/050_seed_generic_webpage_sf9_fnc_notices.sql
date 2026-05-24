@@ -67,7 +67,7 @@
 --   WHERE source_key = 'generic-sf9-fnc-notices';
 --
 --   Expected: 1 row, is_active=false, has_idol=true,
---             source_url='https://www.fncent.com/Notices'.
+--             source_url='https://www.fncent.com'.
 --
 -- HUMAN ACCEPTANCE TEST (after migration executed)
 --   1. Open /admin/sources and search "SF9" or "FNC".
@@ -104,14 +104,14 @@ SELECT
   'SF9 — FNC Entertainment Notices',
   'generic-sf9-fnc-notices',
   idols.id,
-  'https://www.fncent.com/Notices',
+  'https://www.fncent.com',
   'official_website'::source_type,
   'generic_webpage',
   false,
   jsonb_build_object(
     'provider', 'generic_webpage',
     'phase',    'p1-b3',
-    'note',     'FNC Entertainment public notices page — SF9 hit-quality test. Covers all FNC acts; admin should filter non-SF9 candidates at review stage.',
+    'note',     'FNC Entertainment homepage — NOTICE section lists concert announcements for SF9 / N.Flying / FTISLAND etc. Server-rendered. Admin should filter non-SF9 candidates at review stage.',
     'scouted',  '2026-05-24'
   )
 FROM public.idols
