@@ -149,7 +149,8 @@
 | 119 | Weverse / Weverse Shop 公開頁面研究工作單 | `WEVERSE_PUBLIC_PAGE_RESEARCH_WORK_ORDER.md`：第二輪 Weverse 公開頁研究計畫，覆蓋 shop.weverse.io；純研究，不登入，不實作 | ✅ PR #180 merged |
 | 120 | Weverse / Weverse Shop 公開頁面探測報告 | `WEVERSE_PUBLIC_PAGE_PROBE_REPORT.md`：weverse.io 全 SPA（5478 bytes 同 md5 所有路徑）；shop.weverse.io SSR 只在 /home，_buildManifest.js 確認無 per-artist / per-product routes；**兩者整體 Verdict C/D**，不可作為爬蟲來源；已加入「不要重複嘗試」清單 | ✅ PR #181 merged（2026-05-25）|
 | 121 | Jay Park / Dean 子路徑修復（migration 059）| Preview 驗收（#114）發現 jaypark.com & youwillknovv.com 落地頁 pageRelevance=none。Curl 探測 2026-05-25：Jay Park `/notice` 命中 Next.js SSG 含 inline 真實活動（월드투어 [Serenades & Body Rolls] In Seoul 等）；Dean `/live` 命中 226KB imweb 頁含 3 個未來日期（2026.05/06/08）。`059_fix_solo_artist_subpath_urls.sql`：UPDATE 2 rows source_url + jsonb_set config.note；不改 schema / GRANT / RLS / parser | 🔲 PR #182 待 audit；migration SQL 已寫，等 PR merge + 至 Supabase SQL Editor 跑；執行後 Preview 重驗 |
-| 122 | RSS Feed 探測工作單 | `RSS_FEED_PROBE_WORK_ORDER.md`：規劃對既有 WordPress 系 generic_webpage 來源（WAKEONE / BLISSOO / VLAST / Cube / Amoeba / YG / etc.）curl 探測 `/feed/` `/feed/atom/` `/?feed=rss2` `/rss.xml` 等標準路徑；含自動探測（解析首頁 `<link rel="alternate" type="application/rss+xml">`）；Verdict A/B/C/D 標準；2s sleep 避免壓測；不繞 auth；不寫 runtime / 不新增 parser_type / 不新增 migration / 不 seed crawler_sources；探測完產出 `RSS_FEED_PROBE_REPORT.md`；若 ≥3 Verdict A 才開 wordpress_rss runtime 工作單 | 🔲 本 PR；只工作單 |
+| 122 | RSS Feed 探測工作單 | `RSS_FEED_PROBE_WORK_ORDER.md`：規劃對既有 WordPress 系 generic_webpage 來源（WAKEONE / BLISSOO / VLAST / Cube / Amoeba / YG / etc.）curl 探測 `/feed/` `/feed/atom/` `/?feed=rss2` `/rss.xml` 等標準路徑；含自動探測（解析首頁 `<link rel="alternate" type="application/rss+xml">`）；Verdict A/B/C/D 標準；2s sleep 避免壓測；不繞 auth；不寫 runtime / 不新增 parser_type / 不新增 migration / 不 seed crawler_sources；探測完產出 `RSS_FEED_PROBE_REPORT.md`；若 ≥3 Verdict A 才開 wordpress_rss runtime 工作單 | ✅ PR #183 merged |
+| 123 | RSS Feed 探測報告 | `RSS_FEED_PROBE_REPORT.md`：11 個 domain curl 實測。**結論：否決 wordpress_rss runtime 開發**。Verdict A：WAKEONE (`/news/feed/` 12 items + `/notice/feed/` 12 items) + kpopofficial (`/feed/` 15 items)；但這兩個來源**目前都不走 generic_webpage / 不耗 Claude token**（各用獨立 cheerio parser），原始動機「降低 Claude 成本」無法兌現。所有真正用 generic_webpage 的 8 個來源（BLISSOO / VLAST / Cube / Amoeba / Jay Park / Dean / N.Flying JP / YG）全部 Verdict C 或 B（無可用 feed）。建議 7 個來源加入「不要重複嘗試」清單，把資源轉向 Ticketmaster / Search Discovery / YouTube 擴張 | 🔲 本 PR；只研究報告 |
 
 ---
 
@@ -168,6 +169,13 @@
 | fnc.co.kr（FNC CUPID）/ edm.co.kr（EDAM）/ starshipent.com | ❌ bot protection | Cloudflare 封鎖 |
 | bstage.im（KQ）/ modhaus.co.kr / cube-ent.com（官網以外頁）| ❌ SPA | 全 SPA |
 | rbw.kr / wm-entertainment.com / p-nation.com | ❌ HTTP 000 / 連線失敗 | curl 直接失敗 |
+| smtown.com `/feed/` 等所有 feed 路徑 | ❌ 無 RSS feed | 自製 framework，所有 path 回 12KB 相同 HTML；PR #184 RSS probe 確認 |
+| ygfamily.com `/feed/` 等 | ❌ 無 RSS feed | 404 + 間歇 SSL_ERROR；PR #184 RSS probe 確認 |
+| jaypark.com `/feed/` 等 | ❌ 無 RSS feed | Next.js SSG，非 WordPress；PR #184 RSS probe 確認 |
+| nflying-official.jp `/feed/` 等 | ❌ 無 RSS feed | 自製站，feed 路徑 fallback 到 HTML；PR #184 RSS probe 確認 |
+| youwillknovv.com `/rss` | ❌ Dummy feed only | imweb 預設只回站點自己 1 個 item，無實際內容；PR #184 RSS probe 確認 |
+| amoebaculture.com 所有 feed 路徑 | ❌ 無 RSS feed | 所有 path 回相同首頁 HTML；PR #184 RSS probe 確認 |
+| blissoo.com `/?feed=rss2` | ❌ Feed 已關閉 | WordPress 站但站長關閉 feed，回 HTML；PR #184 RSS probe 確認 |
 
 ---
 
