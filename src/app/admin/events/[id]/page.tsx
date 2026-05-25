@@ -13,6 +13,7 @@ import EventTypeBadge from '@/components/EventTypeBadge'
 import { publishEvent, unpublishEvent } from './actions'
 import GenerateChineseButton from './GenerateChineseButton'
 import MarkReviewedButton from './MarkReviewedButton'
+import { getReviewSourceInfo } from '@/lib/admin/sourceReview'
 
 // ── Admin-only types (not exported — used only in this page) ──────────────────
 
@@ -247,6 +248,24 @@ export default async function AdminEventDetailPage({
 
   const trustConfig = SOURCE_CONFIG[event.trustLevel]
   const displayTitle = event.displayTitleZh || event.title
+
+  // Pre-check: will publishing be blocked by trust level?
+  // Shows a warning banner instead of crashing on submit.
+  const publishBlockReason: string | null = (() => {
+    if (event.isPublished) return null
+    const src = event.sources[0] ?? null
+    if (!src) return '此活動尚無來源紀錄，請先在編輯頁新增官方、售票或媒體來源。'
+    const { trustLevel, hint } = getReviewSourceInfo({
+      sourceName: src.label,
+      sourceType: src.type,
+      sourceUrl: src.url,
+    })
+    if (trustLevel === 'pending') {
+      return hint ?? '來源為聚合 / 社群 / 未知類型，請先補充官方、售票、主辦、場館或媒體來源後再發布。'
+    }
+    return null
+  })()
+
   const dateDisplay =
     event.dateLabel ||
     (event.startDate && event.endDate
@@ -305,6 +324,24 @@ export default async function AdminEventDetailPage({
                 <span className="text-xs font-semibold text-amber-400">下架活動（取消發布）</span>
               </button>
             </form>
+          ) : publishBlockReason ? (
+            /* ── Publish blocked: show reason instead of crash ── */
+            <div className="flex flex-col gap-2">
+              <div className="rounded-xl bg-red-500/10 border border-red-500/25 px-3 py-2.5 flex items-start gap-2">
+                <AlertTriangle className="h-3.5 w-3.5 text-red-400 flex-shrink-0 mt-0.5" />
+                <div className="flex flex-col gap-0.5">
+                  <p className="text-xs font-semibold text-red-400">無法發布：來源不符</p>
+                  <p className="text-xs text-red-300/80 leading-snug">{publishBlockReason}</p>
+                </div>
+              </div>
+              <Link
+                href={`/admin/events/${event.id}/edit`}
+                className="flex items-center gap-2 rounded-xl bg-card border border-card-border px-3 py-2.5 hover:bg-card-border/30 transition-colors"
+              >
+                <FileEdit className="h-4 w-4 text-muted flex-shrink-0" />
+                <span className="text-xs font-medium text-muted">前往編輯頁新增官方來源</span>
+              </Link>
+            </div>
           ) : (
             /* ── Publish button ── */
             <form action={publishEvent.bind(null, event.id)}>
