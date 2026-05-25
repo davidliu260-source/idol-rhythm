@@ -45,6 +45,12 @@ interface CandidateDetail {
   createdAt: string
   updatedAt: string
   needsRecheck: boolean
+  // Drift Diff v1 (migration 058)
+  latestRawTitle: string | null
+  latestRawContent: string | null
+  latestDetectedDate: string | null
+  latestSourceUrl: string | null
+  latestDetectedAt: string | null
 }
 
 // ── Data fetcher ──────────────────────────────────────────────────────────────
@@ -91,6 +97,13 @@ async function getCandidate(id: string): Promise<CandidateDetail | null> {
     created_at: string
     updated_at: string
     needs_recheck: boolean | null
+    // Drift Diff v1 (migration 058) — latest snapshot from crawler when
+    // content_hash drifted. NULL means no drift has been detected yet.
+    latest_raw_title: string | null
+    latest_raw_content: string | null
+    latest_detected_date: string | null
+    latest_source_url: string | null
+    latest_detected_at: string | null
     idols: { name: string } | null
   }
 
@@ -137,6 +150,11 @@ async function getCandidate(id: string): Promise<CandidateDetail | null> {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     needsRecheck: row.needs_recheck ?? false,
+    latestRawTitle: row.latest_raw_title,
+    latestRawContent: row.latest_raw_content,
+    latestDetectedDate: row.latest_detected_date,
+    latestSourceUrl: row.latest_source_url,
+    latestDetectedAt: row.latest_detected_at,
   }
 }
 
@@ -182,6 +200,47 @@ function getCandidateReviewedDisabledReason(candidate: CandidateDetail): string 
     return '缺少中文欄位，無法標記已審閱'
   }
   return null
+}
+
+/**
+ * One row inside the Drift Diff side-by-side panel.
+ * - `value` null/empty renders as "—".
+ * - `multiline` preserves whitespace + wraps long content (for raw_content).
+ * - `mono` uses a monospace font (for URLs).
+ * - `changed` adds a subtle highlight ring on the "latest" side so the admin
+ *   can scan which fields actually differ. The original side never sets
+ *   `changed`; the comparison is only meaningful when called from the
+ *   latest column.
+ */
+function DiffField({
+  label,
+  value,
+  multiline = false,
+  mono = false,
+  changed = false,
+}: {
+  label: string
+  value: string | null
+  multiline?: boolean
+  mono?: boolean
+  changed?: boolean
+}) {
+  return (
+    <div>
+      <div className="text-[10px] text-muted mb-0.5">{label}</div>
+      <div
+        className={`text-xs leading-relaxed ${
+          mono ? 'font-mono break-all' : 'break-words'
+        } ${multiline ? 'whitespace-pre-wrap' : ''} ${
+          changed
+            ? 'text-emerald-300 font-medium'
+            : 'text-text-base'
+        }`}
+      >
+        {value && value.length > 0 ? value : <span className="text-muted">—</span>}
+      </div>
+    </div>
+  )
 }
 
 function sourceBadgeClass(risk: string): string {
@@ -296,6 +355,70 @@ export default async function AdminCandidateDetailPage({
             candidateId={candidate.id}
             isApproved={isApproved}
           />
+        </div>
+      )}
+
+      {/* ── Drift Diff v1 (migration 058) ──
+         Shown whenever the crawler has ever captured a newer snapshot
+         (latestDetectedAt set), even after admin clicked 已處理. The
+         latest_* values stay around for audit. */}
+      {candidate.latestDetectedAt && (
+        <div className="px-4 mb-4">
+          <div className="rounded-xl bg-card border border-card-border p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle className="h-3.5 w-3.5 text-orange-400 flex-shrink-0" />
+              <h3 className="text-sm font-semibold text-text-base">內容變更紀錄</h3>
+              <span className="ml-auto text-[10px] text-muted tabular-nums">
+                最近偵測：{formatDatetime(candidate.latestDetectedAt)}
+              </span>
+            </div>
+
+            <p className="mb-3 rounded-lg bg-amber-500/10 border border-amber-500/25 px-3 py-2 text-[11px] text-amber-300 leading-snug">
+              此區塊只顯示來源最新版本；系統不會自動更新對應的已發布活動。如需更新，請至 <code className="font-mono">/admin/events/[id]/edit</code> 人工調整。
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {/* Original column */}
+              <div className="rounded-lg bg-card-border/20 border border-card-border p-3 space-y-2.5">
+                <div className="text-[10px] font-semibold text-muted uppercase tracking-wider">
+                  原本內容（核准時）
+                </div>
+                <DiffField label="標題" value={candidate.rawTitle} />
+                <DiffField label="日期" value={candidate.detectedDate} />
+                <DiffField label="來源 URL" value={candidate.sourceUrl} mono />
+                <DiffField label="內容" value={candidate.rawContent} multiline />
+              </div>
+
+              {/* Latest column */}
+              <div className="rounded-lg bg-emerald-500/5 border border-emerald-500/25 p-3 space-y-2.5">
+                <div className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider">
+                  新抓到內容
+                </div>
+                <DiffField
+                  label="標題"
+                  value={candidate.latestRawTitle}
+                  changed={candidate.latestRawTitle !== candidate.rawTitle}
+                />
+                <DiffField
+                  label="日期"
+                  value={candidate.latestDetectedDate}
+                  changed={candidate.latestDetectedDate !== candidate.detectedDate}
+                />
+                <DiffField
+                  label="來源 URL"
+                  value={candidate.latestSourceUrl}
+                  mono
+                  changed={candidate.latestSourceUrl !== candidate.sourceUrl}
+                />
+                <DiffField
+                  label="內容"
+                  value={candidate.latestRawContent}
+                  multiline
+                  changed={candidate.latestRawContent !== candidate.rawContent}
+                />
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
