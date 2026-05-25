@@ -39,6 +39,12 @@ import {
   type RunStatus,
   type SourceTypeEnum,
 } from './crawlerSource'
+import {
+  buildIdolMatchIndex,
+  matchIdolFromTitle,
+  type IdolForMatching,
+  type IdolMatchIndex,
+} from './idolMatcher'
 
 const EXPECTED_PARSER_TYPE = 'generic_webpage'
 const PARSER_VERSION = 'p1-b2'
@@ -53,11 +59,32 @@ const PARSER_VERSION = 'p1-b2'
 export const COMMIT_CONFIDENCE_THRESHOLD = 0.65
 
 /**
- * Hard cap on candidates per commit call. If the filtered list exceeds this,
- * the orchestrator refuses to write any candidate (no partial writes) and
- * returns a warning. See work order §11.
+ * Default cap on candidates per commit call. Raised from 3 → 10 (P1-B8) to
+ * handle label-level / aggregator sources that commonly return 5–10 events.
+ *
+ * Per-source override: set `source.config.maxCandidatesPerCommit` (number)
+ * in the crawler_sources jsonb config column — no migration needed.
+ *
+ * Hard cap: MAX_CANDIDATES_PER_COMMIT_HARD_CAP (50) — Claude returning >50
+ * events almost always indicates noise; refuse and log so admin can investigate.
+ *
+ * Behavior when exceeded is unchanged: refuse entire batch (no partial writes).
  */
-export const MAX_CANDIDATES_PER_COMMIT = 3
+export const DEFAULT_MAX_CANDIDATES_PER_COMMIT = 10
+export const MAX_CANDIDATES_PER_COMMIT_HARD_CAP = 50
+
+/**
+ * Resolve the effective per-commit cap for a given source.
+ * Precedence: source.config.maxCandidatesPerCommit (if valid positive number)
+ * → DEFAULT_MAX_CANDIDATES_PER_COMMIT. Always clamped to [1, HARD_CAP].
+ */
+function resolveMaxCandidates(source: CrawlerSourceRow): number {
+  const configVal = source.config?.maxCandidatesPerCommit
+  if (typeof configVal === 'number' && configVal > 0) {
+    return Math.min(Math.floor(configVal), MAX_CANDIDATES_PER_COMMIT_HARD_CAP)
+  }
+  return DEFAULT_MAX_CANDIDATES_PER_COMMIT
+}
 
 /**
  * DB schema event_type enum (matches migration 001 `event_type`).
@@ -194,6 +221,91 @@ function computeSourceHash(args: {
   }
 }
 
+// ── P1-B8: idol matching helpers ───────────────────────────────────────────
+
+/**
+ * How the detected_idol_id was resolved for a given candidate.
+ * Recorded in raw_data.idol_matched_via for post-commit analysis.
+ *   'source_binding' — source.idol_id was set; inherited directly
+ *   'name'           — matched via idol.name
+ *   'alt_name'       — matched via one of idol.alt_names
+ *   'none'           — no match; detected_idol_id = null
+ */
+export type IdolMatchedVia = 'source_binding' | 'name' | 'alt_name' | 'none'
+
+/**
+ * Per-event idol match result returned in PreviewResult.idolMatchResults
+ * so admin can see what would be committed before clicking Commit.
+ */
+export interface IdolMatchedEvent {
+  rawTitle: string
+  matchedIdolId: string | null
+  matchedIdolName: string | null
+  via: IdolMatchedVia
+}
+
+/**
+ * Load all active idols and build the match index.
+ * Throws on DB error — callers should propagate as a fatal run error
+ * (per Q4 in the work order: fail-fast to avoid silently writing bad data).
+ */
+async function loadIdolMatcherIndex(
+  supabase: SupabaseClient,
+): Promise<IdolMatchIndex> {
+  const { data, error } = await supabase
+    .from('idols')
+    .select('id, name, alt_names')
+    .eq('is_active', true)
+  if (error) {
+    throw new Error(`idols 載入失敗 [${error.code ?? '?'}] ${error.message}`)
+  }
+  const idols: IdolForMatching[] = ((data ?? []) as Array<{
+    id: string
+    name: string
+    alt_names: string[] | null
+  }>).map((row) => ({
+    id: row.id,
+    name: row.name,
+    alt_names: row.alt_names ?? [],
+  }))
+  return buildIdolMatchIndex(idols)
+}
+
+/**
+ * Resolve detected_idol_id + how it was obtained for one event.
+ *
+ * If source has a bound idol_id, that always takes precedence (source_binding).
+ * Otherwise run the matcher against the event title.
+ * Returns null idol_id (via = 'none') when no match is found — the candidate
+ * is still written so admin can manually assign the idol.
+ *
+ * idolName is returned for display / logging only; not stored in DB.
+ */
+function resolveDetectedIdol(args: {
+  event: PreviewEvent
+  source: CrawlerSourceRow
+  matcherIndex: IdolMatchIndex | null
+}): { idolId: string | null; idolName: string | null; via: IdolMatchedVia } {
+  const { event, source, matcherIndex } = args
+  if (source.idol_id !== null) {
+    // Name for source_binding case is looked up separately by the preview
+    // caller (hintIdolName) — return null here to avoid a second DB call.
+    return { idolId: source.idol_id, idolName: null, via: 'source_binding' }
+  }
+  if (!matcherIndex) {
+    return { idolId: null, idolName: null, via: 'none' }
+  }
+  const result = matchIdolFromTitle(event.rawTitle, matcherIndex)
+  if (!result) {
+    return { idolId: null, idolName: null, via: 'none' }
+  }
+  return {
+    idolId: result.idol.id,
+    idolName: result.idol.name,
+    via: result.viaPrimaryName ? 'name' : 'alt_name',
+  }
+}
+
 export interface FetcherOptions {
   sourceKey: string
 }
@@ -253,6 +365,12 @@ export interface PreviewResult {
   events: PreviewEvent[]
   truncatedEvents: number
   model: string | null
+  /**
+   * P1-B8: per-event idol match preview. Populated when source.idol_id is
+   * null (aggregator / label sources). Empty array for idol-bound sources
+   * (source_binding path). Parallel to `events` by index.
+   */
+  idolMatchResults: IdolMatchedEvent[]
   errors: string[]
   warnings: string[]
   status: number
@@ -283,6 +401,7 @@ function base(
     events: [],
     truncatedEvents: 0,
     model: null,
+    idolMatchResults: [],
     errors: [],
     warnings: [],
     status: 200,
@@ -446,6 +565,59 @@ export async function runGenericWebpagePreview(
     )
   }
 
+  // ── P1-B8: idol match preview (only when source has no bound idol) ──────
+  // Mirrors the commit-path matcher so admin sees exactly what would be
+  // written to detected_idol_id before clicking Commit. Failure is fatal
+  // per Q4 (fail-fast to avoid misleading previews).
+  const idolMatchResults: IdolMatchedEvent[] = []
+  if (source.idol_id === null && parseResult.pageRelevance !== 'none') {
+    let matcherIndex: IdolMatchIndex
+    try {
+      matcherIndex = await loadIdolMatcherIndex(supabase)
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      await updateRunStatus(supabase, source.id, {
+        last_status: 'error' as RunStatus,
+        last_error: `idol matcher load failed: ${msg}`,
+      })
+      return base(sourceKey, {
+        crawlerSourceId: source.id,
+        sourceName: source.name,
+        sourceUrl,
+        finalUrl: fetched.finalUrl,
+        httpStatus: fetched.status,
+        bytesRead: fetched.bytesRead,
+        wasByteTruncated: fetched.wasByteTruncated,
+        pageTitle: cleaned.pageTitle || null,
+        metaDescription: cleaned.metaDescription || null,
+        bodyTextLength: cleaned.bodyText.length,
+        bodyTextTruncated: cleaned.wasTruncated,
+        hintIdolName,
+        pageRelevance: parseResult.pageRelevance,
+        parserNote: parseResult.parserNote,
+        events: parseResult.events,
+        truncatedEvents: parseResult.truncatedEvents,
+        model: parseResult.model,
+        errors: [`idol matcher 載入失敗：${msg}`],
+        warnings,
+        status: 500,
+      })
+    }
+    for (const evt of parseResult.events) {
+      const { idolId, idolName, via } = resolveDetectedIdol({
+        event: evt,
+        source,
+        matcherIndex,
+      })
+      idolMatchResults.push({
+        rawTitle: evt.rawTitle,
+        matchedIdolId: idolId,
+        matchedIdolName: idolName,
+        via,
+      })
+    }
+  }
+
   // ── Success status write-back ──────────────────────────────────────────
   await updateRunStatus(supabase, source.id, {
     last_status: 'success' as RunStatus,
@@ -470,6 +642,7 @@ export async function runGenericWebpagePreview(
     events: parseResult.events,
     truncatedEvents: parseResult.truncatedEvents,
     model: parseResult.model,
+    idolMatchResults,
     errors: [],
     warnings,
     status: 200,
@@ -535,9 +708,10 @@ interface CandidatePayload {
  * Build the event_candidates row payload for one PreviewEvent that has
  * already passed the confidence + type-mapping gates.
  *
- * Caller must have computed `parsedDate`, `mappedEventType`, `mapping`, and
- * `sourceHash` (with its `dedupeBasis`). This function is pure — it only
- * assembles fields, no DB call, no validation.
+ * Caller must have computed `parsedDate`, `mappedEventType`, `mapping`,
+ * `sourceHash` (with its `dedupeBasis`), `detectedIdolId`, and
+ * `idolMatchedVia`. This function is pure — it only assembles fields,
+ * no DB call, no validation.
  */
 function buildCandidatePayload(args: {
   event: PreviewEvent
@@ -548,6 +722,8 @@ function buildCandidatePayload(args: {
   parsedDate: string | null
   sourceHash: string
   dedupeBasis: DedupeBasis
+  detectedIdolId: string | null
+  idolMatchedVia: IdolMatchedVia
 }): CandidatePayload {
   const {
     event,
@@ -558,12 +734,14 @@ function buildCandidatePayload(args: {
     parsedDate,
     sourceHash,
     dedupeBasis,
+    detectedIdolId,
+    idolMatchedVia,
   } = args
   const rawSnippet = event.rawSnippet ?? ''
   return {
     raw_title: event.rawTitle,
     raw_content: rawSnippet.length > 0 ? rawSnippet : null,
-    detected_idol_id: source.idol_id,
+    detected_idol_id: detectedIdolId,
     detected_event_type: mappedEventType,
     detected_date: parsedDate,
     source_url: source.source_url,
@@ -581,6 +759,7 @@ function buildCandidatePayload(args: {
       dedupe_basis: dedupeBasis,
       preview_event_type: event.eventType,
       event_type_mapping: mapping,
+      idol_matched_via: idolMatchedVia,
       idolHint: event.idolHint,
       locationHint: event.locationHint,
       originalDateHint: event.dateHint,
@@ -688,6 +867,37 @@ export async function runGenericWebpageCommit(
     })
   }
 
+  // ── P1-B8: load idol matcher index for unbound sources ─────────────────
+  // When source.idol_id is null (label-level / aggregator), we try to infer
+  // the idol from each event title. This mirrors runGenericWebpagePreview so
+  // the commit result is consistent with what admin saw in the preview panel.
+  // Failure is fatal (fail-fast per Q4: avoid silently writing bad data).
+  let commitMatcherIndex: IdolMatchIndex | null = null
+  if (source.idol_id === null) {
+    try {
+      commitMatcherIndex = await loadIdolMatcherIndex(supabase)
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      await updateRunStatus(supabase, source.id, {
+        last_status: 'error' as RunStatus,
+        last_error: `commit failed: idol matcher load error: ${msg}`,
+      })
+      return commitBase(sourceKey, {
+        crawlerSourceId: source.id,
+        sourceName: source.name,
+        sourceUrl: source.source_url,
+        finalUrl: preview.finalUrl,
+        httpStatus: preview.httpStatus,
+        pageTitle: preview.pageTitle,
+        pageRelevance: preview.pageRelevance,
+        summary,
+        warnings,
+        errors: [`idol matcher 載入失敗：${msg}`],
+        status: 500,
+      })
+    }
+  }
+
   // ── Apply confidence + type-mapping gates ───────────────────────────────
   interface PreparedCandidate {
     event: PreviewEvent
@@ -696,6 +906,8 @@ export async function runGenericWebpageCommit(
     parsedDate: string | null
     sourceHash: string
     dedupeBasis: DedupeBasis
+    detectedIdolId: string | null
+    idolMatchedVia: IdolMatchedVia
   }
   const prepared: PreparedCandidate[] = []
   for (const event of preview.events) {
@@ -725,6 +937,10 @@ export async function runGenericWebpageCommit(
       mappedEventType: typeEntry.eventType,
       rawSnippet: event.rawSnippet ?? '',
     })
+    // P1-B8: resolve detected_idol_id via source binding or title matcher
+    const { idolId: detectedIdolId, via: idolMatchedVia } = resolveDetectedIdol(
+      { event, source, matcherIndex: commitMatcherIndex },
+    )
     prepared.push({
       event,
       mappedEventType: typeEntry.eventType,
@@ -732,17 +948,21 @@ export async function runGenericWebpageCommit(
       parsedDate,
       sourceHash: hash,
       dedupeBasis: basis,
+      detectedIdolId,
+      idolMatchedVia,
     })
   }
 
   // ── maxCandidatesPerCommit guard (no partial writes) ────────────────────
-  if (prepared.length > MAX_CANDIDATES_PER_COMMIT) {
+  // P1-B8: cap is now configurable per source via source.config.maxCandidatesPerCommit
+  const maxCandidates = resolveMaxCandidates(source)
+  if (prepared.length > maxCandidates) {
     warnings.push(
-      `too many candidates after filtering (${prepared.length} > ${MAX_CANDIDATES_PER_COMMIT}): refuse to commit; please split source or tighten Claude prompt`,
+      `too many candidates after filtering (${prepared.length} > ${maxCandidates}): refuse to commit; please split source or tighten Claude prompt`,
     )
     await updateRunStatus(supabase, source.id, {
       last_status: 'skipped' as RunStatus,
-      last_error: `commit refused (too many candidates: ${prepared.length}>${MAX_CANDIDATES_PER_COMMIT})`,
+      last_error: `commit refused (too many candidates: ${prepared.length}>${maxCandidates})`,
     })
     return commitBase(sourceKey, {
       crawlerSourceId: source.id,
@@ -792,7 +1012,7 @@ export async function runGenericWebpageCommit(
       if (row.source_hash) existingHashes.add(row.source_hash)
     }
 
-    // ── INSERT loop (per-row; ≤ MAX_CANDIDATES_PER_COMMIT iterations) ────
+    // ── INSERT loop (per-row; ≤ maxCandidates iterations) ───────────────
     for (const p of prepared) {
       if (existingHashes.has(p.sourceHash)) {
         summary.deduped += 1
@@ -807,6 +1027,8 @@ export async function runGenericWebpageCommit(
         parsedDate: p.parsedDate,
         sourceHash: p.sourceHash,
         dedupeBasis: p.dedupeBasis,
+        detectedIdolId: p.detectedIdolId,
+        idolMatchedVia: p.idolMatchedVia,
       })
       const { error: insertErr } = await supabase
         .from('event_candidates')
