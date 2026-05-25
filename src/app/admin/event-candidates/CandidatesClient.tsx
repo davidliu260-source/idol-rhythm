@@ -94,8 +94,16 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
   const [resultMsg, setResultMsg] = useState<{ type: 'ok' | 'error'; text: string } | null>(null)
 
   // ── Filter / search state ──────────────────────────────────────────────────
-  const [tab, setTab] = useState<FilterTab>('pending')
+  const [tab, setTabState] = useState<FilterTab>('pending')
   const [query, setQuery] = useState('')
+
+  // Wrap setTab to clear selection when tab changes — selection semantics
+  // differ between tabs (pending → approve/reject; recheck → resolve), so
+  // carrying selection across is confusing.
+  function setTab(next: FilterTab) {
+    if (next !== tab) setSelected(new Set())
+    setTabState(next)
+  }
 
   // Tab counts ignore search so the user always sees the full distribution.
   const tabCounts = useMemo(() => {
@@ -124,6 +132,20 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
   const allPendingSelected =
     pendingCandidates.length > 0 && pendingCandidates.every((c) => selected.has(c.id))
 
+  // Recheck candidates within the current filtered view (only relevant on
+  // the 需重審 tab). Bulk-resolve operates on these. Note: an item with
+  // review_status='pending' AND needs_recheck=true lives in the 待審 tab
+  // per matchTab(); it is NOT included here.
+  const visibleRecheck = useMemo(
+    () =>
+      filteredCandidates.filter(
+        (c) => c.needsRecheck && c.reviewStatus !== 'pending',
+      ),
+    [filteredCandidates],
+  )
+  const allRecheckSelected =
+    visibleRecheck.length > 0 && visibleRecheck.every((c) => selected.has(c.id))
+
   const todayIso = new Date().toISOString().slice(0, 10)
   // Cleanup-expired button counts ALL pending+expired (not just filtered view).
   // The cleanup endpoint operates server-side on every matching row, so it
@@ -146,6 +168,62 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
     } else {
       setSelected(new Set(pendingCandidates.map((c) => c.id)))
     }
+  }
+
+  function toggleAllRecheck() {
+    if (allRecheckSelected) {
+      setSelected(new Set())
+    } else {
+      setSelected(new Set(visibleRecheck.map((c) => c.id)))
+    }
+  }
+
+  async function bulkResolveRecheck() {
+    const ids = Array.from(selected)
+    if (ids.length === 0) return
+    setResultMsg(null)
+
+    startTransition(async () => {
+      try {
+        const res = await fetch('/api/admin/event-candidates/bulk-resolve-recheck', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids }),
+        })
+        const data = await res.json()
+        if (!res.ok || data.failed > 0) {
+          const errText =
+            data.errors?.length > 0
+              ? data.errors
+                  .map((e: { id: string; message: string }) => e.message)
+                  .join('；')
+              : data.error ?? '部分項目處理失敗'
+          // Partial success surfaces a warning rather than a hard error so
+          // the admin sees both: how many cleared and what failed.
+          setResultMsg({
+            type: 'error',
+            text:
+              data.resolved > 0
+                ? `已處理 ${data.resolved} 筆（同步事件 ${data.synced} 筆），失敗 ${data.failed} 筆：${errText}`
+                : `處理失敗：${errText}`,
+          })
+          setSelected(new Set())
+          router.refresh()
+        } else {
+          setResultMsg({
+            type: 'ok',
+            text: `已處理 ${data.resolved} 筆需重審${data.synced > 0 ? `（同步繁中欄位到 ${data.synced} 筆事件）` : ''}`,
+          })
+          setSelected(new Set())
+          router.refresh()
+        }
+      } catch (e) {
+        setResultMsg({
+          type: 'error',
+          text: e instanceof Error ? e.message : '網路錯誤',
+        })
+      }
+    })
   }
 
   async function bulkAction(action: 'approve' | 'reject') {
@@ -298,8 +376,8 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
         </div>
       </div>
 
-      {/* Select-all pending button — operates on pending inside current filtered view */}
-      {isAdmin && pendingCandidates.length > 0 && (
+      {/* Select-all button — context-aware per tab */}
+      {isAdmin && tab === 'pending' && pendingCandidates.length > 0 && (
         <div className="px-4 mb-2">
           <button
             onClick={toggleAllPending}
@@ -307,6 +385,17 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
           >
             <CheckSquare className="h-3.5 w-3.5" />
             {allPendingSelected ? '取消全選' : `全選此頁待審核（${pendingCandidates.length} 筆）`}
+          </button>
+        </div>
+      )}
+      {isAdmin && tab === 'recheck' && visibleRecheck.length > 0 && (
+        <div className="px-4 mb-2">
+          <button
+            onClick={toggleAllRecheck}
+            className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-text-base transition-colors"
+          >
+            <CheckSquare className="h-3.5 w-3.5" />
+            {allRecheckSelected ? '取消全選' : `全選此頁需重審（${visibleRecheck.length} 筆）`}
           </button>
         </div>
       )}
@@ -333,11 +422,18 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
           const sourceInfo = getReviewSourceInfo(c)
           const isChecked = selected.has(c.id)
           const isPending = c.reviewStatus === 'pending'
+          // Checkbox visibility is tab-scoped to keep selection semantics
+          // unambiguous: 待審 tab selects pending (approve/reject), 需重審
+          // tab selects already-decided drift items (resolve). Mixing the
+          // two would make the toolbar ambiguous.
+          const isCheckable =
+            (tab === 'pending' && isPending) ||
+            (tab === 'recheck' && c.needsRecheck && !isPending)
 
           return (
             <div key={c.id} className="relative flex items-stretch gap-2">
-              {/* Checkbox zone — only for pending + admin */}
-              {isAdmin && isPending && (
+              {/* Checkbox zone — admin + tab-scoped */}
+              {isAdmin && isCheckable && (
                 <button
                   onClick={() => toggleOne(c.id)}
                   className="flex-shrink-0 flex items-center justify-center w-8 rounded-xl bg-card border border-card-border active:opacity-70 transition-opacity"
@@ -422,36 +518,49 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
         })}
       </div>
 
-      {/* Bulk action toolbar — appears when items selected */}
+      {/* Bulk action toolbar — appears when items selected; buttons swap per tab */}
       {isAdmin && hasSelected && (
         <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-6 pt-3 bg-gradient-to-t from-bg via-bg/95 to-transparent">
           <div className="max-w-md mx-auto flex items-center gap-2 rounded-2xl bg-card border border-card-border px-4 py-3 shadow-xl">
             <span className="text-xs text-muted flex-1">
               已選 <span className="text-text-base font-semibold">{selected.size}</span> 筆
             </span>
-            <button
-              onClick={() => bulkAction('reject')}
-              disabled={isPending}
-              className="inline-flex items-center gap-1 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-400 disabled:opacity-50 active:opacity-70 transition-opacity"
-            >
-              <X className="h-3 w-3" />
-              批量拒絕
-            </button>
-            <button
-              onClick={() => bulkAction('approve')}
-              disabled={isPending || selectedHaveNoIdol || selectedHaveAggregator}
-              title={
-                selectedHaveNoIdol
-                  ? '部分候選缺少偶像對應，無法批量核准'
-                  : selectedHaveAggregator
-                    ? '聚合 / 社群來源需要逐筆確認原始佐證，不支援批量核准'
-                    : undefined
-              }
-              className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40 active:opacity-70 transition-opacity"
-            >
-              <Check className="h-3 w-3" />
-              批量核准
-            </button>
+            {tab === 'pending' ? (
+              <>
+                <button
+                  onClick={() => bulkAction('reject')}
+                  disabled={isPending}
+                  className="inline-flex items-center gap-1 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-400 disabled:opacity-50 active:opacity-70 transition-opacity"
+                >
+                  <X className="h-3 w-3" />
+                  批量拒絕
+                </button>
+                <button
+                  onClick={() => bulkAction('approve')}
+                  disabled={isPending || selectedHaveNoIdol || selectedHaveAggregator}
+                  title={
+                    selectedHaveNoIdol
+                      ? '部分候選缺少偶像對應，無法批量核准'
+                      : selectedHaveAggregator
+                        ? '聚合 / 社群來源需要逐筆確認原始佐證，不支援批量核准'
+                        : undefined
+                  }
+                  className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40 active:opacity-70 transition-opacity"
+                >
+                  <Check className="h-3 w-3" />
+                  批量核准
+                </button>
+              </>
+            ) : tab === 'recheck' ? (
+              <button
+                onClick={bulkResolveRecheck}
+                disabled={isPending}
+                className="inline-flex items-center gap-1 rounded-lg bg-violet px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40 active:opacity-70 transition-opacity"
+              >
+                <Check className="h-3 w-3" />
+                批量已處理
+              </button>
+            ) : null}
           </div>
         </div>
       )}
