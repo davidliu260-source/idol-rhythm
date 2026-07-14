@@ -286,11 +286,6 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
   const selectedHaveNoIdol = Array.from(selected).some(
     (id) => !candidates.find((c) => c.id === id)?.hasIdol,
   )
-  const selectedHaveAggregator = Array.from(selected).some((id) => {
-    const candidate = candidates.find((c) => c.id === id)
-    if (!candidate) return false
-    return getReviewSourceInfo(candidate).needsOriginalSource
-  })
 
   return (
     <>
@@ -537,13 +532,11 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
                 </button>
                 <button
                   onClick={() => bulkAction('approve')}
-                  disabled={isPending || selectedHaveNoIdol || selectedHaveAggregator}
+                  disabled={isPending || selectedHaveNoIdol}
                   title={
                     selectedHaveNoIdol
                       ? '部分候選缺少偶像對應，無法批量核准'
-                      : selectedHaveAggregator
-                        ? '聚合 / 社群來源需要逐筆確認原始佐證，不支援批量核准'
-                        : undefined
+                      : undefined
                   }
                   className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40 active:opacity-70 transition-opacity"
                 >
