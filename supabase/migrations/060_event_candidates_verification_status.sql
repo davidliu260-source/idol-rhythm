@@ -27,8 +27,10 @@
 --       "citedText": "...",
 --       "sourceClass": "official_artist_company|promoter|venue|ticketing|reliable_media",
 --       "fieldMatches": { "artist": true, "dates": true, "venueOrCity": true },
---       "confidence": 0.0
+--       "confidence": "high|medium|low"
 --     } ]
+--   confidence is calculated by deterministic re-check, not a model-reported
+--   score; low confidence never produces a proposal.
 --   Only auditable citation fields belong here. Never store encrypted_index
 --   (Anthropic continuation metadata), nor any dynamic-filtering/A response
 --   compatibility fields. A response without bound citations is fail-closed.
