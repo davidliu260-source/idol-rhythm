@@ -157,7 +157,8 @@
 **D1 已定案（2026-07-14）→ provider 已改（2026-07-15）**：Owner 選 **選項 B（自動求證）**。
 - **Provider 定案：Claude web search（非 Gemini）**。B-0 實測 Gemini BLOCKED（2.5→404 / 3.x→grounding quota 0），且需開 Google billing 預付 $10 + 台灣統編 → Owner 否決。
 - B-0c 實測 **Claude web search 命中 5/5、假陽性 0/5、$0.93**，用**現有 ANTHROPIC_API_KEY 零新 billing** → 採用此路。
-- 唯一卡點：structured citations 0/5 → B-1 spike 驗證中（見工作單 §7）。
+- 卡點 structured citations 0/5 **已解（2026-07-15，B-1 spike）**：`allowed_callers:["direct"]` 關掉 dynamic filtering 後 citations 恢復 5/5、cited_text 5/5，且成本降 73.5%（$0.049/event）→ **runtime contract 定為 B-direct**。
+- **但下一關是 B-1a negative control**：前三輪樣本全是真候選，「假陽性 0/5」是空指標，fail closed 從未被考驗 → **B-1a 未過不得進 B-1b migration**（見工作單 §7）。
 - 現場驗證：99 筆草稿 = 94 community + 5 official_website；後台「自動判斷+發布」對 94 筆聚合源 0/84 生效（閘門正確運作）。
 - 已發布 156 場中，27 場聚合源是人工升級（達人力極限），94 筆卡住無法比照。
 - → 已開 `AGGREGATOR_EVENT_VERIFICATION_WORK_ORDER.md`（B 選項工作單）；下一步 PM 開 B-0 探測票交 Codex。
