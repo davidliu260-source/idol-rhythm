@@ -154,7 +154,10 @@
 > PM 傾向：**先做 §3 步驟 1（Jay Park + DAY6 官方源，零成本 +2 藝人）驗證流程**，
 > 再由 Owner 決定 D1 要不要投入人工（選項 A）或開發半自動（選項 B）。
 
-**D1 已定案（2026-07-14）**：Owner 選 **選項 B（自動求證）**。
+**D1 已定案（2026-07-14）→ provider 已改（2026-07-15）**：Owner 選 **選項 B（自動求證）**。
+- **Provider 定案：Claude web search（非 Gemini）**。B-0 實測 Gemini BLOCKED（2.5→404 / 3.x→grounding quota 0），且需開 Google billing 預付 $10 + 台灣統編 → Owner 否決。
+- B-0c 實測 **Claude web search 命中 5/5、假陽性 0/5、$0.93**，用**現有 ANTHROPIC_API_KEY 零新 billing** → 採用此路。
+- 唯一卡點：structured citations 0/5 → B-1 spike 驗證中（見工作單 §7）。
 - 現場驗證：99 筆草稿 = 94 community + 5 official_website；後台「自動判斷+發布」對 94 筆聚合源 0/84 生效（閘門正確運作）。
 - 已發布 156 場中，27 場聚合源是人工升級（達人力極限），94 筆卡住無法比照。
 - → 已開 `AGGREGATOR_EVENT_VERIFICATION_WORK_ORDER.md`（B 選項工作單）；下一步 PM 開 B-0 探測票交 Codex。

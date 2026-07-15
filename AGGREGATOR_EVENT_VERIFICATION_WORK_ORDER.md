@@ -109,7 +109,9 @@
 ## 7. 建議 PR 拆分（PM 逐張開票交 Codex，high-risk 標 label）
 
 1. **B-0 Gemini grounding 探測報告**（純研究）：用 Gemini（Google Search grounding）對 3–5 個真實聚合草稿（如 ENHYPEN / BTS World Tour）做求證，實測：(a) 命中率（找到官方/售票佐證的比例）、(b) 假陽性率（錯配活動）、(c) citations URL 品質、(d) 每筆成本與延遲、(e) grounding metadata 解析難度。備選同場測 Claude web search 對照。→ 定 provider。比照 P1-A/P1-B「先探測再實作」紀律，**不先寫 runtime**。
-2. **B-1 migration**：新增求證狀態欄位（verified_at / verified_result / proposed_source jsonb 等）。
+2. **B-1 parser / evidence-contract spike**（純研究，**不碰 DB**）：依 B-0c 報告 §8，先解決 citation binding —— 測 `allowed_callers:["direct"]` / `web_search_20250305` 能否恢復結構化 citations，並設計 evidence contract（哪些欄位可稽核落庫）+ `max_uses` 成本收斂。**取不到可靠 citation binding 就不進 runtime**，即使 accuracy 5/5。
+   > ⚠️ 原規劃此處為 migration，已於 2026-07-15 依 B-0c 結論改為 spike——格式問題未解前不得建 schema。
+3. **B-1b migration**（B-1 spike 通過後才做）：新增求證狀態欄位（verified_at / verified_result / proposed_source jsonb 等）。
 3. **B-2 求證 runtime（手動、單筆）**：一個草稿 → 搜尋 → fetch+Claude → 產出提議；不自動發。
 4. **B-3 後台 UI**：提議檢視 + 一鍵「採用並發布」+ 未命中標記。
 5. **B-4 批量 + 上限保護**：batch 求證 + maxVerifyPerRun。
