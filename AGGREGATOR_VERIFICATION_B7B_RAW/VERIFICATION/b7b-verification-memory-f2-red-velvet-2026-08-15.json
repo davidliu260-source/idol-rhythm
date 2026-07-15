@@ -1,0 +1,150 @@
+{
+  "request": {
+    "model": "claude-sonnet-4-6",
+    "tool": {
+      "type": "web_search_20260209",
+      "name": "web_search",
+      "max_uses": 3,
+      "blocked_domains": [
+        "kpopofficial.com"
+      ],
+      "allowed_callers": [
+        "direct"
+      ]
+    },
+    "allowed_callers": [
+      "direct"
+    ],
+    "max_uses": 3,
+    "max_tokens": 16384,
+    "blocked_domains": [
+      "kpopofficial.com"
+    ],
+    "as_of": "2026-07-15",
+    "prompt": "Verify exactly one K-pop event candidate using web search. Do not bundle another event.\n\nCandidate ID: memory-f2-red-velvet-2026-08-15\nArtist: Red Velvet\nClaimed dates: August 15, 2026\nClaimed venue: Olympic Hall\nClaimed city/country: Seoul, South Korea\nRaw candidate title: Red Velvet live event at Olympic Hall on August 15, 2026\n\nStrict evidence rules (do not relax): exclude kpopofficial.com and all other event aggregators as evidence; accept only an official artist/company, promoter, venue, ticketing, or reliable media source; artist AND exact date(s) must match (timezone tolerance only ±1 day); venue/city must not conflict; a general tour announcement without this stop/date is not a match. Return UNCONFIRMED if no qualifying source is found and CONTRADICTED if reliable evidence conflicts.\n\nReturn only these compact fields, in this order. Cite factual claims with the web-search citation mechanism:\nVERDICT: CONFIRMED | UNCONFIRMED | CONTRADICTED\nARTIST_MATCH: true | false\nDATE_MATCH: true | false\nVENUE_OR_CITY_MATCH: true | false\nMATCHED_DATES: ...\nSOURCE_QUALITY: official_artist_company | promoter | venue | ticketing | reliable_media | none\nSOURCE_URLS: ...\nREASON: one short factual sentence"
+  },
+  "response": {
+    "model": "claude-sonnet-4-6",
+    "id": "msg_011Cd4gstB8yomfBvMqxj8sh",
+    "type": "message",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "server_tool_use",
+        "id": "srvtoolu_01Wt1eZQbCnRt9XXirEE6fRB",
+        "name": "web_search",
+        "input": {
+          "query": "Red Velvet Olympic Hall Seoul August 2026"
+        }
+      },
+      {
+        "type": "web_search_tool_result",
+        "tool_use_id": "srvtoolu_01Wt1eZQbCnRt9XXirEE6fRB",
+        "content": [
+          {
+            "type": "web_search_result",
+            "title": "Olympic Hall - Wikipedia",
+            "url": "https://en.wikipedia.org/wiki/Olympic_Hall",
+            "page_age": "5 days ago"
+          },
+          {
+            "type": "web_search_result",
+            "title": "List of Red Velvet live performances - Wikipedia",
+            "url": "https://en.wikipedia.org/wiki/List_of_Red_Velvet_live_performances",
+            "page_age": "3 weeks ago"
+          },
+          {
+            "type": "web_search_result",
+            "title": "Concert Tickets | NOL World",
+            "url": "https://world.nol.com/en/ticket/genre/CONCERT/products",
+            "page_age": null
+          },
+          {
+            "type": "web_search_result",
+            "title": "Red Room (tour) - Wikipedia",
+            "url": "https://en.wikipedia.org/wiki/Red_Velvet_-_Red_Room",
+            "page_age": "May 12, 2026"
+          },
+          {
+            "type": "web_search_result",
+            "title": "Olympic Hall Seoul, Tickets for Concerts & Music Events 2026 – Songkick",
+            "url": "https://www.songkick.com/venues/357531-olympic-hall",
+            "page_age": null
+          },
+          {
+            "type": "web_search_result",
+            "title": "Red Velvet on X: \"2025 IRENE &amp; SEULGI Concert Tour [ BALANCE ] in ASIA -SEOUL- 2025.6.14-15 l Olympic Hall -SINGAPORE- 2025.7.4 l THE STAR THEATRE -MACAU- 2025.7.12 l THE LONDONER ARENA -BANGKOK- 2025.7.19 l PARAGON HALL -TAIPEI- 2025.8.3 l TICC -KUALA LUMPUR- 2025.9.13 l MEGA STAR ARENA https://t.co/lxEdYKO1dB\" / X",
+            "url": "https://x.com/RVsmtown/status/1911585194341195834",
+            "page_age": null
+          },
+          {
+            "type": "web_search_result",
+            "title": "Olympic Hall - Venues Seoul",
+            "url": "https://readdork.com/venues/olympic-hall-seoul",
+            "page_age": null
+          },
+          {
+            "type": "web_search_result",
+            "title": "Olympic Hall: Premier K-pop Concert Venue | NOL World",
+            "url": "https://world.nol.com/en/content/pois/60008c15-82b6-40b9-9e7d-f33009336579",
+            "page_age": null
+          },
+          {
+            "type": "web_search_result",
+            "title": "Red Room | Red Velvet Wiki | Fandom",
+            "url": "https://redvelvet.fandom.com/wiki/Red_Room",
+            "page_age": "March 18, 2026"
+          },
+          {
+            "type": "web_search_result",
+            "title": "Red Velvet Announces 2026 Fan-Con “A Day In Red & Velvet” Following August Comeback News | Soompi",
+            "url": "https://www.soompi.com/article/1847788wpp/red-velvet-announces-2026-fan-con-a-day-in-red-velvet-following-august-comeback-news",
+            "page_age": "1 month ago"
+          }
+        ],
+        "caller": {
+          "type": "direct"
+        }
+      },
+      {
+        "type": "text",
+        "text": "**VERDICT:** UNCONFIRMED\n**ARTIST_MATCH:** false\n**DATE_MATCH:** false\n**VENUE_OR_CITY_MATCH:** false\n**MATCHED_DATES:** none\n**SOURCE_QUALITY:** none\n**SOURCE_URLS:** none\n**REASON:** "
+      },
+      {
+        "citations": [
+          {
+            "type": "web_search_result_location",
+            "cited_text": "Following the announcement of their long-awaited August comeback, Red Velvet has unveiled plans for a fan-con to celebrate with fans! On June 15, the ...",
+            "url": "https://www.soompi.com/article/1847788wpp/red-velvet-announces-2026-fan-con-a-day-in-red-velvet-following-august-comeback-news",
+            "title": "Red Velvet Announces 2026 Fan-Con “A Day In Red & Velvet” Following August Comeback News | Soompi"
+          }
+        ],
+        "type": "text",
+        "text": "Red Velvet's only confirmed 2026 Seoul live event is their fan-con \"A Day in Red & Velvet,\" announced for **August 1–2, 2026, at Korea University's Hwajeong Tiger Dome** — not Olympic Hall on August 15."
+      },
+      {
+        "type": "text",
+        "text": " No qualifying official, promoter, venue, ticketing, or reliable media source places Red Velvet at Olympic Hall on August 15, 2026."
+      }
+    ],
+    "stop_reason": "end_turn",
+    "stop_sequence": null,
+    "stop_details": null,
+    "usage": {
+      "input_tokens": 18578,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 254,
+      "service_tier": "standard",
+      "inference_geo": "global",
+      "server_tool_use": {
+        "web_search_requests": 1,
+        "web_fetch_requests": 0
+      }
+    }
+  }
+}
