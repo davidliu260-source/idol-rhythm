@@ -17,6 +17,22 @@
 
 ---
 
+## 角色與分工（2026-07-14 起，比照 telegram照片生成bot 專案）
+
+| 角色 | 職責 |
+| --- | --- |
+| **Claude（PM / 審核）** | 讀 repo、開票（ticket / 工作單）、定 acceptance criteria、審核 Codex 的 PR、維護 CLAUDE.md / WORKING.md、跑驗證查詢與診斷 |
+| **Codex（實作）** | 只依 Claude 開出的票施工，一次一張票，不得超 scope、不得自行 merge |
+| **使用者（Owner）** | 確認產品規則、把票貼給 Codex、批准 merge |
+
+**PM 硬界線：**
+1. Claude **不得自己寫 `src/` code / migration / schema 實作**——一律開票交 Codex。文件（`*.md`）與驗證 SQL 查詢屬 PM 職責，可直接動手。
+2. **每次派工必附「可一鍵複製」的完整指令 code block**：含任務、真因、要做的步驟、限制（不要動什麼）、驗收條件、feature branch 名、PR 規則。不能只丟票號。
+3. Codex 的 PR 由 Claude review 後回報，使用者最終確認 merge。
+4. **高風險任務**（migration / RLS / 爬蟲 / AI / 付款 / 部署）：PM 先寫工作單 `*.md` 規劃 → 再開實作票交 Codex，PR 標 `high-risk` label → Claude review → Owner 最終 merge。**不走 GPT audit**（此流程已於 2026-07-14 廢除，比照 telegram照片生成bot 專案）。工作單本身就是計畫，不需外部 audit 關卡。
+
+---
+
 ## 每次任務前
 
 1. 確認 `pwd` 是 `~/Desktop/idol-rhythm`，避免在錯誤目錄操作
