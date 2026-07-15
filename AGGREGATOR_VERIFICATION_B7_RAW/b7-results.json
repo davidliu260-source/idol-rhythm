@@ -1,0 +1,1374 @@
+{
+  "config": {
+    "model": "claude-sonnet-4-6",
+    "tool": "web_search_20260209",
+    "allowed_callers": [
+      "direct"
+    ],
+    "max_uses": 3,
+    "max_tokens": 16384,
+    "blocked_domains": [
+      "kpopofficial.com"
+    ],
+    "as_of": "2026-07-15"
+  },
+  "stage1": [
+    {
+      "artist": "Red Velvet",
+      "request": {
+        "model": "claude-sonnet-4-6",
+        "tool": {
+          "type": "web_search_20260209",
+          "name": "web_search",
+          "max_uses": 3,
+          "blocked_domains": [
+            "kpopofficial.com"
+          ],
+          "allowed_callers": [
+            "direct"
+          ]
+        },
+        "allowed_callers": [
+          "direct"
+        ],
+        "max_uses": 3,
+        "max_tokens": 16384,
+        "blocked_domains": [
+          "kpopofficial.com"
+        ],
+        "as_of": "2026-07-15",
+        "prompt": "Determine whether Red Velvet has any publicly announced events after 2026-07-15 (concerts, tours, or fan meetings). Search for this artist only; do not bundle another artist.\n\nStrict evidence rules: accept only an official artist/company source, promoter, venue, ticketing source, or reliable media. Exclude kpopofficial.com and all other event aggregators as evidence. Do not guess. A general tour announcement without a dated stop is not an event. If no qualifying public event is found, return NO_EVENTS_FOUND.\n\nFor every event you claim, the artist must match and you must provide the complete exact date or date range, venue, city/country, and a structured web-search citation with URL, title, and cited text that directly supports that same event. Do not claim an event without a citation.\n\nReturn only these fields in this order:\nVERDICT: EVENTS_FOUND | NO_EVENTS_FOUND\nEVENT_COUNT: <n>\nEVENTS:\n- ARTIST: ...\n  DATES: ...\n  VENUE: ...\n  CITY_COUNTRY: ...\n  SOURCE_CLASS: official_artist_company | promoter | venue | ticketing | reliable_media\n  CITATION_URL: ...\n  CITED_TEXT: ...\nREASON: one short factual sentence"
+      },
+      "verdict": "EVENTS_FOUND",
+      "event_count": 1,
+      "events": [
+        {
+          "artist": "Red Velvet",
+          "dates": "August 1, 2026 (6:00 PM KST) & August 2, 2026 (4:00 PM KST)",
+          "venue": "Korea University Hwajeong Tiger Dome (Hwajeong Gymnasium)",
+          "city": "Seoul, South Korea"
+        }
+      ],
+      "stop_reason": "end_turn",
+      "classification": "completed_with_results",
+      "usage": {
+        "input_tokens": 17063,
+        "output_tokens": 791,
+        "web_search_requests": 2
+      },
+      "latency_ms": 17483,
+      "cost_usd": 0.083054,
+      "citations": [
+        {
+          "url": "https://www.koreajoongangdaily.com/entertainment/girl-group-red-velvet-to-return-with-new-album-fan-concert-in-august/12723807",
+          "title": "Girl group Red Velvet to return with new album, fan concert in August",
+          "cited_text": "While details of the new album have not yet been disclosed, the group unveiled a poster and schedule for its fan concert, titled “2026 Red Velvet Fan-..."
+        },
+        {
+          "url": "https://www.soompi.com/article/1847788wpp/red-velvet-announces-2026-fan-con-a-day-in-red-velvet-following-august-comeback-news",
+          "title": "Red Velvet Announces 2026 Fan-Con “A Day In Red & Velvet” Following August Comeback News | Soompi",
+          "cited_text": "Following the announcement of their long-awaited August comeback, Red Velvet has unveiled plans for a fan-con to celebrate with fans! On June 15, the ..."
+        },
+        {
+          "url": "https://www.soompi.com/article/1847788wpp/red-velvet-announces-2026-fan-con-a-day-in-red-velvet-following-august-comeback-news",
+          "title": "Red Velvet Announces 2026 Fan-Con “A Day In Red & Velvet” Following August Comeback News | Soompi",
+          "cited_text": "Notably, the first day of the event falls on August 1, the anniversary of Red Velvet’s debut, making it an especially meaningful occasion as the group..."
+        },
+        {
+          "url": "https://www.soompi.com/article/1847788wpp/red-velvet-announces-2026-fan-con-a-day-in-red-velvet-following-august-comeback-news",
+          "title": "Red Velvet Announces 2026 Fan-Con “A Day In Red & Velvet” Following August Comeback News | Soompi",
+          "cited_text": "Tickets will be available through Melon Ticket. The Korean fan club presale will begin on June 18 at 8 p.m. KST, followed by the global fan club presa..."
+        }
+      ],
+      "raw_file": "b7-discovery-red-velvet.json"
+    },
+    {
+      "artist": "MONSTA X",
+      "request": {
+        "model": "claude-sonnet-4-6",
+        "tool": {
+          "type": "web_search_20260209",
+          "name": "web_search",
+          "max_uses": 3,
+          "blocked_domains": [
+            "kpopofficial.com"
+          ],
+          "allowed_callers": [
+            "direct"
+          ]
+        },
+        "allowed_callers": [
+          "direct"
+        ],
+        "max_uses": 3,
+        "max_tokens": 16384,
+        "blocked_domains": [
+          "kpopofficial.com"
+        ],
+        "as_of": "2026-07-15",
+        "prompt": "Determine whether MONSTA X has any publicly announced events after 2026-07-15 (concerts, tours, or fan meetings). Search for this artist only; do not bundle another artist.\n\nStrict evidence rules: accept only an official artist/company source, promoter, venue, ticketing source, or reliable media. Exclude kpopofficial.com and all other event aggregators as evidence. Do not guess. A general tour announcement without a dated stop is not an event. If no qualifying public event is found, return NO_EVENTS_FOUND.\n\nFor every event you claim, the artist must match and you must provide the complete exact date or date range, venue, city/country, and a structured web-search citation with URL, title, and cited text that directly supports that same event. Do not claim an event without a citation.\n\nReturn only these fields in this order:\nVERDICT: EVENTS_FOUND | NO_EVENTS_FOUND\nEVENT_COUNT: <n>\nEVENTS:\n- ARTIST: ...\n  DATES: ...\n  VENUE: ...\n  CITY_COUNTRY: ...\n  SOURCE_CLASS: official_artist_company | promoter | venue | ticketing | reliable_media\n  CITATION_URL: ...\n  CITED_TEXT: ...\nREASON: one short factual sentence"
+      },
+      "verdict": "EVENTS_FOUND",
+      "event_count": 10,
+      "events": [
+        {
+          "artist": "MONSTA X",
+          "dates": "October 3, 2026",
+          "venue": "EagleBank Arena",
+          "city": "Fairfax, VA, USA"
+        },
+        {
+          "artist": "MONSTA X",
+          "dates": "October 6, 2026",
+          "venue": "Infosys Theater at Madison Square Garden",
+          "city": "New York, NY, USA"
+        },
+        {
+          "artist": "MONSTA X",
+          "dates": "October 8, 2026",
+          "venue": "MGM Music Hall at Fenway",
+          "city": "Boston, MA, USA"
+        },
+        {
+          "artist": "MONSTA X",
+          "dates": "October 10, 2026",
+          "venue": "Great Canadian Toronto",
+          "city": "Toronto, ON, Canada"
+        },
+        {
+          "artist": "MONSTA X",
+          "dates": "October 13, 2026",
+          "venue": "Rosemont Theatre",
+          "city": "Rosemont, IL, USA"
+        },
+        {
+          "artist": "MONSTA X",
+          "dates": "October 15, 2026",
+          "venue": "The Pavilion at Toyota Music Factory",
+          "city": "Irving, TX, USA"
+        },
+        {
+          "artist": "MONSTA X",
+          "dates": "October 17, 2026",
+          "venue": "Arizona Financial Theatre",
+          "city": "Phoenix, AZ, USA"
+        },
+        {
+          "artist": "MONSTA X",
+          "dates": "October 20, 2026",
+          "venue": "Kia Forum",
+          "city": "Inglewood (Los Angeles), CA, USA"
+        },
+        {
+          "artist": "MONSTA X",
+          "dates": "October 22, 2026",
+          "venue": "The Theater at Bill Graham Civic Auditorium",
+          "city": "San Francisco, CA, USA"
+        },
+        {
+          "artist": "MONSTA X",
+          "dates": "October 24, 2026",
+          "venue": "WAMU Theater",
+          "city": "Seattle, WA, USA"
+        }
+      ],
+      "stop_reason": "end_turn",
+      "classification": "completed_with_results",
+      "usage": {
+        "input_tokens": 34876,
+        "output_tokens": 2099,
+        "web_search_requests": 3
+      },
+      "latency_ms": 30835,
+      "cost_usd": 0.166113,
+      "citations": [
+        {
+          "url": "https://newsroom.livenation.com/news/global-superstars-monsta-x-announce-north-american-dates-on-world-tour-the-x-nexus/",
+          "title": "Global Superstars MONSTA X Announce North American Dates on WORLD TOUR [THE X : NEXUS] - Live Nation Newsroom",
+          "cited_text": "Global superstars MONSTA X today announced North American dates on their 2026 MONSTA X WORLD TOUR [THE X : NEXUS]. Promoted by Live Nation, the newly ..."
+        },
+        {
+          "url": "https://www.msg.com/events-tickets/monsta-x-infosys-theater-at-madison-square-garden-october-2026/3B00647BF0495307",
+          "title": "MONSTA X | KPOP Concerts | Infosys Theater at MSG",
+          "cited_text": "2026 MONSTA X WORLD TOUR [THE X : NEXUS] IN NEW YORK will come to the Infosys Theater at MSG on October 6. "
+        },
+        {
+          "url": "https://www.ticketmaster.com/monsta-x-tickets/artist/2371302",
+          "title": "MONSTA X Tickets, 2026-2027 Concert Tour Dates | Ticketmaster",
+          "cited_text": "Saturday 08:00 PMSat8:00 PMOpen additional information for Fairfax, VA, EagleBank Arena, 2026 MONSTA X WORLD TOUR [THE X : NEXUS] IN FAIRFAX10/3/26, 8..."
+        },
+        {
+          "url": "https://www.billboard.com/music/concerts/monsta-x-2026-the-x-nexus-world-tour-dates-north-america-1236215603/",
+          "title": "Monsta X 'THE X : NEXUS' 2026 World Tour North America Dates",
+          "cited_text": "2026 MONSTA X WORLD TOUR [THE X : NEXUS] NORTH AMERICA DATES: Oct. 3: Fairfax, Va. @ EagleBank Arena · Oct. 6: New York, N.Y. @ Infosys Theater at Mad..."
+        },
+        {
+          "url": "https://www.ticketmaster.com/monsta-x-tickets/artist/2371302",
+          "title": "MONSTA X Tickets, 2026-2027 Concert Tour Dates | Ticketmaster",
+          "cited_text": "Change date range: All Dates · October 3, 2026 · Oct03 · Saturday 08:00 PMSat8:00 PMOpen additional information for Fairfax, VA, EagleBank Arena, 2026..."
+        },
+        {
+          "url": "https://www.ticketmaster.com/monsta-x-tickets/artist/2371302",
+          "title": "MONSTA X Tickets, 2026-2027 Concert Tour Dates | Ticketmaster",
+          "cited_text": "Saturday 08:00 PMSat8:00 PMOpen additional information for Fairfax, VA, EagleBank Arena, 2026 MONSTA X WORLD TOUR [THE X : NEXUS] IN FAIRFAX10/3/26, 8..."
+        },
+        {
+          "url": "https://www.ticketmaster.com/monsta-x-tickets/artist/2371302",
+          "title": "MONSTA X Tickets, 2026-2027 Concert Tour Dates | Ticketmaster",
+          "cited_text": "Saturday 08:00 PMSat8:00 PMOpen additional information for Phoenix, AZ, Arizona Financial Theatre, 2026 MONSTA X WORLD TOUR [THE X : NEXUS] IN PHOENIX..."
+        },
+        {
+          "url": "https://www.ticketmaster.com/monsta-x-tickets/artist/2371302",
+          "title": "MONSTA X Tickets, 2026-2027 Concert Tour Dates | Ticketmaster",
+          "cited_text": "Saturday 08:00 PMSat8:00 PMOpen additional information for Fairfax, VA, EagleBank Arena, 2026 MONSTA X WORLD TOUR [THE X : NEXUS] IN FAIRFAX10/3/26, 8..."
+        },
+        {
+          "url": "https://www.ticketmaster.com/monsta-x-tickets/artist/2371302",
+          "title": "MONSTA X Tickets, 2026-2027 Concert Tour Dates | Ticketmaster",
+          "cited_text": "Change date range: All Dates · October 3, 2026 · Oct03 · Saturday 08:00 PMSat8:00 PMOpen additional information for Fairfax, VA, EagleBank Arena, 2026..."
+        },
+        {
+          "url": "https://newsroom.livenation.com/news/global-superstars-monsta-x-announce-north-american-dates-on-world-tour-the-x-nexus/",
+          "title": "Global Superstars MONSTA X Announce North American Dates on WORLD TOUR [THE X : NEXUS] - Live Nation Newsroom",
+          "cited_text": "Promoted by Live Nation, the newly added shows kick off Saturday, October 3 in Fairfax, VA at EagleBank Arena, with stops in New York, Boston, Toronto..."
+        },
+        {
+          "url": "https://kpopbreaking.com/monsta-x-announces-2026-north-america-tour-dates/",
+          "title": "Monsta X Announces 2026 North America Tour Dates • K-popBreaking",
+          "cited_text": "On April 6, Starship Entertainment officially unveiled the North American schedule for “2026 Monsta X World Tour [The X: Nexus]” through the group’s s..."
+        }
+      ],
+      "raw_file": "b7-discovery-monsta-x.json"
+    },
+    {
+      "artist": "tripleS",
+      "request": {
+        "model": "claude-sonnet-4-6",
+        "tool": {
+          "type": "web_search_20260209",
+          "name": "web_search",
+          "max_uses": 3,
+          "blocked_domains": [
+            "kpopofficial.com"
+          ],
+          "allowed_callers": [
+            "direct"
+          ]
+        },
+        "allowed_callers": [
+          "direct"
+        ],
+        "max_uses": 3,
+        "max_tokens": 16384,
+        "blocked_domains": [
+          "kpopofficial.com"
+        ],
+        "as_of": "2026-07-15",
+        "prompt": "Determine whether tripleS has any publicly announced events after 2026-07-15 (concerts, tours, or fan meetings). Search for this artist only; do not bundle another artist.\n\nStrict evidence rules: accept only an official artist/company source, promoter, venue, ticketing source, or reliable media. Exclude kpopofficial.com and all other event aggregators as evidence. Do not guess. A general tour announcement without a dated stop is not an event. If no qualifying public event is found, return NO_EVENTS_FOUND.\n\nFor every event you claim, the artist must match and you must provide the complete exact date or date range, venue, city/country, and a structured web-search citation with URL, title, and cited text that directly supports that same event. Do not claim an event without a citation.\n\nReturn only these fields in this order:\nVERDICT: EVENTS_FOUND | NO_EVENTS_FOUND\nEVENT_COUNT: <n>\nEVENTS:\n- ARTIST: ...\n  DATES: ...\n  VENUE: ...\n  CITY_COUNTRY: ...\n  SOURCE_CLASS: official_artist_company | promoter | venue | ticketing | reliable_media\n  CITATION_URL: ...\n  CITED_TEXT: ...\nREASON: one short factual sentence"
+      },
+      "verdict": "NO_EVENTS_FOUND",
+      "event_count": 0,
+      "events": [],
+      "stop_reason": "end_turn",
+      "classification": "completed_with_results",
+      "usage": {
+        "input_tokens": 44672,
+        "output_tokens": 508,
+        "web_search_requests": 3
+      },
+      "latency_ms": 17199,
+      "cost_usd": 0.171636,
+      "citations": [
+        {
+          "url": "https://seatgeek.com/triples-tickets",
+          "title": "TripleS Tickets & 2026 Concert Tour Dates",
+          "cited_text": "There are no upcoming events for TripleS. "
+        }
+      ],
+      "raw_file": "b7-discovery-triples.json"
+    },
+    {
+      "artist": "PENTAGON",
+      "request": {
+        "model": "claude-sonnet-4-6",
+        "tool": {
+          "type": "web_search_20260209",
+          "name": "web_search",
+          "max_uses": 3,
+          "blocked_domains": [
+            "kpopofficial.com"
+          ],
+          "allowed_callers": [
+            "direct"
+          ]
+        },
+        "allowed_callers": [
+          "direct"
+        ],
+        "max_uses": 3,
+        "max_tokens": 16384,
+        "blocked_domains": [
+          "kpopofficial.com"
+        ],
+        "as_of": "2026-07-15",
+        "prompt": "Determine whether PENTAGON has any publicly announced events after 2026-07-15 (concerts, tours, or fan meetings). Search for this artist only; do not bundle another artist.\n\nStrict evidence rules: accept only an official artist/company source, promoter, venue, ticketing source, or reliable media. Exclude kpopofficial.com and all other event aggregators as evidence. Do not guess. A general tour announcement without a dated stop is not an event. If no qualifying public event is found, return NO_EVENTS_FOUND.\n\nFor every event you claim, the artist must match and you must provide the complete exact date or date range, venue, city/country, and a structured web-search citation with URL, title, and cited text that directly supports that same event. Do not claim an event without a citation.\n\nReturn only these fields in this order:\nVERDICT: EVENTS_FOUND | NO_EVENTS_FOUND\nEVENT_COUNT: <n>\nEVENTS:\n- ARTIST: ...\n  DATES: ...\n  VENUE: ...\n  CITY_COUNTRY: ...\n  SOURCE_CLASS: official_artist_company | promoter | venue | ticketing | reliable_media\n  CITATION_URL: ...\n  CITED_TEXT: ...\nREASON: one short factual sentence"
+      },
+      "verdict": "NO_EVENTS_FOUND",
+      "event_count": 0,
+      "events": [],
+      "stop_reason": "end_turn",
+      "classification": "completed_with_results",
+      "usage": {
+        "input_tokens": 14976,
+        "output_tokens": 367,
+        "web_search_requests": 2
+      },
+      "latency_ms": 10542,
+      "cost_usd": 0.070433,
+      "citations": [
+        {
+          "url": "https://www.ticketmaster.com/pentagon-tickets/artist/2646819",
+          "title": "PENTAGON Tickets, 2026 Concert Tour Dates | Ticketmaster",
+          "cited_text": "We&#x27;re sorry, but we couldn&#x27;t find any upcoming concerts for PENTAGON. Please check back soon. "
+        },
+        {
+          "url": "https://festivaly.eu/en/artists/pentagon/415213",
+          "title": "Pentagon - tickets, concerts and tour dates 2025 and 2026 — Festivaly.eu",
+          "cited_text": "Concerts · Info · Discography · Similar artists · Track · ⏰ There are no events planned but you can follow the artist. If a new event comes up, we’ll ..."
+        }
+      ],
+      "raw_file": "b7-discovery-pentagon.json"
+    },
+    {
+      "artist": "N.Flying",
+      "request": {
+        "model": "claude-sonnet-4-6",
+        "tool": {
+          "type": "web_search_20260209",
+          "name": "web_search",
+          "max_uses": 3,
+          "blocked_domains": [
+            "kpopofficial.com"
+          ],
+          "allowed_callers": [
+            "direct"
+          ]
+        },
+        "allowed_callers": [
+          "direct"
+        ],
+        "max_uses": 3,
+        "max_tokens": 16384,
+        "blocked_domains": [
+          "kpopofficial.com"
+        ],
+        "as_of": "2026-07-15",
+        "prompt": "Determine whether N.Flying has any publicly announced events after 2026-07-15 (concerts, tours, or fan meetings). Search for this artist only; do not bundle another artist.\n\nStrict evidence rules: accept only an official artist/company source, promoter, venue, ticketing source, or reliable media. Exclude kpopofficial.com and all other event aggregators as evidence. Do not guess. A general tour announcement without a dated stop is not an event. If no qualifying public event is found, return NO_EVENTS_FOUND.\n\nFor every event you claim, the artist must match and you must provide the complete exact date or date range, venue, city/country, and a structured web-search citation with URL, title, and cited text that directly supports that same event. Do not claim an event without a citation.\n\nReturn only these fields in this order:\nVERDICT: EVENTS_FOUND | NO_EVENTS_FOUND\nEVENT_COUNT: <n>\nEVENTS:\n- ARTIST: ...\n  DATES: ...\n  VENUE: ...\n  CITY_COUNTRY: ...\n  SOURCE_CLASS: official_artist_company | promoter | venue | ticketing | reliable_media\n  CITATION_URL: ...\n  CITED_TEXT: ...\nREASON: one short factual sentence"
+      },
+      "verdict": "NO_EVENTS_FOUND",
+      "event_count": 0,
+      "events": [],
+      "stop_reason": "end_turn",
+      "classification": "completed_with_results",
+      "usage": {
+        "input_tokens": 44212,
+        "output_tokens": 656,
+        "web_search_requests": 3
+      },
+      "latency_ms": 17341,
+      "cost_usd": 0.172476,
+      "citations": [
+        {
+          "url": "https://www.ticketmaster.com/n-flying-tickets/artist/2952756",
+          "title": "N.Flying Tickets, 2026 Concert Tour Dates | Ticketmaster",
+          "cited_text": "We&#x27;re sorry, but we couldn&#x27;t find any upcoming concerts for N.Flying. "
+        },
+        {
+          "url": "https://www.livenation.com/artist/K8vZ917QBk0/n-flying-events",
+          "title": "N.Flying - 2026 Tour Dates & Concert Schedule",
+          "cited_text": "There are no upcoming shows.\n\n"
+        },
+        {
+          "url": "https://www.songkick.com/artists/10091488-nflying/calendar",
+          "title": "N.Flying Full Tour Schedule 2026 & 2027, Tour Dates & Concerts – Songkick",
+          "cited_text": "Unfortunately there are no concert dates for N.Flying scheduled in 2026. "
+        }
+      ],
+      "raw_file": "b7-discovery-n-flying.json"
+    }
+  ],
+  "stage2": [
+    {
+      "candidate": {
+        "candidateId": "discovery-red-velvet-august-1-2026",
+        "artist": "Red Velvet",
+        "dates": "August 1, 2026",
+        "venue": "Korea University Hwajeong Tiger Dome (Hwajeong Gymnasium)",
+        "city": "Seoul, South Korea",
+        "raw_title": "Red Velvet live event at Korea University Hwajeong Tiger Dome (Hwajeong Gymnasium) on August 1, 2026"
+      },
+      "request": {
+        "model": "claude-sonnet-4-6",
+        "tool": {
+          "type": "web_search_20260209",
+          "name": "web_search",
+          "max_uses": 3,
+          "blocked_domains": [
+            "kpopofficial.com"
+          ],
+          "allowed_callers": [
+            "direct"
+          ]
+        },
+        "allowed_callers": [
+          "direct"
+        ],
+        "max_uses": 3,
+        "max_tokens": 16384,
+        "blocked_domains": [
+          "kpopofficial.com"
+        ],
+        "as_of": "2026-07-15",
+        "prompt": "Verify exactly one K-pop event candidate using web search. Do not bundle another event.\n\nCandidate ID: discovery-red-velvet-august-1-2026\nArtist: Red Velvet\nClaimed dates: August 1, 2026\nClaimed venue: Korea University Hwajeong Tiger Dome (Hwajeong Gymnasium)\nClaimed city/country: Seoul, South Korea\nRaw candidate title: Red Velvet live event at Korea University Hwajeong Tiger Dome (Hwajeong Gymnasium) on August 1, 2026\n\nStrict evidence rules (do not relax): exclude kpopofficial.com and all other event aggregators as evidence; accept only an official artist/company, promoter, venue, ticketing, or reliable media source; artist AND exact date(s) must match (timezone tolerance only ±1 day); venue/city must not conflict; a general tour announcement without this stop/date is not a match. Return UNCONFIRMED if no qualifying source is found and CONTRADICTED if reliable evidence conflicts.\n\nReturn only these compact fields, in this order. Cite factual claims with the web-search citation mechanism:\nVERDICT: CONFIRMED | UNCONFIRMED | CONTRADICTED\nARTIST_MATCH: true | false\nDATE_MATCH: true | false\nVENUE_OR_CITY_MATCH: true | false\nMATCHED_DATES: ...\nSOURCE_QUALITY: official_artist_company | promoter | venue | ticketing | reliable_media | none\nSOURCE_URLS: ...\nREASON: one short factual sentence"
+      },
+      "rawVerdict": "CONFIRMED",
+      "effectiveVerdict": "citation_unbound",
+      "assertion": {
+        "A_date_literal": true,
+        "B_venue_literal": true,
+        "C_no_shared_snippet": false,
+        "D_same_cited_text": true,
+        "passed": false
+      },
+      "stop_reason": "end_turn",
+      "classification": "completed_with_results",
+      "usage": {
+        "input_tokens": 14211,
+        "output_tokens": 391,
+        "web_search_requests": 1
+      },
+      "latency_ms": 10071,
+      "cost_usd": 0.058498,
+      "structured_citations": 2,
+      "cited_text_nonempty": 2,
+      "citations": [
+        {
+          "url": "https://www.koreajoongangdaily.com/entertainment/girl-group-red-velvet-to-return-with-new-album-fan-concert-in-august/12723807",
+          "title": "Girl group Red Velvet to return with new album, fan concert in August",
+          "cited_text": "The fan concert will take place at the Tiger Dome gymnasium at Korea University in northern Seoul at 6 p.m. on Aug. 1 and at 4 p.m. on Aug. 2. "
+        },
+        {
+          "url": "https://www.koreatimes.co.kr/entertainment/k-pop/20260616/red-velvet-sets-august-return-ending-2-year-wait-for-full-group-comeback",
+          "title": "Red Velvet sets August return, ending 2-year wait for full group comeback - The Korea Times",
+          "cited_text": "According to SM Entertainment, the performances will feature a selection of songs spanning Red Velvet’s career, along with interactive segments ...\n\nT..."
+        }
+      ],
+      "text": "VERDICT: CONFIRMED\nARTIST_MATCH: true\nDATE_MATCH: true\nVENUE_OR_CITY_MATCH: true\nMATCHED_DATES: August 1, 2026\nSOURCE_QUALITY: reliable_media\nSOURCE_URLS: https://www.koreajoongangdaily.com/entertainment/girl-group-red-velvet-to-return-with-new-album-fan-concert-in-august/12723807, https://www.koreatimes.co.kr/entertainment/k-pop/20260616/red-velvet-sets-august-return-ending-2-year-wait-for-full-group-comeback, https://www.soompi.com/article/1847788wpp/red-velvet-announces-2026-fan-con-a-day-in-red-velvet-following-august-comeback-news\nREASON: \nMultiple reliable outlets confirm the fan concert takes place at the Tiger Dome gymnasium at Korea University in northern Seoul at 6 p.m. on Aug. 1\n, with \nSM Entertainment as the announcing company for the \"2026 Red Velvet FAN-CON 'A Day in Red & Velvet'\" event.",
+      "raw_file": "b7-verification-discovery-red-velvet-august-1-2026.json"
+    },
+    {
+      "candidate": {
+        "candidateId": "discovery-red-velvet-august-2-2026",
+        "artist": "Red Velvet",
+        "dates": "August 2, 2026",
+        "venue": "Korea University Hwajeong Tiger Dome (Hwajeong Gymnasium)",
+        "city": "Seoul, South Korea",
+        "raw_title": "Red Velvet live event at Korea University Hwajeong Tiger Dome (Hwajeong Gymnasium) on August 2, 2026"
+      },
+      "request": {
+        "model": "claude-sonnet-4-6",
+        "tool": {
+          "type": "web_search_20260209",
+          "name": "web_search",
+          "max_uses": 3,
+          "blocked_domains": [
+            "kpopofficial.com"
+          ],
+          "allowed_callers": [
+            "direct"
+          ]
+        },
+        "allowed_callers": [
+          "direct"
+        ],
+        "max_uses": 3,
+        "max_tokens": 16384,
+        "blocked_domains": [
+          "kpopofficial.com"
+        ],
+        "as_of": "2026-07-15",
+        "prompt": "Verify exactly one K-pop event candidate using web search. Do not bundle another event.\n\nCandidate ID: discovery-red-velvet-august-2-2026\nArtist: Red Velvet\nClaimed dates: August 2, 2026\nClaimed venue: Korea University Hwajeong Tiger Dome (Hwajeong Gymnasium)\nClaimed city/country: Seoul, South Korea\nRaw candidate title: Red Velvet live event at Korea University Hwajeong Tiger Dome (Hwajeong Gymnasium) on August 2, 2026\n\nStrict evidence rules (do not relax): exclude kpopofficial.com and all other event aggregators as evidence; accept only an official artist/company, promoter, venue, ticketing, or reliable media source; artist AND exact date(s) must match (timezone tolerance only ±1 day); venue/city must not conflict; a general tour announcement without this stop/date is not a match. Return UNCONFIRMED if no qualifying source is found and CONTRADICTED if reliable evidence conflicts.\n\nReturn only these compact fields, in this order. Cite factual claims with the web-search citation mechanism:\nVERDICT: CONFIRMED | UNCONFIRMED | CONTRADICTED\nARTIST_MATCH: true | false\nDATE_MATCH: true | false\nVENUE_OR_CITY_MATCH: true | false\nMATCHED_DATES: ...\nSOURCE_QUALITY: official_artist_company | promoter | venue | ticketing | reliable_media | none\nSOURCE_URLS: ...\nREASON: one short factual sentence"
+      },
+      "rawVerdict": "CONFIRMED",
+      "effectiveVerdict": "citation_unbound",
+      "assertion": {
+        "A_date_literal": false,
+        "B_venue_literal": false,
+        "C_no_shared_snippet": true,
+        "D_same_cited_text": false,
+        "passed": false
+      },
+      "stop_reason": "end_turn",
+      "classification": "completed_with_results",
+      "usage": {
+        "input_tokens": 13148,
+        "output_tokens": 405,
+        "web_search_requests": 1
+      },
+      "latency_ms": 10106,
+      "cost_usd": 0.055519,
+      "structured_citations": 1,
+      "cited_text_nonempty": 1,
+      "citations": [
+        {
+          "url": "https://www.soompi.com/article/1847788wpp/red-velvet-announces-2026-fan-con-a-day-in-red-velvet-following-august-comeback-news",
+          "title": "Red Velvet Announces 2026 Fan-Con “A Day In Red & Velvet” Following August Comeback News | Soompi",
+          "cited_text": "On June 15, the group revealed a poster announcing the schedule for “2026 Red Velvet FAN-CON ‘A Day in Red & Velvet.’” The fan-con will take place at ..."
+        }
+      ],
+      "text": "VERDICT: CONFIRMED\nARTIST_MATCH: true\nDATE_MATCH: true\nVENUE_OR_CITY_MATCH: true\nMATCHED_DATES: August 2, 2026\nSOURCE_QUALITY: reliable_media\nSOURCE_URLS: https://www.koreatimes.co.kr/entertainment/k-pop/20260616/red-velvet-sets-august-return-ending-2-year-wait-for-full-group-comeback, https://www.koreajoongangdaily.com/entertainment/girl-group-red-velvet-to-return-with-new-album-fan-concert-in-august/12723807, https://www.soompi.com/article/1847788wpp/red-velvet-announces-2026-fan-con-a-day-in-red-velvet-following-august-comeback-news\nREASON: \nRed Velvet's \"2026 Red Velvet FAN-CON 'A Day in Red & Velvet'\" is confirmed at Korea University's Hwajeong Tiger Dome on August 1 at 6 p.m. KST and August 2 at 4 p.m. KST,\n corroborated by multiple reliable media outlets including Korea JoongAng Daily, Korea Times, and Soompi.",
+      "raw_file": "b7-verification-discovery-red-velvet-august-2-2026.json"
+    },
+    {
+      "candidate": {
+        "candidateId": "discovery-monsta-x-october-3-2026",
+        "artist": "MONSTA X",
+        "dates": "October 3, 2026",
+        "venue": "EagleBank Arena",
+        "city": "Fairfax, VA, USA",
+        "raw_title": "MONSTA X live event at EagleBank Arena on October 3, 2026"
+      },
+      "request": {
+        "model": "claude-sonnet-4-6",
+        "tool": {
+          "type": "web_search_20260209",
+          "name": "web_search",
+          "max_uses": 3,
+          "blocked_domains": [
+            "kpopofficial.com"
+          ],
+          "allowed_callers": [
+            "direct"
+          ]
+        },
+        "allowed_callers": [
+          "direct"
+        ],
+        "max_uses": 3,
+        "max_tokens": 16384,
+        "blocked_domains": [
+          "kpopofficial.com"
+        ],
+        "as_of": "2026-07-15",
+        "prompt": "Verify exactly one K-pop event candidate using web search. Do not bundle another event.\n\nCandidate ID: discovery-monsta-x-october-3-2026\nArtist: MONSTA X\nClaimed dates: October 3, 2026\nClaimed venue: EagleBank Arena\nClaimed city/country: Fairfax, VA, USA\nRaw candidate title: MONSTA X live event at EagleBank Arena on October 3, 2026\n\nStrict evidence rules (do not relax): exclude kpopofficial.com and all other event aggregators as evidence; accept only an official artist/company, promoter, venue, ticketing, or reliable media source; artist AND exact date(s) must match (timezone tolerance only ±1 day); venue/city must not conflict; a general tour announcement without this stop/date is not a match. Return UNCONFIRMED if no qualifying source is found and CONTRADICTED if reliable evidence conflicts.\n\nReturn only these compact fields, in this order. Cite factual claims with the web-search citation mechanism:\nVERDICT: CONFIRMED | UNCONFIRMED | CONTRADICTED\nARTIST_MATCH: true | false\nDATE_MATCH: true | false\nVENUE_OR_CITY_MATCH: true | false\nMATCHED_DATES: ...\nSOURCE_QUALITY: official_artist_company | promoter | venue | ticketing | reliable_media | none\nSOURCE_URLS: ...\nREASON: one short factual sentence"
+      },
+      "rawVerdict": "CONFIRMED",
+      "effectiveVerdict": "CONFIRMED",
+      "assertion": {
+        "A_date_literal": true,
+        "B_venue_literal": true,
+        "C_no_shared_snippet": true,
+        "D_same_cited_text": true,
+        "passed": true
+      },
+      "stop_reason": "end_turn",
+      "classification": "completed_with_results",
+      "usage": {
+        "input_tokens": 10004,
+        "output_tokens": 341,
+        "web_search_requests": 1
+      },
+      "latency_ms": 8374,
+      "cost_usd": 0.045127,
+      "structured_citations": 2,
+      "cited_text_nonempty": 2,
+      "citations": [
+        {
+          "url": "https://www.ticketmaster.com/2026-monsta-x-world-tour-the-fairfax-virginia-10-03-2026/event/15006482B90BDA55",
+          "title": "2026 MONSTA X WORLD TOUR [THE X : NEXUS] IN FAIRFAX Tickets Oct 03, 2026 Fairfax, VA | Ticketmaster",
+          "cited_text": "Buy 2026 MONSTA X WORLD TOUR [THE X : NEXUS] IN FAIRFAX tickets at the EagleBank Arena in Fairfax, VA for Oct 03, 2026 at Ticketmaster.\n\n"
+        },
+        {
+          "url": "https://www.livenation.com/event/1A4Zk3eGkeyeWt4/2026-monsta-x-world-tour-the-x-nexus-in-fairfax",
+          "title": "2026 monsta x world tour [the x : nexus] in fairfax",
+          "cited_text": "EagleBank Arena · Fairfax, VA · Buy Tickets · MONSTA X ·"
+        }
+      ],
+      "text": "VERDICT: CONFIRMED\nARTIST_MATCH: true\nDATE_MATCH: true\nVENUE_OR_CITY_MATCH: true\nMATCHED_DATES: October 3, 2026\nSOURCE_QUALITY: ticketing\nSOURCE_URLS: https://www.ticketmaster.com/2026-monsta-x-world-tour-the-fairfax-virginia-10-03-2026/event/15006482B90BDA55, https://www.livenation.com/event/1A4Zk3eGkeyeWt4/2026-monsta-x-world-tour-the-x-nexus-in-fairfax\nREASON: \nTicketmaster lists the 2026 MONSTA X World Tour [THE X : NEXUS] at EagleBank Arena in Fairfax, VA on October 3, 2026\n, corroborated by \nLive Nation also listing the event at EagleBank Arena, Fairfax, VA.",
+      "raw_file": "b7-verification-discovery-monsta-x-october-3-2026.json"
+    },
+    {
+      "candidate": {
+        "candidateId": "discovery-monsta-x-october-6-2026",
+        "artist": "MONSTA X",
+        "dates": "October 6, 2026",
+        "venue": "Infosys Theater at Madison Square Garden",
+        "city": "New York, NY, USA",
+        "raw_title": "MONSTA X live event at Infosys Theater at Madison Square Garden on October 6, 2026"
+      },
+      "request": {
+        "model": "claude-sonnet-4-6",
+        "tool": {
+          "type": "web_search_20260209",
+          "name": "web_search",
+          "max_uses": 3,
+          "blocked_domains": [
+            "kpopofficial.com"
+          ],
+          "allowed_callers": [
+            "direct"
+          ]
+        },
+        "allowed_callers": [
+          "direct"
+        ],
+        "max_uses": 3,
+        "max_tokens": 16384,
+        "blocked_domains": [
+          "kpopofficial.com"
+        ],
+        "as_of": "2026-07-15",
+        "prompt": "Verify exactly one K-pop event candidate using web search. Do not bundle another event.\n\nCandidate ID: discovery-monsta-x-october-6-2026\nArtist: MONSTA X\nClaimed dates: October 6, 2026\nClaimed venue: Infosys Theater at Madison Square Garden\nClaimed city/country: New York, NY, USA\nRaw candidate title: MONSTA X live event at Infosys Theater at Madison Square Garden on October 6, 2026\n\nStrict evidence rules (do not relax): exclude kpopofficial.com and all other event aggregators as evidence; accept only an official artist/company, promoter, venue, ticketing, or reliable media source; artist AND exact date(s) must match (timezone tolerance only ±1 day); venue/city must not conflict; a general tour announcement without this stop/date is not a match. Return UNCONFIRMED if no qualifying source is found and CONTRADICTED if reliable evidence conflicts.\n\nReturn only these compact fields, in this order. Cite factual claims with the web-search citation mechanism:\nVERDICT: CONFIRMED | UNCONFIRMED | CONTRADICTED\nARTIST_MATCH: true | false\nDATE_MATCH: true | false\nVENUE_OR_CITY_MATCH: true | false\nMATCHED_DATES: ...\nSOURCE_QUALITY: official_artist_company | promoter | venue | ticketing | reliable_media | none\nSOURCE_URLS: ...\nREASON: one short factual sentence"
+      },
+      "rawVerdict": "CONFIRMED",
+      "effectiveVerdict": "CONFIRMED",
+      "assertion": {
+        "A_date_literal": true,
+        "B_venue_literal": true,
+        "C_no_shared_snippet": true,
+        "D_same_cited_text": true,
+        "passed": true
+      },
+      "stop_reason": "end_turn",
+      "classification": "completed_with_results",
+      "usage": {
+        "input_tokens": 11891,
+        "output_tokens": 524,
+        "web_search_requests": 1
+      },
+      "latency_ms": 12503,
+      "cost_usd": 0.053533,
+      "structured_citations": 3,
+      "cited_text_nonempty": 3,
+      "citations": [
+        {
+          "url": "https://www.billboard.com/music/concerts/monsta-x-2026-the-x-nexus-world-tour-dates-north-america-1236215603/",
+          "title": "Monsta X 'THE X : NEXUS' 2026 World Tour North America Dates",
+          "cited_text": "2026 MONSTA X WORLD TOUR [THE X : NEXUS] NORTH AMERICA DATES: Oct. 3: Fairfax, Va. @ EagleBank Arena · Oct. 6: New York, N.Y. @ Infosys Theater at Mad..."
+        },
+        {
+          "url": "https://www.msg.com/events-tickets/monsta-x-infosys-theater-at-madison-square-garden-october-2026/3B00647BF0495307",
+          "title": "MONSTA X | KPOP Concerts | Infosys Theater at MSG",
+          "cited_text": "Get tickets to see 2026 MONSTA X WORLD TOUR [THE X : NEXUS] IN NEW YORK come to the Infosys Theater at MSG on October 6, 2026.\n\n2026 MONSTA X WORLD TO..."
+        },
+        {
+          "url": "https://www.livenation.com/event/G5diZ_6RY34G6/2026-monsta-x-world-tour-the-x-nexus-in-new-york",
+          "title": "2026 monsta x world tour [the x : nexus] in new york",
+          "cited_text": "Tue Oct 6, 2026 ▪︎ 8 PM · Infosys Theater at Madison Square Garden · New York, NY · Buy Tickets · MONSTA X ·"
+        }
+      ],
+      "text": "**VERDICT:** CONFIRMED\n**ARTIST_MATCH:** true\n**DATE_MATCH:** true\n**VENUE_OR_CITY_MATCH:** true\n**MATCHED_DATES:** October 6, 2026\n**SOURCE_QUALITY:** venue, ticketing, reliable_media\n**SOURCE_URLS:**\n- https://www.msg.com/events-tickets/monsta-x-infosys-theater-at-madison-square-garden-october-2026/3B00647BF0495307 (venue – MSG official)\n- https://www.ticketmaster.com/monsta-x-tickets/artist/2371302 (ticketing – Ticketmaster)\n- https://www.livenation.com/event/G5diZ_6RY34G6/2026-monsta-x-world-tour-the-x-nexus-in-new-york (promoter – Live Nation)\n- https://www.billboard.com/music/concerts/monsta-x-2026-the-x-nexus-world-tour-dates-north-america-1236215603/ (reliable media – Billboard)\n\n**REASON:** \nBillboard confirms \"Oct. 6: New York, N.Y. @ Infosys Theater at Madison Square Garden\"\n as part of the 2026 MONSTA X WORLD TOUR [THE X : NEXUS], corroborated by \nthe MSG venue's own listing showing the event at the Infosys Theater at MSG on October 6, 2026\n and \nLive Nation listing it as \"Tue Oct 6, 2026 ▪︎ 8 PM · Infosys Theater at Madison Square Garden · New York, NY.\"",
+      "raw_file": "b7-verification-discovery-monsta-x-october-6-2026.json"
+    },
+    {
+      "candidate": {
+        "candidateId": "discovery-monsta-x-october-8-2026",
+        "artist": "MONSTA X",
+        "dates": "October 8, 2026",
+        "venue": "MGM Music Hall at Fenway",
+        "city": "Boston, MA, USA",
+        "raw_title": "MONSTA X live event at MGM Music Hall at Fenway on October 8, 2026"
+      },
+      "request": {
+        "model": "claude-sonnet-4-6",
+        "tool": {
+          "type": "web_search_20260209",
+          "name": "web_search",
+          "max_uses": 3,
+          "blocked_domains": [
+            "kpopofficial.com"
+          ],
+          "allowed_callers": [
+            "direct"
+          ]
+        },
+        "allowed_callers": [
+          "direct"
+        ],
+        "max_uses": 3,
+        "max_tokens": 16384,
+        "blocked_domains": [
+          "kpopofficial.com"
+        ],
+        "as_of": "2026-07-15",
+        "prompt": "Verify exactly one K-pop event candidate using web search. Do not bundle another event.\n\nCandidate ID: discovery-monsta-x-october-8-2026\nArtist: MONSTA X\nClaimed dates: October 8, 2026\nClaimed venue: MGM Music Hall at Fenway\nClaimed city/country: Boston, MA, USA\nRaw candidate title: MONSTA X live event at MGM Music Hall at Fenway on October 8, 2026\n\nStrict evidence rules (do not relax): exclude kpopofficial.com and all other event aggregators as evidence; accept only an official artist/company, promoter, venue, ticketing, or reliable media source; artist AND exact date(s) must match (timezone tolerance only ±1 day); venue/city must not conflict; a general tour announcement without this stop/date is not a match. Return UNCONFIRMED if no qualifying source is found and CONTRADICTED if reliable evidence conflicts.\n\nReturn only these compact fields, in this order. Cite factual claims with the web-search citation mechanism:\nVERDICT: CONFIRMED | UNCONFIRMED | CONTRADICTED\nARTIST_MATCH: true | false\nDATE_MATCH: true | false\nVENUE_OR_CITY_MATCH: true | false\nMATCHED_DATES: ...\nSOURCE_QUALITY: official_artist_company | promoter | venue | ticketing | reliable_media | none\nSOURCE_URLS: ...\nREASON: one short factual sentence"
+      },
+      "rawVerdict": "CONFIRMED",
+      "effectiveVerdict": "citation_unbound",
+      "assertion": {
+        "A_date_literal": false,
+        "B_venue_literal": false,
+        "C_no_shared_snippet": true,
+        "D_same_cited_text": false,
+        "passed": false
+      },
+      "stop_reason": "end_turn",
+      "classification": "completed_with_results",
+      "usage": {
+        "input_tokens": 12281,
+        "output_tokens": 338,
+        "web_search_requests": 1
+      },
+      "latency_ms": 11517,
+      "cost_usd": 0.051913,
+      "structured_citations": 1,
+      "cited_text_nonempty": 1,
+      "citations": [
+        {
+          "url": "https://www.ticketmaster.com/monsta-x-tickets/artist/2371302",
+          "title": "MONSTA X Tickets, 2026-2027 Concert Tour Dates | Ticketmaster",
+          "cited_text": "2026 MONSTA X WORLD TOUR [THE X : NEXUS] IN NORTH AMERICA DATES: Sat Oct 3 - Fairfax, VA - EagleBank Arena · Tue Oct 6 - New York, NY - Infosys Theate..."
+        }
+      ],
+      "text": "VERDICT: CONFIRMED\nARTIST_MATCH: true\nDATE_MATCH: true\nVENUE_OR_CITY_MATCH: true\nMATCHED_DATES: October 8, 2026\nSOURCE_QUALITY: ticketing\nSOURCE_URLS: https://www.ticketmaster.com/2026-monsta-x-world-tour-the-boston-massachusetts-10-08-2026/event/0100647BAD4DF692, https://www.livenation.com/event/vv177Z_6GkmcKLQ3/2026-monsta-x-world-tour-the-x-nexus-in-boston, https://www.axs.com/events/1405346/monsta-x-tickets\nREASON: \nTicketmaster's official tour listing confirms MONSTA X performing at MGM Music Hall at Fenway, Boston, MA on October 8, 2026 at 8:00 PM as part of the 2026 MONSTA X WORLD TOUR [THE X : NEXUS].",
+      "raw_file": "b7-verification-discovery-monsta-x-october-8-2026.json"
+    },
+    {
+      "candidate": {
+        "candidateId": "discovery-monsta-x-october-10-2026",
+        "artist": "MONSTA X",
+        "dates": "October 10, 2026",
+        "venue": "Great Canadian Toronto",
+        "city": "Toronto, ON, Canada",
+        "raw_title": "MONSTA X live event at Great Canadian Toronto on October 10, 2026"
+      },
+      "request": {
+        "model": "claude-sonnet-4-6",
+        "tool": {
+          "type": "web_search_20260209",
+          "name": "web_search",
+          "max_uses": 3,
+          "blocked_domains": [
+            "kpopofficial.com"
+          ],
+          "allowed_callers": [
+            "direct"
+          ]
+        },
+        "allowed_callers": [
+          "direct"
+        ],
+        "max_uses": 3,
+        "max_tokens": 16384,
+        "blocked_domains": [
+          "kpopofficial.com"
+        ],
+        "as_of": "2026-07-15",
+        "prompt": "Verify exactly one K-pop event candidate using web search. Do not bundle another event.\n\nCandidate ID: discovery-monsta-x-october-10-2026\nArtist: MONSTA X\nClaimed dates: October 10, 2026\nClaimed venue: Great Canadian Toronto\nClaimed city/country: Toronto, ON, Canada\nRaw candidate title: MONSTA X live event at Great Canadian Toronto on October 10, 2026\n\nStrict evidence rules (do not relax): exclude kpopofficial.com and all other event aggregators as evidence; accept only an official artist/company, promoter, venue, ticketing, or reliable media source; artist AND exact date(s) must match (timezone tolerance only ±1 day); venue/city must not conflict; a general tour announcement without this stop/date is not a match. Return UNCONFIRMED if no qualifying source is found and CONTRADICTED if reliable evidence conflicts.\n\nReturn only these compact fields, in this order. Cite factual claims with the web-search citation mechanism:\nVERDICT: CONFIRMED | UNCONFIRMED | CONTRADICTED\nARTIST_MATCH: true | false\nDATE_MATCH: true | false\nVENUE_OR_CITY_MATCH: true | false\nMATCHED_DATES: ...\nSOURCE_QUALITY: official_artist_company | promoter | venue | ticketing | reliable_media | none\nSOURCE_URLS: ...\nREASON: one short factual sentence"
+      },
+      "rawVerdict": "CONFIRMED",
+      "effectiveVerdict": "citation_unbound",
+      "assertion": {
+        "A_date_literal": false,
+        "B_venue_literal": false,
+        "C_no_shared_snippet": true,
+        "D_same_cited_text": false,
+        "passed": false
+      },
+      "stop_reason": "end_turn",
+      "classification": "completed_with_results",
+      "usage": {
+        "input_tokens": 10535,
+        "output_tokens": 348,
+        "web_search_requests": 1
+      },
+      "latency_ms": 10099,
+      "cost_usd": 0.046825,
+      "structured_citations": 2,
+      "cited_text_nonempty": 2,
+      "citations": [
+        {
+          "url": "https://greatcanadian.com/event/2026-monsta-x/",
+          "title": "Monsta X - Great Canadian Casino Resort Toronto",
+          "cited_text": "Get ready for a night of explosive energy and global K-pop dominance as Monsta X takes the stage October 10, 2026!\n\n"
+        },
+        {
+          "url": "https://www.ticketmaster.com/monsta-x-tickets/artist/2371302",
+          "title": "MONSTA X Tickets, 2026-2027 Concert Tour Dates | Ticketmaster",
+          "cited_text": "Parking: WAMU Theater MONSTA X · Venue · WAMU Theater · October 10, 2026 · Oct10 · Saturday 08:00 PMSat8:00 PMOpen additional information for Toronto,..."
+        }
+      ],
+      "text": "VERDICT: CONFIRMED\nARTIST_MATCH: true\nDATE_MATCH: true\nVENUE_OR_CITY_MATCH: true\nMATCHED_DATES: October 10, 2026\nSOURCE_QUALITY: venue, ticketing\nSOURCE_URLS: https://greatcanadian.com/event/2026-monsta-x/, https://www.ticketmaster.ca/2026-monsta-x-world-tour-the-toronto-ontario-10-10-2026/event/10006482BE2D3F52, https://www.livenation.com/event/1A8Zk3eGkeX5KW3/2026-monsta-x-world-tour-the-x-nexus-in-toronto\nREASON: \nThe venue's own website (Great Canadian Casino Resort Toronto) confirms MONSTA X takes the stage October 10, 2026,\n and \nTicketmaster lists the event as October 10, 2026 at 8:00 PM at The Theatre at Great Canadian Toronto, Toronto, ON, Canada.",
+      "raw_file": "b7-verification-discovery-monsta-x-october-10-2026.json"
+    },
+    {
+      "candidate": {
+        "candidateId": "discovery-monsta-x-october-13-2026",
+        "artist": "MONSTA X",
+        "dates": "October 13, 2026",
+        "venue": "Rosemont Theatre",
+        "city": "Rosemont, IL, USA",
+        "raw_title": "MONSTA X live event at Rosemont Theatre on October 13, 2026"
+      },
+      "request": {
+        "model": "claude-sonnet-4-6",
+        "tool": {
+          "type": "web_search_20260209",
+          "name": "web_search",
+          "max_uses": 3,
+          "blocked_domains": [
+            "kpopofficial.com"
+          ],
+          "allowed_callers": [
+            "direct"
+          ]
+        },
+        "allowed_callers": [
+          "direct"
+        ],
+        "max_uses": 3,
+        "max_tokens": 16384,
+        "blocked_domains": [
+          "kpopofficial.com"
+        ],
+        "as_of": "2026-07-15",
+        "prompt": "Verify exactly one K-pop event candidate using web search. Do not bundle another event.\n\nCandidate ID: discovery-monsta-x-october-13-2026\nArtist: MONSTA X\nClaimed dates: October 13, 2026\nClaimed venue: Rosemont Theatre\nClaimed city/country: Rosemont, IL, USA\nRaw candidate title: MONSTA X live event at Rosemont Theatre on October 13, 2026\n\nStrict evidence rules (do not relax): exclude kpopofficial.com and all other event aggregators as evidence; accept only an official artist/company, promoter, venue, ticketing, or reliable media source; artist AND exact date(s) must match (timezone tolerance only ±1 day); venue/city must not conflict; a general tour announcement without this stop/date is not a match. Return UNCONFIRMED if no qualifying source is found and CONTRADICTED if reliable evidence conflicts.\n\nReturn only these compact fields, in this order. Cite factual claims with the web-search citation mechanism:\nVERDICT: CONFIRMED | UNCONFIRMED | CONTRADICTED\nARTIST_MATCH: true | false\nDATE_MATCH: true | false\nVENUE_OR_CITY_MATCH: true | false\nMATCHED_DATES: ...\nSOURCE_QUALITY: official_artist_company | promoter | venue | ticketing | reliable_media | none\nSOURCE_URLS: ...\nREASON: one short factual sentence"
+      },
+      "rawVerdict": "CONFIRMED",
+      "effectiveVerdict": "CONFIRMED",
+      "assertion": {
+        "A_date_literal": true,
+        "B_venue_literal": true,
+        "C_no_shared_snippet": true,
+        "D_same_cited_text": true,
+        "passed": true
+      },
+      "stop_reason": "end_turn",
+      "classification": "completed_with_results",
+      "usage": {
+        "input_tokens": 9899,
+        "output_tokens": 442,
+        "web_search_requests": 1
+      },
+      "latency_ms": 10619,
+      "cost_usd": 0.046327,
+      "structured_citations": 3,
+      "cited_text_nonempty": 3,
+      "citations": [
+        {
+          "url": "https://rosemont.com/theatre/event/2026-monsta-x-world-tour-the-x-nexus-in-rosemont/",
+          "title": "2026 MONSTA X WORLD TOUR [THE X : NEXUS] IN ROSEMONT – Rosemont Theatre",
+          "cited_text": "Tuesday, October 13, 2026 · GET TICKETS · Parking is available close to all entrances of the Rosemont Theatre. "
+        },
+        {
+          "url": "https://rosemont.com/theatre/event/2026-monsta-x-world-tour-the-x-nexus-in-rosemont/",
+          "title": "2026 MONSTA X WORLD TOUR [THE X : NEXUS] IN ROSEMONT – Rosemont Theatre",
+          "cited_text": "5400 N. River Road Rosemont, IL 60018 ...\n\nTuesday, October 13, 2026 · GET TICKETS · Parking is available close to all entrances of the Rosemont Theat..."
+        },
+        {
+          "url": "https://www.ticketmaster.com/monsta-x-tickets/artist/2371302",
+          "title": "MONSTA X Tickets, 2026-2027 Concert Tour Dates | Ticketmaster",
+          "cited_text": "Truly Rooftop Pre-Show Access: ... Rosemont, IL, Rosemont Theatre, 2026 MONSTA X WORLD TOUR [THE X : NEXUS] IN ROSEMONT10/13/26, 8:00 PMRosemont, ILRo..."
+        }
+      ],
+      "text": "VERDICT: CONFIRMED\nARTIST_MATCH: true\nDATE_MATCH: true\nVENUE_OR_CITY_MATCH: true\nMATCHED_DATES: October 13, 2026\nSOURCE_QUALITY: venue, ticketing, promoter\nSOURCE_URLS:\n- https://rosemont.com/theatre/event/2026-monsta-x-world-tour-the-x-nexus-in-rosemont/ (venue – official)\n- https://www.ticketmaster.com/2026-monsta-x-world-tour-the-rosemont-illinois-10-13-2026/event/0400647E8C903FD3 (ticketing)\n- https://www.livenation.com/event/vv178Z_6GkBG0dTK/2026-monsta-x-world-tour-the-x-nexus-in-rosemont (promoter – Live Nation)\n\nREASON: \nThe official Rosemont Theatre website lists MONSTA X on Tuesday, October 13, 2026, at 5400 N. River Road, Rosemont, IL 60018\n, corroborated by \nTicketmaster, which shows the event as \"2026 MONSTA X WORLD TOUR [THE X : NEXUS] IN ROSEMONT\" on 10/13/26 at Rosemont Theatre, Rosemont, IL.",
+      "raw_file": "b7-verification-discovery-monsta-x-october-13-2026.json"
+    },
+    {
+      "candidate": {
+        "candidateId": "discovery-monsta-x-october-15-2026",
+        "artist": "MONSTA X",
+        "dates": "October 15, 2026",
+        "venue": "The Pavilion at Toyota Music Factory",
+        "city": "Irving, TX, USA",
+        "raw_title": "MONSTA X live event at The Pavilion at Toyota Music Factory on October 15, 2026"
+      },
+      "request": {
+        "model": "claude-sonnet-4-6",
+        "tool": {
+          "type": "web_search_20260209",
+          "name": "web_search",
+          "max_uses": 3,
+          "blocked_domains": [
+            "kpopofficial.com"
+          ],
+          "allowed_callers": [
+            "direct"
+          ]
+        },
+        "allowed_callers": [
+          "direct"
+        ],
+        "max_uses": 3,
+        "max_tokens": 16384,
+        "blocked_domains": [
+          "kpopofficial.com"
+        ],
+        "as_of": "2026-07-15",
+        "prompt": "Verify exactly one K-pop event candidate using web search. Do not bundle another event.\n\nCandidate ID: discovery-monsta-x-october-15-2026\nArtist: MONSTA X\nClaimed dates: October 15, 2026\nClaimed venue: The Pavilion at Toyota Music Factory\nClaimed city/country: Irving, TX, USA\nRaw candidate title: MONSTA X live event at The Pavilion at Toyota Music Factory on October 15, 2026\n\nStrict evidence rules (do not relax): exclude kpopofficial.com and all other event aggregators as evidence; accept only an official artist/company, promoter, venue, ticketing, or reliable media source; artist AND exact date(s) must match (timezone tolerance only ±1 day); venue/city must not conflict; a general tour announcement without this stop/date is not a match. Return UNCONFIRMED if no qualifying source is found and CONTRADICTED if reliable evidence conflicts.\n\nReturn only these compact fields, in this order. Cite factual claims with the web-search citation mechanism:\nVERDICT: CONFIRMED | UNCONFIRMED | CONTRADICTED\nARTIST_MATCH: true | false\nDATE_MATCH: true | false\nVENUE_OR_CITY_MATCH: true | false\nMATCHED_DATES: ...\nSOURCE_QUALITY: official_artist_company | promoter | venue | ticketing | reliable_media | none\nSOURCE_URLS: ...\nREASON: one short factual sentence"
+      },
+      "rawVerdict": "CONFIRMED",
+      "effectiveVerdict": "CONFIRMED",
+      "assertion": {
+        "A_date_literal": true,
+        "B_venue_literal": true,
+        "C_no_shared_snippet": true,
+        "D_same_cited_text": true,
+        "passed": true
+      },
+      "stop_reason": "end_turn",
+      "classification": "completed_with_results",
+      "usage": {
+        "input_tokens": 12155,
+        "output_tokens": 448,
+        "web_search_requests": 1
+      },
+      "latency_ms": 11376,
+      "cost_usd": 0.053185,
+      "structured_citations": 3,
+      "cited_text_nonempty": 3,
+      "citations": [
+        {
+          "url": "https://newsroom.livenation.com/news/global-superstars-monsta-x-announce-north-american-dates-on-world-tour-the-x-nexus/",
+          "title": "Global Superstars MONSTA X Announce North American Dates on WORLD TOUR [THE X : NEXUS] - Live Nation Newsroom",
+          "cited_text": "2026 MONSTA X WORLD TOUR [THE X ... 13 – Rosemont, IL – Rosemont Theatre · Thu Oct 15 – Irving, TX – The Pavilion at Toyota Music Factory · Sat Oct 17..."
+        },
+        {
+          "url": "https://www.ticketmaster.com/2026-monsta-x-world-tour-the-irving-texas-10-15-2026/event/0C00648398F88E02",
+          "title": "2026 MONSTA X WORLD TOUR [THE X : NEXUS] IN IRVING Tickets Oct 15, 2026 Irving, TX | Ticketmaster",
+          "cited_text": "Buy 2026 MONSTA X WORLD TOUR [THE X : NEXUS] IN IRVING tickets at the The Pavilion at Toyota Music Factory in Irving, TX for Oct 15, 2026 at Ticketmas..."
+        },
+        {
+          "url": "https://www.billboard.com/music/concerts/monsta-x-2026-the-x-nexus-world-tour-dates-north-america-1236215603/",
+          "title": "Monsta X 'THE X : NEXUS' 2026 World Tour North America Dates",
+          "cited_text": "@ MGM Music Hall at Fenway · Oct. 10: Toronto, ON @ Great Canadian Toronto · Oct. 13: Rosemont, Ill. @ Rosemont Theatre · Oct. 15: Irving, Texas @ The..."
+        }
+      ],
+      "text": "VERDICT: **CONFIRMED**\nARTIST_MATCH: true\nDATE_MATCH: true\nVENUE_OR_CITY_MATCH: true\nMATCHED_DATES: October 15, 2026\nSOURCE_QUALITY: promoter, ticketing, reliable_media\nSOURCE_URLS:\n- https://newsroom.livenation.com/news/global-superstars-monsta-x-announce-north-american-dates-on-world-tour-the-x-nexus/\n- https://www.ticketmaster.com/2026-monsta-x-world-tour-the-irving-texas-10-15-2026/event/0C00648398F88E02\n- https://www.billboard.com/music/concerts/monsta-x-2026-the-x-nexus-world-tour-dates-north-america-1236215603/\n\nREASON: \nThe official Live Nation press release explicitly lists \"Thu Oct 15 – Irving, TX – The Pavilion at Toyota Music Factory\"\n as part of the 2026 MONSTA X WORLD TOUR [THE X : NEXUS], corroborated by \nTicketmaster's event listing for The Pavilion at Toyota Music Factory in Irving, TX on Oct 15, 2026\n and \nBillboard's tour date coverage confirming \"Oct. 15: Irving, Texas @ The Pavilion at Toyota Music Factory.\"",
+      "raw_file": "b7-verification-discovery-monsta-x-october-15-2026.json"
+    },
+    {
+      "candidate": {
+        "candidateId": "discovery-monsta-x-october-17-2026",
+        "artist": "MONSTA X",
+        "dates": "October 17, 2026",
+        "venue": "Arizona Financial Theatre",
+        "city": "Phoenix, AZ, USA",
+        "raw_title": "MONSTA X live event at Arizona Financial Theatre on October 17, 2026"
+      },
+      "request": {
+        "model": "claude-sonnet-4-6",
+        "tool": {
+          "type": "web_search_20260209",
+          "name": "web_search",
+          "max_uses": 3,
+          "blocked_domains": [
+            "kpopofficial.com"
+          ],
+          "allowed_callers": [
+            "direct"
+          ]
+        },
+        "allowed_callers": [
+          "direct"
+        ],
+        "max_uses": 3,
+        "max_tokens": 16384,
+        "blocked_domains": [
+          "kpopofficial.com"
+        ],
+        "as_of": "2026-07-15",
+        "prompt": "Verify exactly one K-pop event candidate using web search. Do not bundle another event.\n\nCandidate ID: discovery-monsta-x-october-17-2026\nArtist: MONSTA X\nClaimed dates: October 17, 2026\nClaimed venue: Arizona Financial Theatre\nClaimed city/country: Phoenix, AZ, USA\nRaw candidate title: MONSTA X live event at Arizona Financial Theatre on October 17, 2026\n\nStrict evidence rules (do not relax): exclude kpopofficial.com and all other event aggregators as evidence; accept only an official artist/company, promoter, venue, ticketing, or reliable media source; artist AND exact date(s) must match (timezone tolerance only ±1 day); venue/city must not conflict; a general tour announcement without this stop/date is not a match. Return UNCONFIRMED if no qualifying source is found and CONTRADICTED if reliable evidence conflicts.\n\nReturn only these compact fields, in this order. Cite factual claims with the web-search citation mechanism:\nVERDICT: CONFIRMED | UNCONFIRMED | CONTRADICTED\nARTIST_MATCH: true | false\nDATE_MATCH: true | false\nVENUE_OR_CITY_MATCH: true | false\nMATCHED_DATES: ...\nSOURCE_QUALITY: official_artist_company | promoter | venue | ticketing | reliable_media | none\nSOURCE_URLS: ...\nREASON: one short factual sentence"
+      },
+      "rawVerdict": "CONFIRMED",
+      "effectiveVerdict": "CONFIRMED",
+      "assertion": {
+        "A_date_literal": true,
+        "B_venue_literal": true,
+        "C_no_shared_snippet": true,
+        "D_same_cited_text": true,
+        "passed": true
+      },
+      "stop_reason": "end_turn",
+      "classification": "completed_with_results",
+      "usage": {
+        "input_tokens": 12452,
+        "output_tokens": 467,
+        "web_search_requests": 1
+      },
+      "latency_ms": 12911,
+      "cost_usd": 0.054361,
+      "structured_citations": 4,
+      "cited_text_nonempty": 4,
+      "citations": [
+        {
+          "url": "https://www.ticketmaster.com/2026-monsta-x-world-tour-the-phoenix-arizona-10-17-2026/event/19006483BC7DB50C",
+          "title": "2026 MONSTA X WORLD TOUR [THE X : NEXUS] IN PHOENIX Tickets Oct 17, 2026 Phoenix, AZ | Ticketmaster",
+          "cited_text": "Buy 2026 MONSTA X WORLD TOUR [THE X : NEXUS] IN PHOENIX tickets at the Arizona Financial Theatre in Phoenix, AZ for Oct 17, 2026 at Ticketmaster.\n\nSat..."
+        },
+        {
+          "url": "https://www.livenation.com/event/1A_Zk3dGkeHLhfG/2026-monsta-x-world-tour-the-x-nexus-in-phoenix",
+          "title": "2026 monsta x world tour [the x : nexus] in phoenix",
+          "cited_text": "Arizona Financial Theatre · Phoenix, AZ · Buy Tickets · Premier Parking - MONSTA X - Not a Concert TicketBuy Upgrade · Fast Lane Pass - MONSTA X - Not..."
+        },
+        {
+          "url": "https://www.thatericalper.com/2026/04/07/monsta-x-bring-their-world-tour-to-north-america-this-fall-with-10-arena-dates/",
+          "title": "Monsta X Bring Their World Tour to North America This Fall With 10 Arena Dates - That Eric Alper",
+          "cited_text": "2026 Monsta X World Tour, The X: ... Theatre · October 15 — Irving, TX — The Pavilion at Toyota Music Factory · October 17 — Phoenix, AZ — Arizona Fin..."
+        },
+        {
+          "url": "https://www.thatericalper.com/2026/04/07/monsta-x-bring-their-world-tour-to-north-america-this-fall-with-10-arena-dates/",
+          "title": "Monsta X Bring Their World Tour to North America This Fall With 10 Arena Dates - That Eric Alper",
+          "cited_text": "The 2026 Monsta X World Tour, The X: Nexus, hits 10 cities across the continent this fall, promoted by Live Nation, kicking off October 3 at EagleBank..."
+        }
+      ],
+      "text": "VERDICT: CONFIRMED\nARTIST_MATCH: true\nDATE_MATCH: true\nVENUE_OR_CITY_MATCH: true\nMATCHED_DATES: October 17, 2026\nSOURCE_QUALITY: ticketing, promoter, reliable_media\nSOURCE_URLS: https://www.ticketmaster.com/2026-monsta-x-world-tour-the-phoenix-arizona-10-17-2026/event/19006483BC7DB50C, https://www.livenation.com/event/1A_Zk3dGkeHLhfG/2026-monsta-x-world-tour-the-x-nexus-in-phoenix, https://www.thatericalper.com/2026/04/07/monsta-x-bring-their-world-tour-to-north-america-this-fall-with-10-arena-dates/\nREASON: \nTicketmaster lists the 2026 MONSTA X WORLD TOUR [THE X : NEXUS] IN PHOENIX at Arizona Financial Theatre, Phoenix, AZ on October 17, 2026 at 8:00 PM\n, corroborated by \nLive Nation's own event page for the same show at Arizona Financial Theatre, Phoenix, AZ\n, and further confirmed by \nreliable media outlet That Eric Alper, which lists \"October 17 — Phoenix, AZ — Arizona Financial Theatre\" as part of the 10-city North American tour promoted by Live Nation\n.",
+      "raw_file": "b7-verification-discovery-monsta-x-october-17-2026.json"
+    },
+    {
+      "candidate": {
+        "candidateId": "discovery-monsta-x-october-20-2026",
+        "artist": "MONSTA X",
+        "dates": "October 20, 2026",
+        "venue": "Kia Forum",
+        "city": "Inglewood (Los Angeles), CA, USA",
+        "raw_title": "MONSTA X live event at Kia Forum on October 20, 2026"
+      },
+      "request": {
+        "model": "claude-sonnet-4-6",
+        "tool": {
+          "type": "web_search_20260209",
+          "name": "web_search",
+          "max_uses": 3,
+          "blocked_domains": [
+            "kpopofficial.com"
+          ],
+          "allowed_callers": [
+            "direct"
+          ]
+        },
+        "allowed_callers": [
+          "direct"
+        ],
+        "max_uses": 3,
+        "max_tokens": 16384,
+        "blocked_domains": [
+          "kpopofficial.com"
+        ],
+        "as_of": "2026-07-15",
+        "prompt": "Verify exactly one K-pop event candidate using web search. Do not bundle another event.\n\nCandidate ID: discovery-monsta-x-october-20-2026\nArtist: MONSTA X\nClaimed dates: October 20, 2026\nClaimed venue: Kia Forum\nClaimed city/country: Inglewood (Los Angeles), CA, USA\nRaw candidate title: MONSTA X live event at Kia Forum on October 20, 2026\n\nStrict evidence rules (do not relax): exclude kpopofficial.com and all other event aggregators as evidence; accept only an official artist/company, promoter, venue, ticketing, or reliable media source; artist AND exact date(s) must match (timezone tolerance only ±1 day); venue/city must not conflict; a general tour announcement without this stop/date is not a match. Return UNCONFIRMED if no qualifying source is found and CONTRADICTED if reliable evidence conflicts.\n\nReturn only these compact fields, in this order. Cite factual claims with the web-search citation mechanism:\nVERDICT: CONFIRMED | UNCONFIRMED | CONTRADICTED\nARTIST_MATCH: true | false\nDATE_MATCH: true | false\nVENUE_OR_CITY_MATCH: true | false\nMATCHED_DATES: ...\nSOURCE_QUALITY: official_artist_company | promoter | venue | ticketing | reliable_media | none\nSOURCE_URLS: ...\nREASON: one short factual sentence"
+      },
+      "rawVerdict": "CONFIRMED",
+      "effectiveVerdict": "CONFIRMED",
+      "assertion": {
+        "A_date_literal": true,
+        "B_venue_literal": true,
+        "C_no_shared_snippet": true,
+        "D_same_cited_text": true,
+        "passed": true
+      },
+      "stop_reason": "end_turn",
+      "classification": "completed_with_results",
+      "usage": {
+        "input_tokens": 11342,
+        "output_tokens": 330,
+        "web_search_requests": 1
+      },
+      "latency_ms": 9019,
+      "cost_usd": 0.048976,
+      "structured_citations": 2,
+      "cited_text_nonempty": 2,
+      "citations": [
+        {
+          "url": "https://thekiaforum.com/event/monsta-x/",
+          "title": "MONSTA X - Kia Forum",
+          "cited_text": "October 20 · 2026 MONSTA X WORLD TOUR [THE X : NEXUS] IN LOS ANGELES · Tickets PARKING · EVENT PARKING · Prepaid parking is available at the Kia Forum..."
+        },
+        {
+          "url": "https://www.livenation.com/event/vv1AaZk3vGkdfJcBD/2026-monsta-x-world-tour-the-x-nexus-in-los-angeles",
+          "title": "2026 monsta x world tour [the x : nexus] in los angeles",
+          "cited_text": "Tue Oct 20, 2026 ▪︎ 8 PM · Kia Forum · Inglewood, CA · Buy Tickets · MONSTA X ·"
+        }
+      ],
+      "text": "VERDICT: CONFIRMED\nARTIST_MATCH: true\nDATE_MATCH: true\nVENUE_OR_CITY_MATCH: true\nMATCHED_DATES: October 20, 2026\nSOURCE_QUALITY: venue, promoter, ticketing\nSOURCE_URLS: https://thekiaforum.com/event/monsta-x/, https://www.livenation.com/event/vv1AaZk3vGkdfJcBD/2026-monsta-x-world-tour-the-x-nexus-in-los-angeles\nREASON: \nThe Kia Forum's official event page lists \"October 20 · 2026 MONSTA X WORLD TOUR [THE X : NEXUS] IN LOS ANGELES\"\n, corroborated by \nLive Nation, which lists the event as \"Tue Oct 20, 2026 ▪︎ 8 PM · Kia Forum · Inglewood, CA.\"",
+      "raw_file": "b7-verification-discovery-monsta-x-october-20-2026.json"
+    },
+    {
+      "candidate": {
+        "candidateId": "discovery-monsta-x-october-22-2026",
+        "artist": "MONSTA X",
+        "dates": "October 22, 2026",
+        "venue": "The Theater at Bill Graham Civic Auditorium",
+        "city": "San Francisco, CA, USA",
+        "raw_title": "MONSTA X live event at The Theater at Bill Graham Civic Auditorium on October 22, 2026"
+      },
+      "request": {
+        "model": "claude-sonnet-4-6",
+        "tool": {
+          "type": "web_search_20260209",
+          "name": "web_search",
+          "max_uses": 3,
+          "blocked_domains": [
+            "kpopofficial.com"
+          ],
+          "allowed_callers": [
+            "direct"
+          ]
+        },
+        "allowed_callers": [
+          "direct"
+        ],
+        "max_uses": 3,
+        "max_tokens": 16384,
+        "blocked_domains": [
+          "kpopofficial.com"
+        ],
+        "as_of": "2026-07-15",
+        "prompt": "Verify exactly one K-pop event candidate using web search. Do not bundle another event.\n\nCandidate ID: discovery-monsta-x-october-22-2026\nArtist: MONSTA X\nClaimed dates: October 22, 2026\nClaimed venue: The Theater at Bill Graham Civic Auditorium\nClaimed city/country: San Francisco, CA, USA\nRaw candidate title: MONSTA X live event at The Theater at Bill Graham Civic Auditorium on October 22, 2026\n\nStrict evidence rules (do not relax): exclude kpopofficial.com and all other event aggregators as evidence; accept only an official artist/company, promoter, venue, ticketing, or reliable media source; artist AND exact date(s) must match (timezone tolerance only ±1 day); venue/city must not conflict; a general tour announcement without this stop/date is not a match. Return UNCONFIRMED if no qualifying source is found and CONTRADICTED if reliable evidence conflicts.\n\nReturn only these compact fields, in this order. Cite factual claims with the web-search citation mechanism:\nVERDICT: CONFIRMED | UNCONFIRMED | CONTRADICTED\nARTIST_MATCH: true | false\nDATE_MATCH: true | false\nVENUE_OR_CITY_MATCH: true | false\nMATCHED_DATES: ...\nSOURCE_QUALITY: official_artist_company | promoter | venue | ticketing | reliable_media | none\nSOURCE_URLS: ...\nREASON: one short factual sentence"
+      },
+      "rawVerdict": "CONFIRMED",
+      "effectiveVerdict": "CONFIRMED",
+      "assertion": {
+        "A_date_literal": true,
+        "B_venue_literal": true,
+        "C_no_shared_snippet": true,
+        "D_same_cited_text": true,
+        "passed": true
+      },
+      "stop_reason": "end_turn",
+      "classification": "completed_with_results",
+      "usage": {
+        "input_tokens": 11259,
+        "output_tokens": 372,
+        "web_search_requests": 1
+      },
+      "latency_ms": 10115,
+      "cost_usd": 0.049357,
+      "structured_citations": 2,
+      "cited_text_nonempty": 2,
+      "citations": [
+        {
+          "url": "https://www.ticketmaster.com/2026-monsta-x-world-tour-the-san-francisco-california-10-22-2026/event/1C006483CF0D29E6",
+          "title": "2026 MONSTA X WORLD TOUR [THE X : NEXUS] IN SAN FRANCISCO Tickets Oct 22, 2026 San Francisco, CA | Ticketmaster",
+          "cited_text": "Buy 2026 MONSTA X WORLD TOUR [THE X : NEXUS] IN SAN FRANCISCO tickets at the The Theater at Bill Graham Civic Auditorium in San Francisco, CA for Oct ..."
+        },
+        {
+          "url": "https://www.livenation.com/event/G5vYZ_F22d3EJ/2026-monsta-x-world-tour-the-x-nexus-in-san-francisco",
+          "title": "2026 monsta x world tour [the x : nexus] in san francisco",
+          "cited_text": "Thu Oct 22, 2026 ▪︎ 8PM · The Theater at Bill Graham Civic Auditorium · San Francisco, CA · Buy Tickets · MONSTA X ·"
+        }
+      ],
+      "text": "VERDICT: CONFIRMED\nARTIST_MATCH: true\nDATE_MATCH: true\nVENUE_OR_CITY_MATCH: true\nMATCHED_DATES: October 22, 2026\nSOURCE_QUALITY: ticketing\nSOURCE_URLS: https://www.ticketmaster.com/2026-monsta-x-world-tour-the-x-nexus-in-san-francisco-san-francisco-10-22-2026/event/1C006483CF0D29E6, https://www.livenation.com/event/G5vYZ_F22d3EJ/2026-monsta-x-world-tour-the-x-nexus-in-san-francisco\nREASON: \nTicketmaster lists tickets for the 2026 MONSTA X WORLD TOUR [THE X : NEXUS] at The Theater at Bill Graham Civic Auditorium in San Francisco, CA on October 22, 2026\n, corroborated by \nLive Nation, which also confirms the show on Thu Oct 22, 2026 at 8PM at The Theater at Bill Graham Civic Auditorium, San Francisco, CA.",
+      "raw_file": "b7-verification-discovery-monsta-x-october-22-2026.json"
+    },
+    {
+      "candidate": {
+        "candidateId": "discovery-monsta-x-october-24-2026",
+        "artist": "MONSTA X",
+        "dates": "October 24, 2026",
+        "venue": "WAMU Theater",
+        "city": "Seattle, WA, USA",
+        "raw_title": "MONSTA X live event at WAMU Theater on October 24, 2026"
+      },
+      "request": {
+        "model": "claude-sonnet-4-6",
+        "tool": {
+          "type": "web_search_20260209",
+          "name": "web_search",
+          "max_uses": 3,
+          "blocked_domains": [
+            "kpopofficial.com"
+          ],
+          "allowed_callers": [
+            "direct"
+          ]
+        },
+        "allowed_callers": [
+          "direct"
+        ],
+        "max_uses": 3,
+        "max_tokens": 16384,
+        "blocked_domains": [
+          "kpopofficial.com"
+        ],
+        "as_of": "2026-07-15",
+        "prompt": "Verify exactly one K-pop event candidate using web search. Do not bundle another event.\n\nCandidate ID: discovery-monsta-x-october-24-2026\nArtist: MONSTA X\nClaimed dates: October 24, 2026\nClaimed venue: WAMU Theater\nClaimed city/country: Seattle, WA, USA\nRaw candidate title: MONSTA X live event at WAMU Theater on October 24, 2026\n\nStrict evidence rules (do not relax): exclude kpopofficial.com and all other event aggregators as evidence; accept only an official artist/company, promoter, venue, ticketing, or reliable media source; artist AND exact date(s) must match (timezone tolerance only ±1 day); venue/city must not conflict; a general tour announcement without this stop/date is not a match. Return UNCONFIRMED if no qualifying source is found and CONTRADICTED if reliable evidence conflicts.\n\nReturn only these compact fields, in this order. Cite factual claims with the web-search citation mechanism:\nVERDICT: CONFIRMED | UNCONFIRMED | CONTRADICTED\nARTIST_MATCH: true | false\nDATE_MATCH: true | false\nVENUE_OR_CITY_MATCH: true | false\nMATCHED_DATES: ...\nSOURCE_QUALITY: official_artist_company | promoter | venue | ticketing | reliable_media | none\nSOURCE_URLS: ...\nREASON: one short factual sentence"
+      },
+      "rawVerdict": "CONFIRMED",
+      "effectiveVerdict": "CONFIRMED",
+      "assertion": {
+        "A_date_literal": true,
+        "B_venue_literal": true,
+        "C_no_shared_snippet": true,
+        "D_same_cited_text": true,
+        "passed": true
+      },
+      "stop_reason": "end_turn",
+      "classification": "completed_with_results",
+      "usage": {
+        "input_tokens": 11301,
+        "output_tokens": 472,
+        "web_search_requests": 1
+      },
+      "latency_ms": 10672,
+      "cost_usd": 0.050983,
+      "structured_citations": 3,
+      "cited_text_nonempty": 3,
+      "citations": [
+        {
+          "url": "https://newsroom.livenation.com/news/global-superstars-monsta-x-announce-north-american-dates-on-world-tour-the-x-nexus/",
+          "title": "Global Superstars MONSTA X Announce North American Dates on WORLD TOUR [THE X : NEXUS] - Live Nation Newsroom",
+          "cited_text": "Promoted by Live Nation, the newly added shows kick off Saturday, October 3 in Fairfax, VA at EagleBank Arena, with stops in New York, Boston, Toronto..."
+        },
+        {
+          "url": "https://www.wamutheater.com/events/monsta-x-2026",
+          "title": "MONSTA X at WAMU Theater | WAMU Theater - WAMUTheater.com",
+          "cited_text": "WAMU Theater 2026 MONSTA X WORLD TOUR [THE X : NEXUS] IN SEATTLE / Get Tickets\n\nThe 2026 MONSTA X WORLD TOUR [THE X : NEXUS] is coming to WAMU Theater..."
+        },
+        {
+          "url": "https://www.ticketmaster.com/2026-monsta-x-world-tour-the-seattle-washington-10-24-2026/event/0F006482D94050A3",
+          "title": "2026 MONSTA X WORLD TOUR [THE X : NEXUS] IN SEATTLE Tickets Oct 24, 2026 Seattle, WA | Ticketmaster",
+          "cited_text": "Buy 2026 MONSTA X WORLD TOUR [THE X : NEXUS] IN SEATTLE tickets at the WAMU Theater in Seattle, WA for Oct 24, 2026 at Ticketmaster.\n\n"
+        }
+      ],
+      "text": "**VERDICT:** CONFIRMED\n**ARTIST_MATCH:** true\n**DATE_MATCH:** true\n**VENUE_OR_CITY_MATCH:** true\n**MATCHED_DATES:** October 24, 2026\n**SOURCE_QUALITY:** promoter, venue, ticketing, reliable_media\n**SOURCE_URLS:**\n- https://newsroom.livenation.com/news/global-superstars-monsta-x-announce-north-american-dates-on-world-tour-the-x-nexus/ (promoter – Live Nation Newsroom)\n- https://www.wamutheater.com/events/monsta-x-2026 (venue – WAMU Theater official)\n- https://www.ticketmaster.com/2026-monsta-x-world-tour-the-seattle-washington-10-24-2026/event/0F006482D94050A3 (ticketing – Ticketmaster)\n- https://consequence.net/2026/04/monsta-x-2026-north-american-the-x-nexus-tour-dates/ (reliable media – Consequence)\n\n**REASON:** \nLive Nation's official newsroom confirms the 2026 MONSTA X WORLD TOUR [THE X : NEXUS] wraps \"Saturday, October 24 in Seattle, WA at WAMU Theater,\"\n corroborated by \nthe WAMU Theater's own event page\n and \na Ticketmaster listing for the same artist, venue, city, and date.",
+      "raw_file": "b7-verification-discovery-monsta-x-october-24-2026.json"
+    },
+    {
+      "candidate": {
+        "candidateId": "memory-f1-monsta-x-2026-10-25",
+        "artist": "MONSTA X",
+        "dates": "October 25, 2026",
+        "venue": "Moda Center",
+        "city": "Portland, OR, USA",
+        "raw_title": "MONSTA X live event at Moda Center on October 25, 2026"
+      },
+      "request": {
+        "model": "claude-sonnet-4-6",
+        "tool": {
+          "type": "web_search_20260209",
+          "name": "web_search",
+          "max_uses": 3,
+          "blocked_domains": [
+            "kpopofficial.com"
+          ],
+          "allowed_callers": [
+            "direct"
+          ]
+        },
+        "allowed_callers": [
+          "direct"
+        ],
+        "max_uses": 3,
+        "max_tokens": 16384,
+        "blocked_domains": [
+          "kpopofficial.com"
+        ],
+        "as_of": "2026-07-15",
+        "prompt": "Verify exactly one K-pop event candidate using web search. Do not bundle another event.\n\nCandidate ID: memory-f1-monsta-x-2026-10-25\nArtist: MONSTA X\nClaimed dates: October 25, 2026\nClaimed venue: Moda Center\nClaimed city/country: Portland, OR, USA\nRaw candidate title: MONSTA X live event at Moda Center on October 25, 2026\n\nStrict evidence rules (do not relax): exclude kpopofficial.com and all other event aggregators as evidence; accept only an official artist/company, promoter, venue, ticketing, or reliable media source; artist AND exact date(s) must match (timezone tolerance only ±1 day); venue/city must not conflict; a general tour announcement without this stop/date is not a match. Return UNCONFIRMED if no qualifying source is found and CONTRADICTED if reliable evidence conflicts.\n\nReturn only these compact fields, in this order. Cite factual claims with the web-search citation mechanism:\nVERDICT: CONFIRMED | UNCONFIRMED | CONTRADICTED\nARTIST_MATCH: true | false\nDATE_MATCH: true | false\nVENUE_OR_CITY_MATCH: true | false\nMATCHED_DATES: ...\nSOURCE_QUALITY: official_artist_company | promoter | venue | ticketing | reliable_media | none\nSOURCE_URLS: ...\nREASON: one short factual sentence"
+      },
+      "rawVerdict": "CONTRADICTED",
+      "effectiveVerdict": "citation_unbound",
+      "assertion": {
+        "A_date_literal": false,
+        "B_venue_literal": false,
+        "C_no_shared_snippet": true,
+        "D_same_cited_text": false,
+        "passed": false
+      },
+      "stop_reason": "end_turn",
+      "classification": "completed_with_results",
+      "usage": {
+        "input_tokens": 29318,
+        "output_tokens": 455,
+        "web_search_requests": 2
+      },
+      "latency_ms": 13833,
+      "cost_usd": 0.114779,
+      "structured_citations": 2,
+      "cited_text_nonempty": 2,
+      "citations": [
+        {
+          "url": "https://www.billboard.com/music/concerts/monsta-x-2026-the-x-nexus-world-tour-dates-north-america-1236215603/",
+          "title": "Monsta X 'THE X : NEXUS' 2026 World Tour North America Dates",
+          "cited_text": "Starting at the EagleBank Arena in Fairfax, Va., on Oct. 3, the group will play dates across the two countries before wrapping on Oct. 24 at the WAMU ..."
+        },
+        {
+          "url": "https://www.ticketmaster.com/moda-center-tickets-portland/venue/123078?page=1",
+          "title": "Moda Center - Portland, OR | Tickets, 2026 Event Schedule, Seating Chart",
+          "cited_text": "Friday 08:00 PMFri8:00 PMOpen additional information for Carin Leon - De Sonora Para El Mundo Tour 2026, 10/9/26, 8:00 PMCarin Leon - De Sonora Para E..."
+        }
+      ],
+      "text": "VERDICT: CONTRADICTED\nARTIST_MATCH: true\nDATE_MATCH: false\nVENUE_OR_CITY_MATCH: false\nMATCHED_DATES: none (October 25, 2026 not found; tour ends October 24, 2026 in Seattle)\nSOURCE_QUALITY: reliable_media, ticketing, promoter\nSOURCE_URLS: https://consequence.net/2026/04/monsta-x-2026-north-american-the-x-nexus-tour-dates/, https://www.ticketmaster.com/monsta-x-tickets/artist/2371302, https://www.billboard.com/music/concerts/monsta-x-2026-the-x-nexus-world-tour-dates-north-america-1236215603/, https://www.rosequarter.com/events/event-calendar\nREASON: \nThe official North American tour runs from October 3 (Fairfax, VA) through October 24 at the WAMU Theater in Seattle\n — Portland/Moda Center on October 25, 2026 appears in none of the confirmed stop lists, and \nthe Moda Center's own Ticketmaster schedule for October 2026 lists no MONSTA X event\n.",
+      "raw_file": "b7-verification-memory-f1-monsta-x-2026-10-25.json"
+    },
+    {
+      "candidate": {
+        "candidateId": "memory-f2-red-velvet-2026-08-15",
+        "artist": "Red Velvet",
+        "dates": "August 15, 2026",
+        "venue": "Olympic Hall",
+        "city": "Seoul, South Korea",
+        "raw_title": "Red Velvet live event at Olympic Hall on August 15, 2026"
+      },
+      "request": {
+        "model": "claude-sonnet-4-6",
+        "tool": {
+          "type": "web_search_20260209",
+          "name": "web_search",
+          "max_uses": 3,
+          "blocked_domains": [
+            "kpopofficial.com"
+          ],
+          "allowed_callers": [
+            "direct"
+          ]
+        },
+        "allowed_callers": [
+          "direct"
+        ],
+        "max_uses": 3,
+        "max_tokens": 16384,
+        "blocked_domains": [
+          "kpopofficial.com"
+        ],
+        "as_of": "2026-07-15",
+        "prompt": "Verify exactly one K-pop event candidate using web search. Do not bundle another event.\n\nCandidate ID: memory-f2-red-velvet-2026-08-15\nArtist: Red Velvet\nClaimed dates: August 15, 2026\nClaimed venue: Olympic Hall\nClaimed city/country: Seoul, South Korea\nRaw candidate title: Red Velvet live event at Olympic Hall on August 15, 2026\n\nStrict evidence rules (do not relax): exclude kpopofficial.com and all other event aggregators as evidence; accept only an official artist/company, promoter, venue, ticketing, or reliable media source; artist AND exact date(s) must match (timezone tolerance only ±1 day); venue/city must not conflict; a general tour announcement without this stop/date is not a match. Return UNCONFIRMED if no qualifying source is found and CONTRADICTED if reliable evidence conflicts.\n\nReturn only these compact fields, in this order. Cite factual claims with the web-search citation mechanism:\nVERDICT: CONFIRMED | UNCONFIRMED | CONTRADICTED\nARTIST_MATCH: true | false\nDATE_MATCH: true | false\nVENUE_OR_CITY_MATCH: true | false\nMATCHED_DATES: ...\nSOURCE_QUALITY: official_artist_company | promoter | venue | ticketing | reliable_media | none\nSOURCE_URLS: ...\nREASON: one short factual sentence"
+      },
+      "rawVerdict": "CONTRADICTED",
+      "effectiveVerdict": "citation_unbound",
+      "assertion": {
+        "A_date_literal": false,
+        "B_venue_literal": false,
+        "C_no_shared_snippet": true,
+        "D_same_cited_text": false,
+        "passed": false
+      },
+      "stop_reason": "end_turn",
+      "classification": "completed_with_results",
+      "usage": {
+        "input_tokens": 15175,
+        "output_tokens": 373,
+        "web_search_requests": 1
+      },
+      "latency_ms": 10509,
+      "cost_usd": 0.06112,
+      "structured_citations": 2,
+      "cited_text_nonempty": 2,
+      "citations": [
+        {
+          "url": "https://www.koreajoongangdaily.com/entertainment/girl-group-red-velvet-to-return-with-new-album-fan-concert-in-august/12723807",
+          "title": "Girl group Red Velvet to return with new album, fan concert in August",
+          "cited_text": "Girl group Red Velvet will return with a new album and a fan concert in August, its agency SM Entertainment announced on Monday. "
+        },
+        {
+          "url": "https://www.koreajoongangdaily.com/entertainment/girl-group-red-velvet-to-return-with-new-album-fan-concert-in-august/12723807",
+          "title": "Girl group Red Velvet to return with new album, fan concert in August",
+          "cited_text": "The fan concert will take place at the Tiger Dome gymnasium at Korea University in northern Seoul at 6 p.m. on Aug. 1 and at 4 p.m. on Aug. 2. "
+        }
+      ],
+      "text": "The Korea JoongAng Daily article (a reliable media source) is highly relevant. It confirms a Red Velvet fan concert in Seoul in August 2026, but specifies the venue as **Korea University's Tiger Dome gymnasium** on **August 1 and 2**, not Olympic Hall on August 15. No source confirms a Red Velvet event at Olympic Hall on August 15, 2026. The Wikipedia Olympic Hall page lists events at that venue around that period but does not mention Red Velvet on August 15.\n\n---\n\nVERDICT: CONTRADICTED\nARTIST_MATCH: true\nDATE_MATCH: false\nVENUE_OR_CITY_MATCH: false\nMATCHED_DATES: none\nSOURCE_QUALITY: reliable_media\nSOURCE_URLS: https://www.koreajoongangdaily.com/entertainment/girl-group-red-velvet-to-return-with-new-album-fan-concert-in-august/12723807\nREASON: \nSM Entertainment announced Red Velvet's 2026 fan concert in Seoul, but it is scheduled at the Tiger Dome gymnasium at Korea University on August 1 and 2\n — not at Olympic Hall on August 15, directly contradicting the claimed date and venue.",
+      "raw_file": "b7-verification-memory-f2-red-velvet-2026-08-15.json"
+    }
+  ]
+}
