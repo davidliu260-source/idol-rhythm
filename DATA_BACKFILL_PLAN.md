@@ -23,7 +23,8 @@
 |---|---|---|---|
 | **L1** | 有 active 爬蟲、候選池有「待審」筆數 | 後台審核 → 發布 | 低 |
 | **L2** | 有爬蟲但 `is_active=false`（generic_webpage / youtube）| 手動 Preview→Commit，或按需啟用 | 低～中 |
-| **L3** | 官網來源封鎖（HYBE / Cube / Starship / THEBLACKLABEL 等）| 等 Scrapling 探測 / 人工維護 | 高 |
+| ~~**L3**~~ | ~~官網來源封鎖（HYBE / Cube / Starship / THEBLACKLABEL 等）~~ | ❌ **2026-07-15 廢除，Scrapling 不投** | — |
+| **L3′（取代 L3）** | 官網「沒有資料」而非「進不去」 | **場館 / 售票 / 主辦端 discovery**（B-6 探測待開） | 低（$0.049/event）|
 | **接受空白** | 藝人現階段真的沒活動 | 不動，避免塞雜訊 | 0 |
 
 > ⚠️ 原則：**寧可正確地空白，也不塞雜訊。** 沒活動的藝人 0 場是正確狀態，
@@ -62,7 +63,7 @@
 |---|---|---|
 | BigHit / HYBE | BTS solo：j-hope / Jimin / Jin / Jung Kook / RM / SUGA / V | 官網 / Weverse 封鎖；部分可試 L2 個人 YouTube |
 | HYBE / KOZ | BOYNEXTDOOR / ZICO | 封鎖 |
-| Cube | (G)I-DLE / PENTAGON | SPA / 404 |
+| Cube | (G)I-DLE / PENTAGON | ⚠️ **2026-07-15 實測推翻**：`gidle.cubeent.jp/schedule/` **零阻擋、完整渲染**，但最新一筆 2025.04.05（15 個月未更新）→ 不是封鎖，是**沒資料** |
 | THEBLACKLABEL | ALLDAY PROJECT / JEON SOMI / MEOVV / ROSÉ / TAEYANG | 503 封鎖 |
 | Starship | CRAVITY / KiiiKiii / MONSTA X | Cloudflare；建議 Google Discovery |
 | Modhaus | ARTMS / tripleS | SPA |
