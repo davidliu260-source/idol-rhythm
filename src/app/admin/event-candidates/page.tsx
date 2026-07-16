@@ -24,6 +24,8 @@ interface Candidate {
   hasIdol: boolean
   createdAt: string
   needsRecheck: boolean
+  verificationStatus: string | null
+  verifiedAt: string | null
 }
 
 // ── Data fetcher ──────────────────────────────────────────────────────────────
@@ -36,7 +38,7 @@ async function getCandidates(): Promise<{ candidates: Candidate[]; error: string
 
   const { data, error } = await supabase
     .from('event_candidates')
-    .select('id, raw_title, detected_idol_id, detected_event_type, detected_event_sub_type, detected_date, source_name, source_type, source_url, review_status, ai_confidence, created_at, needs_recheck, idols(name)')
+    .select('id, raw_title, detected_idol_id, detected_event_type, detected_event_sub_type, detected_date, source_name, source_type, source_url, review_status, ai_confidence, created_at, needs_recheck, verification_status, verified_at, idols(name)')
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -63,6 +65,8 @@ async function getCandidates(): Promise<{ candidates: Candidate[]; error: string
     hasIdol: !!row.detected_idol_id,
     createdAt: row.created_at as string,
     needsRecheck: (row.needs_recheck as boolean | null) ?? false,
+    verificationStatus: (row.verification_status as string | null) ?? null,
+    verifiedAt: (row.verified_at as string | null) ?? null,
   }))
 
   // Sort: pending first, then approved, then rejected; within group by created_at desc

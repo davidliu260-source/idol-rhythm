@@ -10,6 +10,7 @@ import { approveCandidate, rejectCandidate } from './actions'
 import GenerateChineseButton from './GenerateChineseButton'
 import MarkReviewedButton from './MarkReviewedButton'
 import ResolveRecheckButton from './ResolveRecheckButton'
+import VerifyCandidateButton from './VerifyCandidateButton'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -51,6 +52,18 @@ interface CandidateDetail {
   latestDetectedDate: string | null
   latestSourceUrl: string | null
   latestDetectedAt: string | null
+  verificationStatus: string | null
+  verifiedAt: string | null
+  verificationEvidence: Array<{
+    url: string
+    canonicalUrl?: string
+    title: string
+    citedText: string
+    sourceClass: string
+    fieldMatches: { artist: boolean; dates: boolean; venueOrCity: boolean }
+    confidence: string
+  }>
+  verificationProviderMeta: Record<string, unknown> | null
 }
 
 // ── Data fetcher ──────────────────────────────────────────────────────────────
@@ -104,6 +117,10 @@ async function getCandidate(id: string): Promise<CandidateDetail | null> {
     latest_detected_date: string | null
     latest_source_url: string | null
     latest_detected_at: string | null
+    verification_status: string | null
+    verified_at: string | null
+    verification_evidence: unknown
+    verification_provider_meta: Record<string, unknown> | null
     idols: { name: string } | null
   }
 
@@ -155,6 +172,10 @@ async function getCandidate(id: string): Promise<CandidateDetail | null> {
     latestDetectedDate: row.latest_detected_date,
     latestSourceUrl: row.latest_source_url,
     latestDetectedAt: row.latest_detected_at,
+    verificationStatus: row.verification_status,
+    verifiedAt: row.verified_at,
+    verificationEvidence: Array.isArray(row.verification_evidence) ? row.verification_evidence as CandidateDetail['verificationEvidence'] : [],
+    verificationProviderMeta: row.verification_provider_meta,
   }
 }
 
@@ -430,6 +451,51 @@ export default async function AdminCandidateDetailPage({
               <span className="font-semibold">{sourceInfo.shortLabel}</span>
               ｜{sourceInfo.hint}
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* B-2 verification — evidence only; publishing remains manual below. */}
+      {isAdmin && isPending && sourceInfo.needsOriginalSource && (
+        <div className="px-4 mb-4">
+          <VerifyCandidateButton candidateId={candidate.id} />
+        </div>
+      )}
+
+      {candidate.verificationStatus && (
+        <div className="px-4 mb-4">
+          <div className="rounded-xl bg-card border border-card-border p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <h2 className="text-sm font-semibold text-text-base">自動求證</h2>
+              <span className="text-[10px] rounded border border-violet/25 bg-violet/10 px-1.5 py-0.5 text-violet-300">
+                {candidate.verificationStatus}
+              </span>
+              {candidate.verifiedAt && (
+                <span className="ml-auto text-[10px] text-muted">{formatDatetime(candidate.verifiedAt)}</span>
+              )}
+            </div>
+            {candidate.verificationEvidence.length > 0 ? (
+              <div className="space-y-3">
+                {candidate.verificationEvidence.map((evidence, index) => (
+                  <div key={`${evidence.url}-${index}`} className="rounded-lg border border-card-border bg-card-border/10 p-3 space-y-1.5">
+                    <a href={evidence.canonicalUrl ?? evidence.url} target="_blank" rel="noreferrer" className="text-xs text-violet-300 underline break-all">
+                      {evidence.title || evidence.url}
+                    </a>
+                    <p className="text-[11px] text-muted break-all">{evidence.canonicalUrl ?? evidence.url}</p>
+                    <p className="text-xs text-text-base whitespace-pre-wrap">{evidence.citedText}</p>
+                    <div className="flex gap-2 flex-wrap text-[10px] text-muted">
+                      <span>source: {evidence.sourceClass}</span>
+                      <span>confidence: {evidence.confidence}</span>
+                      <span>artist {evidence.fieldMatches.artist ? '✓' : '✗'}</span>
+                      <span>dates {evidence.fieldMatches.dates ? '✓' : '✗'}</span>
+                      <span>venue/city {evidence.fieldMatches.venueOrCity ? '✓' : '✗'}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted">沒有可落庫的 citation evidence；此結果維持 fail closed。</p>
+            )}
           </div>
         </div>
       )}
