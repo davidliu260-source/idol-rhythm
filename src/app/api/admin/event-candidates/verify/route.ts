@@ -5,8 +5,12 @@ import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
 import { getReviewSourceInfo } from '@/lib/admin/sourceReview'
 import { verifyCandidate, type CandidateRow, VERIFICATION_CONFIG } from '@/lib/admin/aggregatorVerification'
 
-const DEFAULT_MAX_VERIFY_PER_RUN = 10
+export const maxDuration = 300
+
+const DEFAULT_MAX_VERIFY_PER_RUN = 5
 const MAX_VERIFY_PER_RUN_HARD_CAP = 50
+const BATCH_TIME_BUDGET_MS = maxDuration * 1_000
+const MIN_REMAINING_TIME_MS = 100_000
 
 function maxVerifyPerRun(): number {
   const configured = Number.parseInt(process.env.MAX_VERIFY_PER_RUN ?? '', 10)
@@ -64,25 +68,26 @@ export async function POST(request: NextRequest): Promise<NextResponse<VerifyRes
     return [candidate.id, candidate] as const
   }))
   const results: VerifyResponse['results'] = []
+  const batchStartedAt = Date.now()
+  const batchDeadline = batchStartedAt + BATCH_TIME_BUDGET_MS - MIN_REMAINING_TIME_MS
   for (const id of ids) {
+    if (Date.now() >= batchDeadline) {
+      results.push(...ids.slice(results.length).map((remainingId) => ({ id: remainingId, status: 'skipped', error: '整批時間預算不足，未呼叫求證' })))
+      break
+    }
     const candidate = rows.get(id)
     if (!candidate || candidate.review_status !== 'pending') {
-      results.push({ id, status: 'field_mismatch', error: '找不到待審核候選（可能已審核過）' })
+      results.push({ id, status: 'skipped', error: '找不到待審核候選（可能已審核過）' })
       continue
     }
     const sourceInfo = getReviewSourceInfo({ sourceName: candidate.source_name, sourceType: candidate.source_type, sourceUrl: candidate.source_url })
     if (!sourceInfo.needsOriginalSource) {
-      results.push({ id, status: 'field_mismatch', error: '只有聚合 / 社群來源候選可自動求證' })
+      results.push({ id, status: 'skipped', error: '只有聚合 / 社群來源候選可自動求證' })
       continue
     }
     const artist = candidate.idols?.name ?? null
     if (!artist || !candidate.detected_venue_name || !candidate.detected_city || !candidateDatesPresent(candidate)) {
-      const providerMeta = {
-        provider: 'anthropic', model: VERIFICATION_CONFIG.model, tool: VERIFICATION_CONFIG.toolType,
-        status: 'field_mismatch', reason: 'candidate requires idol, date, city, and venue', observedAt: new Date().toISOString(),
-      }
-      const { error: updateError } = await supabase.from('event_candidates').update({ verification_status: 'field_mismatch', verified_at: new Date().toISOString(), verification_evidence: [], verification_provider_meta: providerMeta }).eq('id', id).eq('review_status', 'pending')
-      results.push({ id, status: updateError ? 'provider_error' : 'field_mismatch', error: updateError?.message })
+      results.push({ id, status: 'skipped', error: '候選缺少可求證的藝人、ISO 日期、城市或場館' })
       continue
     }
 
@@ -107,5 +112,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<VerifyRes
 }
 
 function candidateDatesPresent(candidate: CandidateRow): boolean {
-  return Boolean(candidate.detected_date || candidate.detected_start_date || candidate.detected_date_label)
+  return isParseableIsoDate(candidate.detected_start_date ?? candidate.detected_date)
+}
+
+function isParseableIsoDate(value: string | null): boolean {
+  if (!value || !/^\d{4}-\d{2}-\d{2}(?:T|$)/.test(value)) return false
+  const date = new Date(value)
+  return !Number.isNaN(date.getTime())
 }

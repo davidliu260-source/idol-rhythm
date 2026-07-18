@@ -12,6 +12,21 @@ export const VERIFICATION_CONFIG = {
   timeoutMs: 90_000,
 }
 
+export const VERIFICATION_SOURCE_DOMAINS = {
+  venue: [
+    'kaitaksportspark.com.hk',
+    'sofistadium.com',
+    'gillettestadium.com',
+    'galaxymacau.com',
+    'tokyo-dome.co.jp',
+    'msg.com',
+    'rosemont.com',
+    'wamutheater.com',
+    'thekiaforum.com',
+    'greatcanadian.com',
+  ],
+} as const
+
 type CandidateRow = {
   id: string
   raw_title: string
@@ -111,7 +126,10 @@ function dateLiteral(date: Date, text: string): boolean {
     new RegExp(`\\b${month}[/.-]0?${day}[/.-]${String(year).slice(2)}\\b`).test(lower) ||
     new RegExp(`\\b${monthName}\\s+0?${day}(?:st|nd|rd|th)?[ ,]+${year}\\b`).test(lower) ||
     new RegExp(`\\b${abbreviated}\\.?\\s+0?${day}(?:st|nd|rd|th)?[ ,]+${year}\\b`).test(lower) ||
-    new RegExp(`\\b0?${day}\\s+${monthName}\\s+${year}\\b`).test(lower)
+    new RegExp(`\\b0?${day}\\s+${monthName}\\s+${year}\\b`).test(lower) ||
+    new RegExp(`\\b${monthName}\\s+0?${day}(?:st|nd|rd|th)?\\b`).test(lower) ||
+    new RegExp(`\\b${abbreviated}\\.?\\s+0?${day}(?:st|nd|rd|th)?\\b`).test(lower) ||
+    new RegExp(`\\b0?${month}[/.-]0?${day}\\b`).test(lower)
   )
 }
 
@@ -146,23 +164,34 @@ function sourceClass(url: string): string {
   } catch {
     return 'unknown'
   }
-  if (host === 'greatcanadian.com' || host.endsWith('.greatcanadian.com')) return 'venue'
+  if (VERIFICATION_SOURCE_DOMAINS.venue.some((domain) => host === domain || host.endsWith(`.${domain}`))) return 'venue'
   if (/ticketmaster|livenation|axs\.com|ticketweb|seatgeek|eventbrite/.test(host)) return 'ticketing'
   if (/billboard|koreajoongangdaily|koreatimes|soompi|consequence|complex/.test(host)) return 'reliable_media'
-  if (/smtown|ygfamily|jype|jypent|hybecorp|bighitmusic|beliftlab|cubeent|fnc ent|wmentertainment/.test(host)) return 'official_artist_company'
+  if (/smtown|ygfamily|jype|jypent|hybecorp|bighitmusic|beliftlab|cubeent|fncent|wmentertainment/.test(host)) return 'official_artist_company'
   return 'unknown'
+}
+
+const VENUE_DOMAIN_ALIASES: Record<string, string[]> = {
+  'kaitaksportspark.com.hk': ['kai tak', 'kai tak sports park'],
+  'sofistadium.com': ['sofi'],
+  'gillettestadium.com': ['gillette'],
+  'galaxymacau.com': ['galaxy arena', 'galaxy macau'],
+  'tokyo-dome.co.jp': ['tokyo dome'],
+  'msg.com': ['madison square garden', 'msg'],
+  'rosemont.com': ['rosemont'],
+  'wamutheater.com': ['wamu'],
+  'thekiaforum.com': ['kia forum'],
+  'greatcanadian.com': ['great canadian'],
 }
 
 function venueDomainSelfMatch(candidate: CandidateRow, citation: Citation): boolean {
   try {
-    const host = new URL(citation.url).hostname.toLowerCase()
-    // Conservative allowlist: this was the only domain self-identification
-    // verified in B-7c. Do not infer venue ownership from fuzzy hostnames.
-    return (
-      (host === 'greatcanadian.com' || host.endsWith('.greatcanadian.com')) &&
-      normalize(candidate.detected_venue_name).includes('great canadian') &&
-      normalize(citation.title).includes('great canadian')
-    )
+    const host = new URL(citation.url).hostname.toLowerCase().replace(/^www\./, '')
+    const domain = VERIFICATION_SOURCE_DOMAINS.venue.find((item) => host === item || host.endsWith(`.${item}`))
+    if (!domain) return false
+    const expectedVenue = normalize(candidate.detected_venue_name)
+    const aliases = VENUE_DOMAIN_ALIASES[domain] ?? []
+    return aliases.some((alias) => expectedVenue.includes(normalize(alias)))
   } catch {
     return false
   }
@@ -304,7 +333,7 @@ export async function verifyCandidate(candidate: CandidateRow, artist: string): 
   else if (final.verdict === 'UNCONFIRMED') status = 'unconfirmed'
   else if (final.verdict === 'CONTRADICTED') status = 'contradicted'
   else if (final.verdict !== 'CONFIRMED') status = 'provider_error'
-  else if (bound.length === 0 && checks.some((check) => check.artistOk && check.datesOk && check.venueOk && check.qualifyingSource)) status = 'citation_unbound'
+  else if (bound.length === 0 && checks.some((check) => check.artistOk) && checks.some((check) => check.datesOk) && checks.some((check) => check.venueOk)) status = 'citation_unbound'
   else if (bound.length === 0) status = 'field_mismatch'
   else status = 'confirmed'
   const evidence = bound.map((check) => ({
