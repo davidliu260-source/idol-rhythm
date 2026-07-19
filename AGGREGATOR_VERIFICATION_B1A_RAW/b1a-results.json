@@ -1,0 +1,320 @@
+{
+  "config": {
+    "model": "claude-sonnet-4-6",
+    "tool": "web_search_20260209",
+    "allowed_callers": [
+      "direct"
+    ],
+    "max_uses": 3,
+    "blocked_domains": [
+      "kpopofficial.com"
+    ]
+  },
+  "samples": [
+    {
+      "key": "T1-bts-sofi",
+      "expected": "CONFIRMED",
+      "candidate": {
+        "id": "31db5d26-cfe8-408c-b0a9-245a0db0ec6c",
+        "artist": "BTS",
+        "dates": "2026-09-01, 2026-09-02, 2026-09-05, 2026-09-06",
+        "venue": "SoFi Stadium",
+        "city": "Inglewood, California, USA",
+        "raw_title": "BTS World Tour ARIRANG 2026 – Los Angeles, CA, US"
+      },
+      "modelVerdict": "CONFIRMED",
+      "classification": "completed_with_results",
+      "latency_ms": 9581,
+      "usage": {
+        "input_tokens": 11082,
+        "output_tokens": 381,
+        "web_search_requests": 1
+      },
+      "cost_usd": 0.048961,
+      "structured_citations": 3,
+      "cited_text_nonempty": 3,
+      "citations": [
+        {
+          "url": "https://www.sofistadium.com/events/detail/bts-september-2-2026",
+          "title": "BTS | SoFi Stadium",
+          "cited_text": "Tickets for the shows at SoFi Stadium on September 1, 2, 5 &amp; 6 are on sale now!! "
+        },
+        {
+          "url": "https://www.sofistadium.com/events/detail/bts-september-2-2026",
+          "title": "BTS | SoFi Stadium",
+          "cited_text": "Date Sep. 2, 2026 ... Are you ready for BTS WORLD TOUR ‘ARIRANG’ IN LOS ANGELES? "
+        },
+        {
+          "url": "https://consequence.net/2026/04/bts-sofi-los-angeles-tickets/",
+          "title": "BTS at SoFi Stadium: How to Get Tickets for Their Sold-Out Los Angeles Shows",
+          "cited_text": "BTS will out the North American leg of their “ARIRANG World Tour” with four massive concerts at SoFi Stadium in Inglewood: September 1st, 2nd, 5th, an..."
+        }
+      ],
+      "text": "VERDICT: CONFIRMED\nARTIST_MATCH: true\nDATE_MATCH: true\nVENUE_OR_CITY_MATCH: true\nMATCHED_DATES: 2026-09-01, 2026-09-02, 2026-09-05, 2026-09-06\nSOURCE_QUALITY: venue, ticketing, reliable_media\nSOURCE_URLS: https://www.sofistadium.com/events/detail/bts-september-2-2026, https://www.ticketmaster.com/bts-world-tour-arirang-in-los-inglewood-california-09-02-2026/event/0A006429B1B363A4, https://consequence.net/2026/04/bts-sofi-los-angeles-tickets/\nREASON: \nSoFi Stadium's official site confirms BTS World Tour 'ARIRANG' shows on September 1, 2, 5 & 6, 2026 at SoFi Stadium, Inglewood, CA\n, corroborated by \nreliable media (Consequence) independently reporting all four dates at SoFi Stadium in Inglewood.",
+      "raw_file": "b1a-T1-bts-sofi.json",
+      "tool_error_codes": []
+    },
+    {
+      "key": "N1-bts-gillette-date-shift",
+      "expected": "REJECT",
+      "candidate": {
+        "artist": "BTS",
+        "dates": "2026-08-12, 2026-08-13",
+        "venue": "Gillette Stadium",
+        "city": "Foxborough, Massachusetts, USA"
+      },
+      "modelVerdict": "CONTRADICTED",
+      "classification": "completed_with_results",
+      "latency_ms": 9042,
+      "usage": {
+        "input_tokens": 12299,
+        "output_tokens": 345,
+        "web_search_requests": 1
+      },
+      "cost_usd": 0.052072,
+      "structured_citations": 3,
+      "cited_text_nonempty": 3,
+      "citations": [
+        {
+          "url": "https://www.ticketmaster.com/gillette-stadium-tickets-foxborough/venue/8759",
+          "title": "Gillette Stadium - Foxborough, MA | Tickets, 2026-2027 Event Schedule, Seating Chart",
+          "cited_text": "August 5, 2026 · Aug05 · Wednesday 08:00 PMWed8:00 PMOpen additional information for BTS WORLD TOUR &#x27;ARIRANG&#x27; IN FOXBOROUGH, 8/5/26, 8:00 PM..."
+        },
+        {
+          "url": "https://www.boston.com/things-to-do/events/bts-gillette-stadium/",
+          "title": "BTS is coming to Gillette Stadium for a pair of concerts | Boston.com",
+          "cited_text": "According to a press release from Live Nation, the shows will mark the first time a K-pop act has ever performed in the Boston area. "
+        },
+        {
+          "url": "https://www.boston.com/things-to-do/events/bts-gillette-stadium/",
+          "title": "BTS is coming to Gillette Stadium for a pair of concerts | Boston.com",
+          "cited_text": "The 79-show tour will visit 34 regions, including a pair of shows at Gillette Stadium on Wednesday, Aug. 5 and Thursday, Aug. 6 at 8 p.m. "
+        }
+      ],
+      "text": "VERDICT: CONTRADICTED\nARTIST_MATCH: true\nDATE_MATCH: false\nVENUE_OR_CITY_MATCH: true\nMATCHED_DATES: 2026-08-05, 2026-08-06\nSOURCE_QUALITY: ticketing, reliable_media\nSOURCE_URLS: https://www.ticketmaster.com/gillette-stadium-tickets-foxborough/venue/8759 | https://www.boston.com/things-to-do/events/bts-gillette-stadium/\nREASON: \nTicketmaster's official Gillette Stadium schedule lists BTS World Tour 'ARIRANG' in Foxborough on **August 5 and August 6, 2026**\n — not August 12–13 as claimed — and \na Live Nation press release cited by Boston.com confirms the pair of shows at Gillette Stadium on **Aug. 5 and Aug. 6**\n, directly contradicting the claimed dates of 2026-08-12 and 2026-08-13.",
+      "raw_file": "b1a-N1-bts-gillette-date-shift.json",
+      "tool_error_codes": []
+    },
+    {
+      "key": "T2-enhypen-macau",
+      "expected": "CONFIRMED",
+      "candidate": {
+        "id": "4ad757a6-f8d2-4c7c-a89d-10a4fd0595b2",
+        "artist": "ENHYPEN",
+        "dates": "2026-10-16, 2026-10-17, 2026-10-18",
+        "venue": "Galaxy Arena",
+        "city": "Macau, China",
+        "raw_title": "ENHYPEN World Tour BLOOD SAGA 2026 – Macau"
+      },
+      "modelVerdict": "CONFIRMED",
+      "classification": "completed_with_results",
+      "latency_ms": 8686,
+      "usage": {
+        "input_tokens": 11814,
+        "output_tokens": 376,
+        "web_search_requests": 1
+      },
+      "cost_usd": 0.051082,
+      "structured_citations": 2,
+      "cited_text_nonempty": 2,
+      "citations": [
+        {
+          "url": "https://www.galaxymacau.com/offers/entertainment/enhypen-world-tour-blood-saga-macau/",
+          "title": "ENHYPEN WORLD TOUR 'BLOOD SAGA' IN MACAU | Galaxy Macau, the World-Class Asian Resort Destination",
+          "cited_text": "The globally acclaimed, record-breaking K-pop boy group ENHYPEN is set to return to Galaxy Macau this October with their brand-new world tour BLOOD SA..."
+        },
+        {
+          "url": "https://ime.co/blog/tour/enhypen-world-tour-blood-saga-in-macau/",
+          "title": "ENHYPEN WORLD TOUR 'BLOOD SAGA' IN MACAU - iMe",
+          "cited_text": "We are excited to announce that ENHYPEN WORLD TOUR ‘BLOOD SAGA’ is coming to MACAU! Date：[ADDED] 2026. 10. 16 FRI &amp; 2026.10.17 SAT &amp; 2026.10.1..."
+        }
+      ],
+      "text": "**VERDICT:** CONFIRMED\n\n**ARTIST_MATCH:** true\n\n**DATE_MATCH:** true\n\n**VENUE_OR_CITY_MATCH:** true\n\n**MATCHED_DATES:** 2026-10-16, 2026-10-17, 2026-10-18\n\n**SOURCE_QUALITY:** venue, promoter\n\n**SOURCE_URLS:**\n- https://www.galaxymacau.com/offers/entertainment/enhypen-world-tour-blood-saga-macau/ (Galaxy Macau — official venue)\n- https://ime.co/blog/tour/enhypen-world-tour-blood-saga-in-macau/ (iMe — official promoter)\n\n**REASON:** \nThe official Galaxy Macau venue site confirms ENHYPEN is returning to Galaxy Macau in October for the BLOOD SAGA world tour,\n and \nthe official promoter iMe confirms the Macau stop on 2026-10-16, 2026-10-17, and 2026-10-18 at Galaxy Arena\n — all three claimed dates, venue, and city match exactly.",
+      "raw_file": "b1a-T2-enhypen-macau.json",
+      "tool_error_codes": []
+    },
+    {
+      "key": "N2-enhypen-venue-swap",
+      "expected": "REJECT",
+      "candidate": {
+        "artist": "ENHYPEN",
+        "dates": "2026-12-01, 2026-12-02",
+        "venue": "Kyocera Dome Osaka",
+        "city": "Osaka, Japan"
+      },
+      "modelVerdict": "CONTRADICTED",
+      "classification": "completed_with_results",
+      "latency_ms": 11911,
+      "usage": {
+        "input_tokens": 25918,
+        "output_tokens": 390,
+        "web_search_requests": 2
+      },
+      "cost_usd": 0.103604,
+      "structured_citations": 1,
+      "cited_text_nonempty": 1,
+      "citations": [
+        {
+          "url": "https://onlyhit.us/en/news/enhypen-announces-2026-2027-blood-saga-world-tour-including-first-japanese-four",
+          "title": "ENHYPEN Announces 2026-2027 'BLOOD SAGA' World Tour, Including First Japanese Four-Dome Tour | Only Hits",
+          "cited_text": "It begins at the Tokyo Dome on December 1 and 2, 2026. The tour then moves to Vantelin Dome Nagoya in Aichi on December 26 and 27, followed by Fukuoka..."
+        }
+      ],
+      "text": "VERDICT: CONTRADICTED\nARTIST_MATCH: true\nDATE_MATCH: false\nVENUE_OR_CITY_MATCH: false\nMATCHED_DATES: none\nSOURCE_QUALITY: reliable_media\nSOURCE_URLS: https://onlyhit.us/en/news/enhypen-announces-2026-2027-blood-saga-world-tour-including-first-japanese-four, https://www.ticketmaster.com/enhypen-tickets/artist/2850606\nREASON: \nThe BLOOD SAGA Japan leg opens at **Tokyo Dome** on December 1–2, 2026, then moves to Vantelin Dome Nagoya on December 26–27 and Fukuoka PayPay Dome on February 6–7, 2027\n — no Kyocera Dome Osaka stop on those dates appears in any qualifying source, and the claimed venue/city directly conflicts with the confirmed December 1–2 venue (Tokyo Dome, Tokyo).",
+      "raw_file": "b1a-N2-enhypen-venue-swap.json",
+      "tool_error_codes": []
+    },
+    {
+      "key": "T3-idle-kaitak",
+      "expected": "CONFIRMED",
+      "candidate": {
+        "id": "4ed0e0ff-2bde-47e2-9aba-37eda05c089d",
+        "artist": "i-dle",
+        "dates": "2026-06-27, 2026-06-28",
+        "venue": "Kai Tak Stadium",
+        "city": "Hong Kong",
+        "raw_title": "i-dle World Tour Syncopation 2026 – Hong Kong"
+      },
+      "modelVerdict": "CONFIRMED",
+      "classification": "completed_with_results",
+      "latency_ms": 10253,
+      "usage": {
+        "input_tokens": 11981,
+        "output_tokens": 349,
+        "web_search_requests": 1
+      },
+      "cost_usd": 0.051178,
+      "structured_citations": 2,
+      "cited_text_nonempty": 2,
+      "citations": [
+        {
+          "url": "https://www.kaitaksportspark.com.hk/events-tickets/2026-i-dle-world-tour-syncopation-in-hong-kong",
+          "title": "2026 i-dle WORLD TOUR [Syncopation] IN HONG KONG - Kai Tak Sports Park",
+          "cited_text": "K-pop popular girl group i-dle will hold their concert 2026 i-dle WORLD TOUR [Syncopation] IN HONG KONG at Kai Tak Stadium on June 27 and 28, 2026. "
+        },
+        {
+          "url": "https://berriz.in/en/i-dle/notice/1436",
+          "title": "2026 i-dle WORLD TOUR [Syncopation] IN HONG KONG i-dle Berriz OFFICIAL FANCLUB NEVERLAND 선예매 안내 (+ENG) - i-dle Berriz",
+          "cited_text": "[Concert Information] - Title : 2026 i-dle WORLD TOUR [Syncopation] IN HONG KONG - Date & Time : June 27th(Sat) - 28th(Sun), 2026 6PM (HKT) - Venue : ..."
+        }
+      ],
+      "text": "VERDICT: CONFIRMED\nARTIST_MATCH: true\nDATE_MATCH: true\nVENUE_OR_CITY_MATCH: true\nMATCHED_DATES: 2026-06-27, 2026-06-28\nSOURCE_QUALITY: venue, official_artist_company\nSOURCE_URLS: https://www.kaitaksportspark.com.hk/events-tickets/2026-i-dle-world-tour-syncopation-in-hong-kong, https://berriz.in/en/i-dle/notice/1436\nREASON: \ni-dle will hold their concert 2026 i-dle WORLD TOUR [Syncopation] IN HONG KONG at Kai Tak Stadium on June 27 and 28, 2026\n, confirmed by both the official Kai Tak Sports Park venue website and \ni-dle's official Berriz fanclub platform, which lists the date, time, and venue as Kai Tak Stadium on June 27–28, 2026.",
+      "raw_file": "b1a-T3-idle-kaitak.json",
+      "tool_error_codes": []
+    },
+    {
+      "key": "N3-aespa-artist-swap",
+      "expected": "REJECT",
+      "candidate": {
+        "id": "4ed0e0ff-2bde-47e2-9aba-37eda05c089d",
+        "artist": "aespa",
+        "dates": "2026-06-27, 2026-06-28",
+        "venue": "Kai Tak Stadium",
+        "city": "Hong Kong",
+        "raw_title": "i-dle World Tour Syncopation 2026 – Hong Kong"
+      },
+      "modelVerdict": "CONTRADICTED",
+      "classification": "completed_with_results",
+      "latency_ms": 14783,
+      "usage": {
+        "input_tokens": 32169,
+        "output_tokens": 466,
+        "web_search_requests": 2
+      },
+      "cost_usd": 0.123497,
+      "structured_citations": 1,
+      "cited_text_nonempty": 1,
+      "citations": [
+        {
+          "url": "https://www.kaitaksportspark.com.hk/events-tickets/2026-i-dle-world-tour-syncopation-in-hong-kong",
+          "title": "2026 i-dle WORLD TOUR [Syncopation] IN HONG KONG - Kai Tak Sports Park",
+          "cited_text": "Ticketing Details 2026 i-dle WORLD TOUR [Syncopation] IN Hong Kong Date: 27 June – 28 June 2026 (Saturday &amp; Sunday) Time: 6PM Venue: Kai Tak Stadi..."
+        }
+      ],
+      "text": "The search results are conclusive. The \"Syncopation\" world tour at Kai Tak Stadium, Hong Kong on June 27–28, 2026 belongs to **i-dle (formerly (G)I-DLE)**, not aespa. The venue official page (kaitaksportspark.com.hk) and Koreaboo both confirm this clearly. The candidate's raw title even reads \"i-dle World Tour Syncopation 2026 – Hong Kong,\" but the artist field was incorrectly listed as aespa.\n\n---\n\nVERDICT: CONTRADICTED\nARTIST_MATCH: false\nDATE_MATCH: false\nVENUE_OR_CITY_MATCH: true\nMATCHED_DATES: none (dates belong to i-dle, not aespa)\nSOURCE_QUALITY: venue\nSOURCE_URLS: https://www.kaitaksportspark.com.hk/events-tickets/2026-i-dle-world-tour-syncopation-in-hong-kong\nREASON: \nThe Kai Tak Sports Park official venue page confirms the 2026 World Tour [Syncopation] at Kai Tak Stadium on June 27–28, 2026 is an **i-dle** concert\n, not aespa — the artist in the candidate is incorrect, directly contradicting the claim.",
+      "raw_file": "b1a-N3-aespa-artist-swap.json",
+      "tool_error_codes": []
+    },
+    {
+      "key": "N4-twice-fabricated",
+      "expected": "REJECT",
+      "candidate": {
+        "id": "4ad757a6-f8d2-4c7c-a89d-10a4fd0595b2",
+        "artist": "TWICE",
+        "dates": "2026-11-14, 2026-11-15",
+        "venue": "Singapore National Stadium",
+        "city": "Singapore",
+        "raw_title": "ENHYPEN World Tour BLOOD SAGA 2026 – Macau"
+      },
+      "modelVerdict": "UNCONFIRMED",
+      "classification": "completed_with_results",
+      "latency_ms": 13158,
+      "usage": {
+        "input_tokens": 14065,
+        "output_tokens": 460,
+        "web_search_requests": 1
+      },
+      "cost_usd": 0.059095,
+      "structured_citations": 2,
+      "cited_text_nonempty": 2,
+      "citations": [
+        {
+          "url": "https://news.pollstar.com/2025/09/30/twice-announces-this-is-for-2026-world-tour/",
+          "title": "TWICE Announces ‘This Is For’ 2026 World Tour - Pollstar News",
+          "cited_text": "TWICE “THIS IS FOR” WORLD TOUR DATES: 2025 DATES (PREVIOUSLY ANNOUNCED): Sat Oct 04 – Bulacan – Philippine Arena · Sat Oct 11 – Singapore – Singapore ..."
+        },
+        {
+          "url": "https://en.wikipedia.org/wiki/List_of_Twice_concert_tours",
+          "title": "List of Twice concert tours - Wikipedia",
+          "cited_text": "Their sixth concert tour, the This Is For World Tour, began in Incheon in July 2025 and concluded in July 2026. "
+        }
+      ],
+      "text": "Based on the search results, the Wikipedia article on the *This Is For* World Tour shows the full tour schedule. \nTWICE's Singapore stop on the \"This Is For\" World Tour was at the **Singapore Indoor Stadium** on **October 11–12, 2025**\n — not at Singapore National Stadium on November 14–15, 2026. \nTheir sixth concert tour, the *This Is For* World Tour, began in Incheon in July 2025 and concluded in July 2026\n, with no Singapore National Stadium dates in November 2026 found anywhere. Additionally, the raw candidate title references \"ENHYPEN World Tour BLOOD SAGA 2026 – Macau,\" which conflicts entirely with the claimed artist (TWICE) and city (Singapore).\n\n---\n\n**VERDICT:** UNCONFIRMED\n**ARTIST_MATCH:** false *(raw title names ENHYPEN, not TWICE)*\n**DATE_MATCH:** false\n**VENUE_OR_CITY_MATCH:** false\n**MATCHED_DATES:** none\n**SOURCE_QUALITY:** reliable_media\n**SOURCE_URLS:** https://news.pollstar.com/2025/09/30/twice-announces-this-is-for-2026-world-tour/, https://en.wikipedia.org/wiki/This_Is_For_World_Tour\n**REASON:** No qualifying source places TWICE at Singapore National Stadium on 2026-11-14/15; the only confirmed Singapore stop was at Singapore Indoor Stadium on 2025-10-11/12, and the raw candidate title contradicts the claimed artist entirely.",
+      "raw_file": "b1a-N4-twice-fabricated.json",
+      "tool_error_codes": []
+    },
+    {
+      "key": "N5-enhypen-extra-date",
+      "expected": "REJECT",
+      "candidate": {
+        "id": "4ad757a6-f8d2-4c7c-a89d-10a4fd0595b2",
+        "artist": "ENHYPEN",
+        "dates": "2026-10-16, 2026-10-17, 2026-10-18, 2026-10-19",
+        "venue": "Galaxy Arena",
+        "city": "Macau, China",
+        "raw_title": "ENHYPEN World Tour BLOOD SAGA 2026 – Macau"
+      },
+      "modelVerdict": "UNCONFIRMED",
+      "classification": "completed_with_results",
+      "latency_ms": 8317,
+      "usage": {
+        "input_tokens": 11830,
+        "output_tokens": 389,
+        "web_search_requests": 1
+      },
+      "cost_usd": 0.051325,
+      "structured_citations": 3,
+      "cited_text_nonempty": 3,
+      "citations": [
+        {
+          "url": "https://www.galaxymacau.com/offers/entertainment/enhypen-world-tour-blood-saga-macau/",
+          "title": "ENHYPEN WORLD TOUR 'BLOOD SAGA' IN MACAU | Galaxy Macau, the World-Class Asian Resort Destination",
+          "cited_text": "The globally acclaimed, record-breaking K-pop boy group ENHYPEN is set to return to Galaxy Macau this October with their brand-new world tour BLOOD SA..."
+        },
+        {
+          "url": "https://ime.co/blog/tour/enhypen-world-tour-blood-saga-in-macau/",
+          "title": "ENHYPEN WORLD TOUR 'BLOOD SAGA' IN MACAU - iMe",
+          "cited_text": "Date：[ADDED] 2026. 10. 16 FRI &amp; 2026.10.17 SAT &amp; 2026.10.18 SUN ... Stay tuned for tickets and more details!!! "
+        },
+        {
+          "url": "https://x.com/moonandenhypen/status/2056973797463621852",
+          "title": "Moon on X: \"After opening an additional show, ENHYPEN WORLD TOUR 'BLOOD SAGA' IN MACAU is all sold out. It's their second time selling out a three-day show in Galaxy Arena after FATE. ENHYPEN will perform on Oct 16, 17, &amp; 18. @ENHYPEN #ENHYPEN https://t.co/k1NaiXPZFZ\" / X",
+          "cited_text": "After opening an additional show, ENHYPEN WORLD TOUR &#x27;BLOOD SAGA&#x27; IN MACAU is all sold out. It&#x27;s their second time selling out a three-..."
+        }
+      ],
+      "text": "**VERDICT:** UNCONFIRMED\n\n**ARTIST_MATCH:** true\n\n**DATE_MATCH:** false\n\n**VENUE_OR_CITY_MATCH:** true\n\n**MATCHED_DATES:** 2026-10-16, 2026-10-17, 2026-10-18\n\n**SOURCE_QUALITY:** promoter\n\n**SOURCE_URLS:** https://ime.co/blog/tour/enhypen-world-tour-blood-saga-in-macau/, https://www.galaxymacau.com/offers/entertainment/enhypen-world-tour-blood-saga-macau/\n\n**REASON:** \nENHYPEN's BLOOD SAGA world tour is confirmed at Galaxy Macau\n for \nOct 16, 17, and 18, 2026\n — three of the four claimed dates are verified, but the claimed fourth date of **2026-10-19** is not supported by any qualifying source; \nafter an added show sold out, the confirmed run is only Oct 16, 17, and 18\n, with no evidence of an Oct 19 performance.",
+      "raw_file": "b1a-N5-enhypen-extra-date.json",
+      "tool_error_codes": []
+    }
+  ]
+}
