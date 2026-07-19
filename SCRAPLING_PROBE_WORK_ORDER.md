@@ -1,6 +1,18 @@
 # Scrapling Public Page Probe Work Order
 
-> **狀態**：📋 工作單（research-only）
+> **狀態**：❌ **不投（2026-07-15 決議）** —— 本工作單保留為歷史紀錄與「不要重複嘗試」依據，**不執行**。
+>
+> **否決依據**：`BLOCKED_SITE_BROWSER_PROBE_REPORT.md`（2026-07-15，真瀏覽器實測）。
+> 本工作單要解的是「能否突破 curl 失敗的反爬站點」，但實測證明**該問題不是瓶頸**：
+> (G)I-DLE 日本官網零阻擋卻 15 個月未更新；BTS 官網 schedule 路徑已移除；
+> THEBLACKLABEL 是維護模式不是反爬；Weverse 是登入牆，Scrapling 也不解。
+> **它解「進不去」，而我們的問題是「裡面沒有」** → 期望報酬接近零。
+>
+> **改走**：資料在場館 / 售票 / 主辦端且全部公開無封鎖 → 見 `BLOCKED_SITE_BROWSER_PROBE_REPORT.md` §4。
+>
+> ---
+>
+> **原狀態**：📋 工作單（research-only）
 > **建立**：2026-06-01
 > **作者**：Claude（與使用者討論後）
 > **產出**：本文件為**只研究**規劃，產出 `SCRAPLING_PROBE_REPORT.md`（下一個 PR）；不寫 runtime、不新增 parser_type、不新增 migration、不改 schema / RLS / GRANT、不 seed crawler_sources、不接 production。

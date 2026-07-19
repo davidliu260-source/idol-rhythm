@@ -109,10 +109,15 @@
 ## 7. 建議 PR 拆分（PM 逐張開票交 Codex，high-risk 標 label）
 
 1. **B-0 Gemini grounding 探測報告**（純研究）：用 Gemini（Google Search grounding）對 3–5 個真實聚合草稿（如 ENHYPEN / BTS World Tour）做求證，實測：(a) 命中率（找到官方/售票佐證的比例）、(b) 假陽性率（錯配活動）、(c) citations URL 品質、(d) 每筆成本與延遲、(e) grounding metadata 解析難度。備選同場測 Claude web search 對照。→ 定 provider。比照 P1-A/P1-B「先探測再實作」紀律，**不先寫 runtime**。
-2. **B-1 migration**：新增求證狀態欄位（verified_at / verified_result / proposed_source jsonb 等）。
-3. **B-2 求證 runtime（手動、單筆）**：一個草稿 → 搜尋 → fetch+Claude → 產出提議；不自動發。
-4. **B-3 後台 UI**：提議檢視 + 一鍵「採用並發布」+ 未命中標記。
-5. **B-4 批量 + 上限保護**：batch 求證 + maxVerifyPerRun。
+2. **B-1 parser / evidence-contract spike**（純研究，**不碰 DB**）：依 B-0c 報告 §8，先解決 citation binding —— 測 `allowed_callers:["direct"]` / `web_search_20250305` 能否恢復結構化 citations，並設計 evidence contract（哪些欄位可稽核落庫）+ `max_uses` 成本收斂。**取不到可靠 citation binding 就不進 runtime**，即使 accuracy 5/5。
+   > ⚠️ 原規劃此處為 migration，已於 2026-07-15 依 B-0c 結論改為 spike——格式問題未解前不得建 schema。
+   > ✅ **已完成 2026-07-15**（`AGGREGATOR_VERIFICATION_B1_SPIKE_REPORT.md`）：假設成立，`allowed_callers:["direct"]` 恢復 citations 5/5，定為 runtime contract。
+3. **B-1a negative control**（純研究，**DB 唯讀**，**擋在 B-1b 前面**）：B-0/B-0c/B-1 三輪都用同一批 5 筆**真實存在**的大型巡演，正確答案本來就全是 CONFIRMED → **「假陽性 0/5」在結構上不可能失敗，是空指標**；contract §4.3 deterministic re-check / §4.4 fail closed 從未被考驗。本票補上：3 筆真候選 + 5 筆偽造（日期偏移 / 場館置換 / 藝人置換 / 憑空捏造 / 日期集合不全）混合送進同一條 B-direct pipeline。**偽造品只能在腳本記憶體中構造，嚴禁 INSERT 進 event_candidates 或任何 table**；**不得為求好看改 prompt**（須與 B-1 B 組逐字相同）。**驗收 = 5/5 偽造被擋下且 3/3 真候選 CONFIRMED**；任一偽造穿過兩層防線 → contract 需修正。
+   > ⚠️ **B-1a 未過不得進 B-1b**：先蓋房再驗地基，等於可能白做整個 schema。
+4. **B-1b migration**（**B-1 spike + B-1a negative control 都通過後才做**）：依 **B-direct contract** 新增求證狀態欄位（verified_at / verified_result / proposed_source jsonb 等）。A dynamic 的 response shape 不可作 citation binding。
+5. **B-2 求證 runtime（手動、單筆）**：一個草稿 → 搜尋 → fetch+Claude → 產出提議；不自動發。**必須做 deterministic artist / 完整日期集合 / venue-city re-check，不得把模型 `CONFIRMED` 直接升 trust 或發布**；citation 未綁定 / cited_text 空 / URL 無法 canonicalize / 任一欄位 mismatch → **fail closed，維持草稿**。
+6. **B-3 後台 UI**：提議檢視 + 一鍵「採用並發布」+ 未命中標記。
+7. **B-4 批量 + 上限保護**：batch 求證 + maxVerifyPerRun。
 6. （後續）B-5 cron 自動求證新草稿 — v1 不做，待 v1 驗證命中率後再議。
 
 ---

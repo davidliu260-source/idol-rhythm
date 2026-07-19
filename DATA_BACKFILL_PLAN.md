@@ -23,7 +23,8 @@
 |---|---|---|---|
 | **L1** | 有 active 爬蟲、候選池有「待審」筆數 | 後台審核 → 發布 | 低 |
 | **L2** | 有爬蟲但 `is_active=false`（generic_webpage / youtube）| 手動 Preview→Commit，或按需啟用 | 低～中 |
-| **L3** | 官網來源封鎖（HYBE / Cube / Starship / THEBLACKLABEL 等）| 等 Scrapling 探測 / 人工維護 | 高 |
+| ~~**L3**~~ | ~~官網來源封鎖（HYBE / Cube / Starship / THEBLACKLABEL 等）~~ | ❌ **2026-07-15 廢除，Scrapling 不投** | — |
+| **L3′（取代 L3）** | 官網「沒有資料」而非「進不去」 | **場館 / 售票 / 主辦端 discovery**（B-6 探測待開） | 低（$0.049/event）|
 | **接受空白** | 藝人現階段真的沒活動 | 不動，避免塞雜訊 | 0 |
 
 > ⚠️ 原則：**寧可正確地空白，也不塞雜訊。** 沒活動的藝人 0 場是正確狀態，
@@ -62,7 +63,7 @@
 |---|---|---|
 | BigHit / HYBE | BTS solo：j-hope / Jimin / Jin / Jung Kook / RM / SUGA / V | 官網 / Weverse 封鎖；部分可試 L2 個人 YouTube |
 | HYBE / KOZ | BOYNEXTDOOR / ZICO | 封鎖 |
-| Cube | (G)I-DLE / PENTAGON | SPA / 404 |
+| Cube | (G)I-DLE / PENTAGON | ⚠️ **2026-07-15 實測推翻**：`gidle.cubeent.jp/schedule/` **零阻擋、完整渲染**，但最新一筆 2025.04.05（15 個月未更新）→ 不是封鎖，是**沒資料** |
 | THEBLACKLABEL | ALLDAY PROJECT / JEON SOMI / MEOVV / ROSÉ / TAEYANG | 503 封鎖 |
 | Starship | CRAVITY / KiiiKiii / MONSTA X | Cloudflare；建議 Google Discovery |
 | Modhaus | ARTMS / tripleS | SPA |
@@ -154,7 +155,11 @@
 > PM 傾向：**先做 §3 步驟 1（Jay Park + DAY6 官方源，零成本 +2 藝人）驗證流程**，
 > 再由 Owner 決定 D1 要不要投入人工（選項 A）或開發半自動（選項 B）。
 
-**D1 已定案（2026-07-14）**：Owner 選 **選項 B（自動求證）**。
+**D1 已定案（2026-07-14）→ provider 已改（2026-07-15）**：Owner 選 **選項 B（自動求證）**。
+- **Provider 定案：Claude web search（非 Gemini）**。B-0 實測 Gemini BLOCKED（2.5→404 / 3.x→grounding quota 0），且需開 Google billing 預付 $10 + 台灣統編 → Owner 否決。
+- B-0c 實測 **Claude web search 命中 5/5、假陽性 0/5、$0.93**，用**現有 ANTHROPIC_API_KEY 零新 billing** → 採用此路。
+- 卡點 structured citations 0/5 **已解（2026-07-15，B-1 spike）**：`allowed_callers:["direct"]` 關掉 dynamic filtering 後 citations 恢復 5/5、cited_text 5/5，且成本降 73.5%（$0.049/event）→ **runtime contract 定為 B-direct**。
+- **但下一關是 B-1a negative control**：前三輪樣本全是真候選，「假陽性 0/5」是空指標，fail closed 從未被考驗 → **B-1a 未過不得進 B-1b migration**（見工作單 §7）。
 - 現場驗證：99 筆草稿 = 94 community + 5 official_website；後台「自動判斷+發布」對 94 筆聚合源 0/84 生效（閘門正確運作）。
 - 已發布 156 場中，27 場聚合源是人工升級（達人力極限），94 筆卡住無法比照。
 - → 已開 `AGGREGATOR_EVENT_VERIFICATION_WORK_ORDER.md`（B 選項工作單）；下一步 PM 開 B-0 探測票交 Codex。
