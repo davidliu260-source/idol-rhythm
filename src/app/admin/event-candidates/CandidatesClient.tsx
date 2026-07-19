@@ -21,6 +21,8 @@ interface Candidate {
   aiConfidence: number | null
   hasIdol: boolean
   needsRecheck: boolean
+  verificationStatus: string | null
+  verifiedAt: string | null
 }
 
 interface Props {
@@ -257,6 +259,44 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
     })
   }
 
+  async function autoVerify() {
+    const ids = Array.from(selected)
+    if (ids.length === 0) return
+    setResultMsg(null)
+    startTransition(async () => {
+      try {
+        const res = await fetch('/api/admin/event-candidates/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids }),
+        })
+        const data = await res.json()
+        if (!res.ok || !data.ok) {
+          const details = (data.results ?? [])
+            .filter((item: { status: string; error?: string }) => item.error)
+            .map((item: { status: string; error?: string }) => item.error)
+            .join('；')
+          setResultMsg({ type: 'error', text: data.error ?? details ?? '自動求證失敗' })
+        } else {
+          const summary = (data.results ?? [])
+            .map((item: { status: string }) => item.status)
+            .reduce((counts: Record<string, number>, status: string) => {
+              counts[status] = (counts[status] ?? 0) + 1
+              return counts
+            }, {})
+          setResultMsg({
+            type: 'ok',
+            text: `自動求證完成：${Object.entries(summary).map(([status, count]) => `${status} ${count}`).join('、')}`,
+          })
+          setSelected(new Set())
+          router.refresh()
+        }
+      } catch (e) {
+        setResultMsg({ type: 'error', text: e instanceof Error ? e.message : '網路錯誤' })
+      }
+    })
+  }
+
   async function cleanupExpired() {
     if (expiredPendingCount === 0) return
     if (!confirm(`將 ${expiredPendingCount} 筆過期待審核候選標記為已拒絕（reviewer_note=auto-expired）？資料保留，可隨時查詢。`)) {
@@ -286,6 +326,10 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
   const selectedHaveNoIdol = Array.from(selected).some(
     (id) => !candidates.find((c) => c.id === id)?.hasIdol,
   )
+  const selectedHaveNonAggregator = Array.from(selected).some((id) => {
+    const candidate = candidates.find((c) => c.id === id)
+    return candidate ? !getReviewSourceInfo(candidate).needsOriginalSource : true
+  })
 
   return (
     <>
@@ -465,6 +509,17 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
                       內容已變更
                     </span>
                   )}
+                  {c.verificationStatus && (
+                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${
+                      c.verificationStatus === 'confirmed'
+                        ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300'
+                        : c.verificationStatus === 'provider_error'
+                          ? 'bg-red-500/10 border-red-500/25 text-red-300'
+                          : 'bg-violet/10 border-violet/25 text-violet-300'
+                    }`}>
+                      求證：{c.verificationStatus}
+                    </span>
+                  )}
                   {sourceInfo.needsOriginalSource && (
                     <span
                       className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded border ${sourceBadgeClass(sourceInfo.risk)}`}
@@ -522,6 +577,14 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
             </span>
             {tab === 'pending' ? (
               <>
+                <button
+                  onClick={autoVerify}
+                  disabled={isPending || selectedHaveNonAggregator}
+                  title={selectedHaveNonAggregator ? '只能對聚合 / 社群來源候選自動求證' : undefined}
+                  className="inline-flex items-center gap-1 rounded-lg border border-violet/40 bg-violet/10 px-3 py-1.5 text-xs font-semibold text-violet-200 disabled:opacity-40 active:opacity-70 transition-opacity"
+                >
+                  {isPending ? '求證中…' : '自動求證'}
+                </button>
                 <button
                   onClick={() => bulkAction('reject')}
                   disabled={isPending}
