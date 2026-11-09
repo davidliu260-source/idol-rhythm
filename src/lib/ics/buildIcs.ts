@@ -47,7 +47,8 @@ export function buildIcs(idolName: string, events: Event[], origin: string): str
 
   for (const event of events) {
     const start = event.startDate ?? event.date
-    const end = addDays(event.endDate ?? start, 1)
+    const endDate = event.endDate && event.endDate < start ? start : event.endDate ?? start
+    const end = addDays(endDate, 1)
     const location = [event.venueName, event.location, event.city]
       .filter((part): part is string => Boolean(part?.trim()))
       .join(' / ')
