@@ -17,6 +17,7 @@ import EventCard from '@/components/EventCard'
 import { SCHEDULE_ARCHIVE_SHELL } from '@/app/schedule/scheduleTheme'
 import { getIdolBySlug, getPublishedEvents } from '@/lib/supabase/events'
 import FollowIdolButton from './FollowIdolButton'
+import SubscribeCalendarButton from './SubscribeCalendarButton'
 import clsx from 'clsx'
 
 export default async function IdolDetailPage({
@@ -101,6 +102,7 @@ export default async function IdolDetailPage({
 
             <div className="mt-5">
               <FollowIdolButton idolSlug={idol.id} idolName={idol.name} />
+              <SubscribeCalendarButton slug={params.slug} />
             </div>
           </div>
         </section>
