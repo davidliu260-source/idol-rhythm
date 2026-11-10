@@ -297,10 +297,10 @@ export default function MeClient({
         <div className="rounded-[26px] border border-white/8 bg-white/[0.035] p-5">
           <SectionHeader
             icon={<Heart className="h-4 w-4 text-[#ff8bc8]" />}
-            title="我的收藏"
+            title="我的圖鑑"
             count={favorites.ids.length}
-            href="/favorites"
-            actionLabel="全部收藏"
+            href="/atlas"
+            actionLabel="全部圖鑑"
           />
           {favoriteEvents.length > 0 ? (
             <div className="space-y-2">
@@ -311,8 +311,8 @@ export default function MeClient({
           ) : (
             <EmptyState
               text="還沒有收藏活動。從行程或詳情頁收進你的 archive shelf。"
-              href="/favorites"
-              label="去收藏頁"
+              href="/atlas"
+              label="去圖鑑"
             />
           )}
         </div>
