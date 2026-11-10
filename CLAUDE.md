@@ -13,6 +13,8 @@
 | 本地路徑 | `~/Desktop/idol-rhythm` |
 | GitHub | `davidliu260-source/idol-rhythm` |
 | 技術棧 | Next.js 14 App Router + TypeScript + Tailwind CSS + Supabase |
+| Supabase 帳號 | **GitHub 登入**的帳號（組織 `ming-app`，Free 方案）；專案 `idol-rhythm`，Project ID `rdrthazsonkefggedbjr`，region `ap-southeast-2`。Owner 一律用 **Chrome** 操作此 Supabase |
+| 瀏覽器分工 | idol-rhythm 的 Supabase → **Chrome**；telegram bot 的 Supabase（另一個 email 登入帳號）→ **Safari**。兩者不要在同一個瀏覽器登入，避免操作錯專案（2026-11-09 Owner 決定不搬家，維持兩個帳號分開） |
 | 工作排程 | `WORKING.md`（目前階段、進度索引、migration 狀態、API / 目錄 / 設計索引） |
 
 ---
@@ -137,6 +139,8 @@
 - **修了 2 次還沒中就停下重讀**：不要連開 3 個症狀治療 PR；第二次修錯時主動承認假設可能有問題，重新讀整個流程
 - **完成 ≠ 結束**：build pass、commit、push 都不等於實際運作。Silent-hang（Promise 不 resolve 也不 reject）、catch 沒命中、async finally 沒跑 都算未完成。預設懷疑「表面平靜」
 - **長 session 主動 checkpoint**：累積 5+ PRs 時主動整理一次成果盤點；換主題前先 summary，避免後面迷路
+- **service_role 不會自動有權限**：本專案每張表都要用 migration 明確 `GRANT` 給 service_role（例：018、020、039、042、061）。新的排程或後台程式要用 service_role 讀寫某張表時，先確認該表已授權
+  - 反例：通知排程（N6 / N7，PR #119 / #122）上線後每天回 500，半年沒人發現，因為 `events` / `reminders` / `user_follows` 從來沒授權給 service_role（2026-11-10 盤點才查到，M061 修正）。排程失敗目前**沒有任何警報**，上線後要實際看一次 Vercel 日誌確認回 200
 
 ---
 
