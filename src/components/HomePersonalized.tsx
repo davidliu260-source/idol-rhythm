@@ -207,9 +207,9 @@ export default function HomePersonalized({
       </Subsection>
 
       <Subsection
-        title="我的收藏"
+        title="我的圖鑑"
         count={counts.favorites}
-        href="/favorites"
+        href="/atlas"
         icon={<Heart className="h-3.5 w-3.5 text-rose-400" />}
       >
         {upcomingFavorites.length > 0 ? (
@@ -221,8 +221,8 @@ export default function HomePersonalized({
         ) : (
           <EmptyHint
             text="還沒收藏活動，可以先收藏想追的行程"
-            linkText="去收藏"
-            href="/favorites"
+            linkText="去圖鑑"
+            href="/atlas"
           />
         )}
       </Subsection>

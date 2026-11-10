@@ -27,7 +27,7 @@ import {
   SOURCE_CONFIG,
   type Event,
 } from '@/lib/mockEvents'
-import { SCHEDULE_ARCHIVE_SHELL } from '../schedule/scheduleTheme'
+import { SCHEDULE_ARCHIVE_SHELL } from '@/app/schedule/scheduleTheme'
 
 function matchSearch(event: Event, query: string): boolean {
   const needle = query.trim().toLowerCase()
@@ -42,7 +42,7 @@ function matchSearch(event: Event, query: string): boolean {
   )
 }
 
-export default function FavoritesClient({ events }: { events: Event[] }) {
+export default function AtlasClient({ events }: { events: Event[] }) {
   const { favorites, user, isUserLoading } = useAppState()
   const [query, setQuery] = useState('')
   const [openArchivedMonths, setOpenArchivedMonths] = useState<string[]>([])
@@ -89,22 +89,22 @@ export default function FavoritesClient({ events }: { events: Event[] }) {
 
   if (isUserLoading) {
     return (
-      <FavoritesShell count={null} upcomingCount={null} pastCount={null}>
+      <AtlasShell count={null} upcomingCount={null} pastCount={null}>
         <LoadingState />
-      </FavoritesShell>
+      </AtlasShell>
     )
   }
 
   if (!user) {
     return (
-      <FavoritesShell count={null} upcomingCount={null} pastCount={null}>
+      <AtlasShell count={null} upcomingCount={null} pastCount={null}>
         <LoginPrompt />
-      </FavoritesShell>
+      </AtlasShell>
     )
   }
 
   return (
-    <FavoritesShell
+    <AtlasShell
       count={favorited.length}
       upcomingCount={upcomingCount}
       pastCount={pastCount}
@@ -178,11 +178,11 @@ export default function FavoritesClient({ events }: { events: Event[] }) {
           )}
         </>
       )}
-    </FavoritesShell>
+    </AtlasShell>
   )
 }
 
-function FavoritesShell({
+function AtlasShell({
   count,
   upcomingCount,
   pastCount,
@@ -212,7 +212,7 @@ function FavoritesShell({
                 </span>
                 <div>
                   <h1 className="text-[34px] font-black leading-none tracking-normal text-white">
-                    收藏檔案櫃
+                    我的圖鑑
                   </h1>
                   <p className="mt-2 text-sm text-white/58">
                     把想追的活動收進你的 cassette shelf
@@ -235,6 +235,18 @@ function FavoritesShell({
               accent="slate"
             />
           </div>
+        </section>
+
+        <section className="rounded-[26px] border border-white/8 bg-white/[0.035] p-4">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-base font-bold text-text-base">去過蓋章</h2>
+            <span className="rounded-full border border-warn/30 bg-warn/10 px-3 py-1 text-xs font-semibold text-warn">
+              尚未開放
+            </span>
+          </div>
+          <p className="mt-2 text-sm leading-6 text-muted">
+            之後可以替去過的演唱會、快閃、生咖蓋章
+          </p>
         </section>
 
         {children}
@@ -617,7 +629,7 @@ function LoginPrompt() {
       </div>
 
       <Link
-        href="/login?next=/favorites"
+        href="/login?next=/atlas"
         className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-[18px] bg-[#ff4ca1] px-4 py-3 text-sm font-bold text-white shadow-[0_14px_34px_rgba(255,76,161,0.22)] transition-transform active:scale-[0.99]"
       >
         <LogIn className="h-4 w-4" />

@@ -123,7 +123,7 @@ function FollowedView({
           icon={<Sparkles className="h-4 w-4 text-primary" />}
           title="我追蹤的近期行程"
           count={followedTotal}
-          href="/favorites"
+          href="/atlas"
         />
         {followedEvents.length > 0 ? (
           <div className="flex flex-col gap-3">
@@ -133,7 +133,7 @@ function FollowedView({
             <SeeAllFooter
               shown={followedEvents.length}
               total={followedTotal}
-              href="/favorites"
+              href="/atlas"
             />
           </div>
         ) : (

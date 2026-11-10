@@ -90,9 +90,9 @@ export default async function HomePage() {
             meta="Tracklist"
           />
           <QuickAccess
-            href="/favorites"
+            href="/atlas"
             icon={<Heart className="h-4 w-4" />}
-            label="收藏"
+            label="圖鑑"
             meta="Archive"
           />
           <QuickAccess

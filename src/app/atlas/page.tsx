@@ -1,9 +1,9 @@
 export const dynamic = 'force-dynamic'
 
 import { getPublishedEvents } from '@/lib/supabase/events'
-import FavoritesClient from './FavoritesClient'
+import AtlasClient from './AtlasClient'
 
-export default async function FavoritesPage() {
+export default async function AtlasPage() {
   const events = await getPublishedEvents()
-  return <FavoritesClient events={events} />
+  return <AtlasClient events={events} />
 }
