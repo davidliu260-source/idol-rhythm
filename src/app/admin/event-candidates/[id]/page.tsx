@@ -329,7 +329,7 @@ export default async function AdminCandidateDetailPage({
           返回候選列表
         </Link>
         <div className="flex items-center gap-2">
-          <FileSearch className="h-5 w-5 text-violet" />
+          <FileSearch className="h-5 w-5 text-violet-500" />
           <h1 className="text-xl font-bold text-text-base">候選活動詳情</h1>
         </div>
       </div>
@@ -467,7 +467,7 @@ export default async function AdminCandidateDetailPage({
           <div className="rounded-xl bg-card border border-card-border p-4">
             <div className="flex items-center gap-2 mb-2">
               <h2 className="text-sm font-semibold text-text-base">自動求證</h2>
-              <span className="text-[10px] rounded border border-violet/25 bg-violet/10 px-1.5 py-0.5 text-violet-300">
+              <span className="text-[10px] rounded border border-violet-500/25 bg-violet-500/10 px-1.5 py-0.5 text-violet-300">
                 {candidate.verificationStatus}
               </span>
               {candidate.verifiedAt && (
@@ -579,7 +579,7 @@ export default async function AdminCandidateDetailPage({
       {/* ── Non-admin read-only notice for pending ─── */}
       {!isAdmin && isPending && (
         <div className="px-4 mb-4">
-          <div className="rounded-xl bg-violet/10 border border-violet/25 px-3 py-2.5">
+          <div className="rounded-xl bg-violet-500/10 border border-violet-500/25 px-3 py-2.5">
             <p className="text-xs text-muted leading-snug">
               只讀詳情預覽｜需要管理員身份才能審核
             </p>
@@ -725,7 +725,7 @@ export default async function AdminCandidateDetailPage({
                   href={candidate.sourceUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-violet underline underline-offset-2 break-all"
+                  className="text-violet-500 underline underline-offset-2 break-all"
                 >
                   {candidate.sourceUrl}
                 </a>

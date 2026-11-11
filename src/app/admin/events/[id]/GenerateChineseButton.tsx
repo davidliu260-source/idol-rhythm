@@ -39,7 +39,7 @@ export default function GenerateChineseButton({
         onClick={run}
         disabled={disabled}
         title={disabledReason ?? undefined}
-        className="inline-flex items-center justify-center gap-2 rounded-xl border border-violet/35 bg-violet/15 px-3 py-2.5 text-xs font-semibold text-violet disabled:opacity-50 active:opacity-80 transition-opacity"
+        className="inline-flex items-center justify-center gap-2 rounded-xl border border-violet-500/35 bg-violet-500/15 px-3 py-2.5 text-xs font-semibold text-violet-500 disabled:opacity-50 active:opacity-80 transition-opacity"
       >
         {isPending ? (
           <Loader2 className="h-3.5 w-3.5 animate-spin" />

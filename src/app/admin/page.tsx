@@ -18,7 +18,7 @@ export default async function AdminPage() {
       {/* Header */}
       <div className="px-4 mb-4">
         <div className="flex items-center gap-2">
-          <LayoutDashboard className="h-5 w-5 text-violet" />
+          <LayoutDashboard className="h-5 w-5 text-violet-500" />
           <h1 className="text-xl font-bold text-text-base">Admin Dashboard</h1>
         </div>
         <p className="text-xs text-muted mt-1">Idol Rhythm 後台概覽</p>
@@ -90,8 +90,8 @@ export default async function AdminPage() {
 
       {/* Read-only preview banner */}
       <div className="px-4 mb-4">
-        <div className="rounded-xl bg-violet/10 border border-violet/25 px-3 py-2.5 flex flex-col gap-0.5">
-          <p className="text-xs font-semibold text-violet">Admin Preview｜Read-only dashboard</p>
+        <div className="rounded-xl bg-violet-500/10 border border-violet-500/25 px-3 py-2.5 flex flex-col gap-0.5">
+          <p className="text-xs font-semibold text-violet-500">Admin Preview｜Read-only dashboard</p>
           <p className="text-xs text-muted leading-snug">
             資料唯讀，不影響前台。寫入功能需管理員身份驗證（Phase 3）。
           </p>
@@ -144,40 +144,40 @@ export default async function AdminPage() {
         <p className="text-xs font-semibold text-text-base mb-1">後台頁面</p>
         <Link
           href="/admin/events"
-          className="flex items-center justify-between rounded-xl bg-card border border-card-border px-4 py-3 hover:border-violet/40 transition-colors"
+          className="flex items-center justify-between rounded-xl bg-card border border-card-border px-4 py-3 hover:border-violet-500/40 transition-colors"
         >
           <div className="flex items-center gap-2">
-            <CalendarCheck className="h-4 w-4 text-violet" />
+            <CalendarCheck className="h-4 w-4 text-violet-500" />
             <span className="text-sm text-text-base">後台活動列表</span>
           </div>
           <ChevronRight className="h-4 w-4 text-muted" />
         </Link>
         <Link
           href="/admin/idols"
-          className="flex items-center justify-between rounded-xl bg-card border border-card-border px-4 py-3 hover:border-violet/40 transition-colors"
+          className="flex items-center justify-between rounded-xl bg-card border border-card-border px-4 py-3 hover:border-violet-500/40 transition-colors"
         >
           <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-violet" />
+            <Users className="h-4 w-4 text-violet-500" />
             <span className="text-sm text-text-base">後台偶像列表</span>
           </div>
           <ChevronRight className="h-4 w-4 text-muted" />
         </Link>
         <Link
           href="/admin/event-candidates"
-          className="flex items-center justify-between rounded-xl bg-card border border-card-border px-4 py-3 hover:border-violet/40 transition-colors"
+          className="flex items-center justify-between rounded-xl bg-card border border-card-border px-4 py-3 hover:border-violet-500/40 transition-colors"
         >
           <div className="flex items-center gap-2">
-            <Inbox className="h-4 w-4 text-violet" />
+            <Inbox className="h-4 w-4 text-violet-500" />
             <span className="text-sm text-text-base">候選活動審核</span>
           </div>
           <ChevronRight className="h-4 w-4 text-muted" />
         </Link>
         <Link
           href="/admin/sources"
-          className="flex items-center justify-between rounded-xl bg-card border border-card-border px-4 py-3 hover:border-violet/40 transition-colors"
+          className="flex items-center justify-between rounded-xl bg-card border border-card-border px-4 py-3 hover:border-violet-500/40 transition-colors"
         >
           <div className="flex items-center gap-2">
-            <Database className="h-4 w-4 text-violet" />
+            <Database className="h-4 w-4 text-violet-500" />
             <span className="text-sm text-text-base">資料來源管理</span>
           </div>
           <ChevronRight className="h-4 w-4 text-muted" />
@@ -236,7 +236,7 @@ function StatCard({
 }) {
   return (
     <div className="rounded-xl bg-card border border-card-border px-4 py-4 flex flex-col gap-2">
-      <div className={`flex items-center gap-1.5 ${requiresAuth ? 'text-muted/50' : 'text-violet'}`}>
+      <div className={`flex items-center gap-1.5 ${requiresAuth ? 'text-muted/50' : 'text-violet-500'}`}>
         {icon}
         <span className="text-xs font-medium">{label}</span>
       </div>

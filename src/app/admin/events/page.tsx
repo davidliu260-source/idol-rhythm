@@ -97,7 +97,7 @@ export default async function AdminEventsPage() {
           Admin Dashboard
         </Link>
         <div className="flex items-center gap-2">
-          <CalendarCheck className="h-5 w-5 text-violet" />
+          <CalendarCheck className="h-5 w-5 text-violet-500" />
           <h1 className="text-xl font-bold text-text-base">後台活動列表</h1>
         </div>
         <p className="text-xs text-muted mt-1">
@@ -117,13 +117,13 @@ export default async function AdminEventsPage() {
         {isAdmin ? (
           <Link
             href="/admin/events/new"
-            className="flex items-center gap-2 rounded-xl bg-violet/15 border border-violet/30 px-3 py-2.5 hover:bg-violet/20 transition-colors"
+            className="flex items-center gap-2 rounded-xl bg-violet-500/15 border border-violet-500/30 px-3 py-2.5 hover:bg-violet-500/20 transition-colors"
           >
-            <FilePlus className="h-4 w-4 text-violet flex-shrink-0" />
-            <span className="text-xs font-semibold text-violet">新增草稿活動</span>
+            <FilePlus className="h-4 w-4 text-violet-500 flex-shrink-0" />
+            <span className="text-xs font-semibold text-violet-500">新增草稿活動</span>
           </Link>
         ) : (
-          <div className="rounded-xl bg-violet/10 border border-violet/25 px-3 py-2.5">
+          <div className="rounded-xl bg-violet-500/10 border border-violet-500/25 px-3 py-2.5">
             <p className="text-xs text-muted leading-snug">
               目前為只讀後台預覽。新增 / 編輯需要管理員登入。
             </p>
@@ -145,7 +145,7 @@ export default async function AdminEventsPage() {
       <div className="px-4 grid grid-cols-2 gap-3 mb-4">
         <MiniStat icon={<FileEdit className="h-3.5 w-3.5" />} label="草稿" value={draftCount} color="text-amber-400" />
         <MiniStat icon={<CheckCircle2 className="h-3.5 w-3.5" />} label="已發布" value={publishedCount} color="text-emerald-400" />
-        <MiniStat icon={<ShieldCheck className="h-3.5 w-3.5" />} label="官方確認" value={officialCount} color="text-violet" />
+        <MiniStat icon={<ShieldCheck className="h-3.5 w-3.5" />} label="官方確認" value={officialCount} color="text-violet-500" />
         <MiniStat icon={<Clock className="h-3.5 w-3.5" />} label="即將到來" value={upcomingCount} color="text-primary" />
       </div>
 
@@ -161,7 +161,7 @@ function MiniStat({
   icon,
   label,
   value,
-  color = 'text-violet',
+  color = 'text-violet-500',
 }: {
   icon: React.ReactNode
   label: string

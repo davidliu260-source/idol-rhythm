@@ -31,7 +31,7 @@ const CATEGORY_OPTIONS = [
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const inputCls =
-  'w-full rounded-xl border border-card-border bg-bg px-3 py-2.5 text-sm text-text-base placeholder:text-muted/40 focus:outline-none focus:border-violet/60 transition-colors'
+  'w-full rounded-xl border border-card-border bg-bg px-3 py-2.5 text-sm text-text-base placeholder:text-muted/40 focus:outline-none focus:border-violet-500/60 transition-colors'
 
 const selectCls = inputCls + ' cursor-pointer'
 
@@ -273,7 +273,7 @@ export default function NewIdolForm() {
             type="checkbox"
             checked={isActive}
             onChange={(e) => setIsActive(e.target.checked)}
-            className="h-4 w-4 rounded accent-violet"
+            className="h-4 w-4 rounded accent-violet-500"
           />
           <span className="text-sm text-text-base">
             立即啟用（is_active = true）
@@ -295,7 +295,7 @@ export default function NewIdolForm() {
       <button
         type="submit"
         disabled={submitting || !!slugError}
-        className="flex items-center justify-center gap-2 rounded-xl bg-violet px-4 py-3 text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
+        className="flex items-center justify-center gap-2 rounded-xl bg-violet-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
       >
         {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
         {submitting ? '建立中…' : '建立偶像'}

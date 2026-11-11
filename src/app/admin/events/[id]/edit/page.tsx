@@ -230,7 +230,7 @@ export default async function AdminEditEventPage({
           返回活動詳情
         </Link>
         <div className="flex items-center gap-2">
-          <FileEdit className="h-5 w-5 text-violet" />
+          <FileEdit className="h-5 w-5 text-violet-500" />
           <h1 className="text-xl font-bold text-text-base">編輯草稿活動</h1>
         </div>
         <p className="text-xs text-muted mt-1 truncate">{eventResult.title}</p>
@@ -238,7 +238,7 @@ export default async function AdminEditEventPage({
 
       {/* Info banner */}
       <div className="px-4 mb-4">
-        <div className="rounded-xl bg-violet/10 border border-violet/25 px-3 py-2.5">
+        <div className="rounded-xl bg-violet-500/10 border border-violet-500/25 px-3 py-2.5">
           <p className="text-xs text-muted leading-snug">
             只可編輯草稿（未發布）活動。來源資訊儲存時將全部取代。
           </p>

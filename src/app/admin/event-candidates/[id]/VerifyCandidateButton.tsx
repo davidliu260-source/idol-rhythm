@@ -32,7 +32,7 @@ export default function VerifyCandidateButton({ candidateId }: { candidateId: st
   }
 
   return (
-    <div className="rounded-xl bg-violet/10 border border-violet/25 px-3 py-2.5">
+    <div className="rounded-xl bg-violet-500/10 border border-violet-500/25 px-3 py-2.5">
       <div className="flex items-center gap-2">
         <SearchCheck className="h-4 w-4 text-violet-300" />
         <div className="flex-1">
@@ -43,7 +43,7 @@ export default function VerifyCandidateButton({ candidateId }: { candidateId: st
           type="button"
           onClick={verify}
           disabled={pending}
-          className="rounded-lg bg-violet px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+          className="rounded-lg bg-violet-500 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
         >
           {pending ? '搜尋中…' : '自動求證'}
         </button>

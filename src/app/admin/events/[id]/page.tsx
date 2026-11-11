@@ -293,7 +293,7 @@ export default async function AdminEventDetailPage({
           返回活動列表
         </Link>
         <div className="flex items-center gap-2">
-          <Eye className="h-5 w-5 text-violet" />
+          <Eye className="h-5 w-5 text-violet-500" />
           <h1 className="text-xl font-bold text-text-base">活動詳情預覽</h1>
         </div>
       </div>
@@ -355,7 +355,7 @@ export default async function AdminEventDetailPage({
             </form>
           )
         ) : (
-          <div className="rounded-xl bg-violet/10 border border-violet/25 px-3 py-2.5">
+          <div className="rounded-xl bg-violet-500/10 border border-violet-500/25 px-3 py-2.5">
             <p className="text-xs text-muted leading-snug">
               只讀詳情預覽｜發布 / 編輯功能規劃中
             </p>
@@ -441,7 +441,7 @@ export default async function AdminEventDetailPage({
             <>
               <Divider />
               <Field label="地圖 URL">
-                <a href={event.mapUrl} target="_blank" rel="noopener noreferrer" className="text-violet underline underline-offset-2 break-all">
+                <a href={event.mapUrl} target="_blank" rel="noopener noreferrer" className="text-violet-500 underline underline-offset-2 break-all">
                   {event.mapUrl}
                 </a>
               </Field>
@@ -510,7 +510,7 @@ export default async function AdminEventDetailPage({
                         href={src.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-violet underline underline-offset-2 break-all"
+                        className="text-violet-500 underline underline-offset-2 break-all"
                       >
                         {src.url}
                       </a>
@@ -544,7 +544,7 @@ export default async function AdminEventDetailPage({
                   href={event.ticketUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-violet underline underline-offset-2 break-all"
+                  className="text-violet-500 underline underline-offset-2 break-all"
                 >
                   {event.ticketUrl}
                 </a>
@@ -557,7 +557,7 @@ export default async function AdminEventDetailPage({
                   href={event.streamUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-violet underline underline-offset-2 break-all"
+                  className="text-violet-500 underline underline-offset-2 break-all"
                 >
                   {event.streamUrl}
                 </a>

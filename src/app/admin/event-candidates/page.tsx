@@ -101,12 +101,12 @@ export default async function AdminCandidatesPage() {
           Admin Dashboard
         </Link>
         <div className="flex items-center gap-2">
-          <FileSearch className="h-5 w-5 text-violet" />
+          <FileSearch className="h-5 w-5 text-violet-500" />
           <h1 className="text-xl font-bold text-text-base">候選活動審核</h1>
           {isAdmin && (
             <Link
               href="/admin/event-candidates/new"
-              className="ml-auto inline-flex items-center gap-1 rounded-lg bg-violet px-2.5 py-1.5 text-[11px] font-semibold text-white active:opacity-80 transition-opacity"
+              className="ml-auto inline-flex items-center gap-1 rounded-lg bg-violet-500 px-2.5 py-1.5 text-[11px] font-semibold text-white active:opacity-80 transition-opacity"
             >
               <Plus className="h-3 w-3" />
               新增候選
@@ -153,7 +153,7 @@ export default async function AdminCandidatesPage() {
         <div className="px-4 mb-3">
           <Link
             href="/admin/event-candidates/parse"
-            className="inline-flex items-center gap-2 rounded-xl border border-violet/40 bg-violet/10 px-3 py-2.5 text-xs font-semibold text-violet-200 active:opacity-80 transition-opacity"
+            className="inline-flex items-center gap-2 rounded-xl border border-violet-500/40 bg-violet-500/10 px-3 py-2.5 text-xs font-semibold text-violet-200 active:opacity-80 transition-opacity"
           >
             <Sparkles className="h-3.5 w-3.5" />
             AI 解析公告
@@ -175,7 +175,7 @@ export default async function AdminCandidatesPage() {
             href="/admin/sources"
             className="inline-flex items-center gap-2 rounded-xl border border-card-border bg-card px-3 py-2.5 text-xs font-semibold text-text-base active:opacity-80 transition-opacity"
           >
-            <Database className="h-3.5 w-3.5 text-violet" />
+            <Database className="h-3.5 w-3.5 text-violet-500" />
             資料來源管理
           </Link>
         </div>

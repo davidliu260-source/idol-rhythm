@@ -232,7 +232,7 @@ export default function EventsClient({ events, isAdmin }: Props) {
                 onClick={() => setTab(t)}
                 className={`flex-shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                   isActive
-                    ? 'bg-violet text-white'
+                    ? 'bg-violet-500 text-white'
                     : 'bg-card border border-card-border text-muted hover:text-text-base'
                 }`}
               >
@@ -259,7 +259,7 @@ export default function EventsClient({ events, isAdmin }: Props) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="搜尋藝人 / 活動標題 / 地點"
-            className="w-full rounded-xl bg-card border border-card-border pl-9 pr-9 py-2.5 text-xs text-text-base placeholder:text-muted focus:outline-none focus:border-violet/40"
+            className="w-full rounded-xl bg-card border border-card-border pl-9 pr-9 py-2.5 text-xs text-text-base placeholder:text-muted focus:outline-none focus:border-violet-500/40"
           />
           {query && (
             <button
@@ -354,7 +354,7 @@ export default function EventsClient({ events, isAdmin }: Props) {
                     bulkAction('publish_auto')
                   }}
                   disabled={isPending}
-                  className="inline-flex items-center justify-center gap-1 rounded-lg bg-violet px-3 py-2 text-xs font-semibold text-white disabled:opacity-50 active:opacity-70 transition-opacity"
+                  className="inline-flex items-center justify-center gap-1 rounded-lg bg-violet-500 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50 active:opacity-70 transition-opacity"
                 >
                   <ShieldCheck className="h-3.5 w-3.5" />
                   自動判斷 + 發布
@@ -439,7 +439,7 @@ function EventRow({
         >
           <div
             className={`h-4 w-4 rounded border flex items-center justify-center transition-colors ${
-              isChecked ? 'bg-violet border-violet' : 'border-card-border bg-transparent'
+              isChecked ? 'bg-violet-500 border-violet-500' : 'border-card-border bg-transparent'
             }`}
           >
             {isChecked && <Check className="h-2.5 w-2.5 text-white" />}
@@ -450,7 +450,7 @@ function EventRow({
       <Link
         href={`/admin/events/${event.id}`}
         className={`flex-1 rounded-xl bg-card border px-4 py-3 flex flex-col gap-1.5 active:opacity-70 transition-opacity ${
-          isChecked ? 'border-violet/50' : 'border-card-border'
+          isChecked ? 'border-violet-500/50' : 'border-card-border'
         } ${isPast && event.isPublished ? 'opacity-50' : ''}`}
       >
         <div className="flex items-center gap-2 flex-wrap">

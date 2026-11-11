@@ -106,7 +106,7 @@ export default async function AdminIdolDetailPage({
           返回偶像列表
         </Link>
         <div className="flex items-center gap-2">
-          <User className="h-5 w-5 text-violet" />
+          <User className="h-5 w-5 text-violet-500" />
           <h1 className="text-xl font-bold text-text-base">偶像詳情</h1>
         </div>
       </div>
@@ -152,14 +152,14 @@ export default async function AdminIdolDetailPage({
             )}
             <Link
               href={`/admin/idols/${idol.id}/edit`}
-              className="flex items-center gap-2 rounded-xl bg-violet/15 border border-violet/30 px-3 py-2.5 hover:bg-violet/20 transition-colors"
+              className="flex items-center gap-2 rounded-xl bg-violet-500/15 border border-violet-500/30 px-3 py-2.5 hover:bg-violet-500/20 transition-colors"
             >
-              <FileEdit className="h-4 w-4 text-violet flex-shrink-0" />
-              <span className="text-xs font-semibold text-violet">編輯偶像資料</span>
+              <FileEdit className="h-4 w-4 text-violet-500 flex-shrink-0" />
+              <span className="text-xs font-semibold text-violet-500">編輯偶像資料</span>
             </Link>
           </>
         ) : (
-          <div className="rounded-xl bg-violet/10 border border-violet/25 px-3 py-2.5">
+          <div className="rounded-xl bg-violet-500/10 border border-violet-500/25 px-3 py-2.5">
             <p className="text-xs text-muted leading-snug">只讀詳情預覽｜請以管理員身份登入</p>
           </div>
         )}

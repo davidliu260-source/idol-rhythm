@@ -7,7 +7,7 @@ export default function AdminLoginPage() {
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-2">
-          <Lock className="h-5 w-5 text-violet" />
+          <Lock className="h-5 w-5 text-violet-500" />
           <h1 className="text-xl font-bold text-text-base">管理員登入</h1>
         </div>
         <p className="text-xs text-muted mt-1">僅限已授權管理員使用</p>

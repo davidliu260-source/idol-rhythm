@@ -47,7 +47,7 @@ export default async function AdminParseCandidatePage() {
           候選活動列表
         </Link>
         <div className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-violet" />
+          <Sparkles className="h-5 w-5 text-violet-500" />
           <h1 className="text-xl font-bold text-text-base">AI 解析公告</h1>
         </div>
         <p className="text-xs text-muted mt-1">
@@ -57,7 +57,7 @@ export default async function AdminParseCandidatePage() {
 
       {/* Info banner */}
       <div className="px-4 mb-4">
-        <div className="rounded-xl bg-violet/10 border border-violet/25 px-3 py-2.5">
+        <div className="rounded-xl bg-violet-500/10 border border-violet-500/25 px-3 py-2.5">
           <p className="text-xs text-muted leading-snug">
             AI 只負責「猜」欄位 — 結果一律存為{' '}
             <span className="font-semibold text-text-base">pending</span> 候選，

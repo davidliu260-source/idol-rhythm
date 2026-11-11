@@ -116,7 +116,7 @@ export default function SourcesClient({ sources }: Props) {
                   isActive
                     ? isFailingChip
                       ? 'bg-amber-500 text-white'
-                      : 'bg-violet text-white'
+                      : 'bg-violet-500 text-white'
                     : isFailingChip
                       ? 'bg-amber-500/10 border border-amber-500/30 text-amber-400'
                       : 'bg-card border border-card-border text-muted hover:text-text-base'
@@ -145,7 +145,7 @@ export default function SourcesClient({ sources }: Props) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="搜尋名稱 / source_key / 偶像 / parser_type"
-            className="w-full rounded-xl bg-card border border-card-border pl-9 pr-9 py-2.5 text-xs text-text-base placeholder:text-muted focus:outline-none focus:border-violet/40"
+            className="w-full rounded-xl bg-card border border-card-border pl-9 pr-9 py-2.5 text-xs text-text-base placeholder:text-muted focus:outline-none focus:border-violet-500/40"
           />
           {query && (
             <button

@@ -47,7 +47,7 @@ export default async function AdminNewIdolPage() {
           Idols 列表
         </Link>
         <div className="flex items-center gap-2">
-          <UserPlus className="h-5 w-5 text-violet" />
+          <UserPlus className="h-5 w-5 text-violet-500" />
           <h1 className="text-xl font-bold text-text-base">新增偶像</h1>
         </div>
         <p className="text-xs text-muted mt-1">建立後即可在活動新增表單中選用此偶像</p>
