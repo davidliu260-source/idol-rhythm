@@ -251,10 +251,6 @@ function IdolRosterCard({
       />
 
       <div className="relative pl-3">
-        <span className="absolute right-0 top-0 rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/42">
-          roster
-        </span>
-
         <Link href={`/idols/${idol.id}`} className="block">
           <div className="flex items-start gap-3">
             <IdolAvatar
@@ -264,7 +260,7 @@ function IdolRosterCard({
               size="md"
             />
             <div className="min-w-0 flex-1">
-              <div className="pr-[74px]">
+              <div>
                 <h3 className="text-[18px] font-black leading-[1.12] text-white break-words">
                   {idol.name}
                 </h3>
