@@ -15,7 +15,7 @@ import { type Event } from '@/lib/mockEvents'
 import HomeNotificationBell from '@/components/HomeNotificationBell'
 import HomePersonalized from '@/components/HomePersonalized'
 import HomeTimeline from '@/components/HomeTimeline'
-import { SCHEDULE_ARCHIVE_SHELL } from './schedule/scheduleTheme'
+import { PAGE_HERO_SHELL } from './schedule/scheduleTheme'
 import clsx from 'clsx'
 
 export default async function HomePage() {
@@ -44,21 +44,18 @@ export default async function HomePage() {
               IDOL · RHYTHM
             </p>
             <h1 className="mt-2 text-[34px] font-black leading-none tracking-normal text-white">
-              今日檔案
+              今天追什麼
             </h1>
             <p className="mt-2 text-sm text-white/52">{dateStr}</p>
           </div>
           <HomeNotificationBell />
         </header>
 
-        <section className={clsx(SCHEDULE_ARCHIVE_SHELL, 'px-5 py-5')}>
-          <div className="pointer-events-none absolute inset-0 opacity-[0.12] [background-image:radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.85)_1px,transparent_0)] [background-size:13px_13px]" />
-          <div className="pointer-events-none absolute inset-0 rounded-[28px] border border-white/6" />
-
+        <section className={clsx(PAGE_HERO_SHELL, 'px-5 py-5')}>
           <div className="relative">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.26em] text-[#ff8bc8]">
-                TODAY ARCHIVE
+                今日焦點
               </p>
               <h2 className="mt-3 text-2xl font-black leading-tight text-white">
                 {spotlight ? '今天從這裡開始追' : '今天暫無公開活動'}
@@ -87,19 +84,19 @@ export default async function HomePage() {
             href="/schedule"
             icon={<ListMusic className="h-4 w-4" />}
             label="行程"
-            meta="Tracklist"
+            meta="依日期瀏覽"
           />
           <QuickAccess
             href="/atlas"
             icon={<Heart className="h-4 w-4" />}
             label="圖鑑"
-            meta="Archive"
+            meta="我的收藏"
           />
           <QuickAccess
             href="/idols"
             icon={<Star className="h-4 w-4" />}
             label="偶像"
-            meta="Roster"
+            meta="追蹤名單"
           />
         </section>
 
@@ -156,9 +153,6 @@ function SpotlightCard({ event, isToday }: { event: Event; isToday: boolean }) {
               {event.title}
             </h3>
           </div>
-          <span className="flex-shrink-0 rounded-full border border-white/12 bg-white/[0.045] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/52">
-            TRK 01
-          </span>
         </div>
 
         <div className="mt-4 rounded-[18px] border border-white/10 bg-white/[0.035] px-3 py-3">
@@ -174,7 +168,7 @@ function SpotlightCard({ event, isToday }: { event: Event; isToday: boolean }) {
         <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/8 pt-3">
           <span className="inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.24em] text-white/38">
             <Sparkles className="h-3.5 w-3.5 text-[#ff8bc8]" />
-            NOW SPINNING
+            最近一場
           </span>
           <span className="inline-flex items-center gap-1 text-xs font-semibold text-white/62">
             查看詳情

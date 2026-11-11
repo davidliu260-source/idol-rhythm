@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { redirect } from 'next/navigation'
 import { Settings } from 'lucide-react'
-import AuthArchiveLayout from '@/components/AuthArchiveLayout'
+import AuthPageLayout from '@/components/AuthPageLayout'
 import { getCurrentUser } from '@/lib/supabase/auth'
 import AccountSettingsClient from './AccountSettingsClient'
 
@@ -27,10 +27,10 @@ export default async function AccountSettingsPage() {
   }
 
   return (
-    <AuthArchiveLayout
+    <AuthPageLayout
       backHref="/me"
       backLabel="返回個人頁"
-      eyebrow="ACCOUNT ARCHIVE"
+      eyebrow="IDOL · RHYTHM"
       title="帳號設定"
       description="管理目前登入帳號的 email 與資料保存。刪除帳號為不可復原操作，請務必確認後再執行。"
       icon={<Settings className="h-5 w-5" />}
@@ -44,6 +44,6 @@ export default async function AccountSettingsPage() {
       }
     >
       <AccountSettingsClient currentEmail={user.email} />
-    </AuthArchiveLayout>
+    </AuthPageLayout>
   )
 }

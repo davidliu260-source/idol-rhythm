@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { KeyRound } from 'lucide-react'
-import AuthArchiveLayout from '@/components/AuthArchiveLayout'
+import AuthPageLayout from '@/components/AuthPageLayout'
 import ForgotPasswordForm from './ForgotPasswordForm'
 
 /**
@@ -18,12 +18,12 @@ import ForgotPasswordForm from './ForgotPasswordForm'
  */
 export default function ForgotPasswordPage() {
   return (
-    <AuthArchiveLayout
+    <AuthPageLayout
       backHref="/login"
       backLabel="返回登入"
       eyebrow="RECOVERY ACCESS"
       title="忘記密碼"
-      description="輸入註冊時使用的 email，我們會寄一封重設密碼連結。點開連結後，就能回到 archive 內設定新密碼。"
+      description="輸入註冊時使用的 email，我們會寄一封重設密碼連結。點開連結後，就能回來設定新密碼。"
       icon={<KeyRound className="h-5 w-5" />}
       headerAside={
         <>
@@ -35,6 +35,6 @@ export default function ForgotPasswordPage() {
       }
     >
       <ForgotPasswordForm />
-    </AuthArchiveLayout>
+    </AuthPageLayout>
   )
 }

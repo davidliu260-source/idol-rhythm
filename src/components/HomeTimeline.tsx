@@ -127,8 +127,8 @@ function FollowedView({
         />
         {followedEvents.length > 0 ? (
           <div className="flex flex-col gap-3">
-            {followedEvents.map((event, index) => (
-              <HomeTrackDisclosure key={event.id} event={event} trackNumber={index + 1} />
+            {followedEvents.map((event) => (
+              <HomeTrackDisclosure key={event.id} event={event} />
             ))}
             <SeeAllFooter
               shown={followedEvents.length}
@@ -158,8 +158,8 @@ function FollowedView({
             href="/schedule"
           />
           <div className="flex flex-col gap-3">
-            {otherEvents.map((event, index) => (
-              <HomeTrackDisclosure key={event.id} event={event} trackNumber={index + 1} />
+            {otherEvents.map((event) => (
+              <HomeTrackDisclosure key={event.id} event={event} />
             ))}
             <SeeAllFooter shown={otherEvents.length} total={otherTotal} />
           </div>
@@ -219,8 +219,8 @@ function DefaultView({
         />
         {todayEvents.length > 0 ? (
           <div className="flex flex-col gap-3">
-            {todayEvents.map((event, index) => (
-              <HomeTrackDisclosure key={event.id} event={event} trackNumber={index + 1} />
+            {todayEvents.map((event) => (
+              <HomeTrackDisclosure key={event.id} event={event} />
             ))}
           </div>
         ) : (
@@ -245,8 +245,8 @@ function DefaultView({
             href="/schedule"
           />
           <div className="flex flex-col gap-3">
-            {weekHighlights.slice(0, 3).map((event, index) => (
-              <HomeTrackDisclosure key={event.id} event={event} trackNumber={index + 1} />
+            {weekHighlights.slice(0, 3).map((event) => (
+              <HomeTrackDisclosure key={event.id} event={event} />
             ))}
             <SeeAllFooter shown={Math.min(3, weekHighlights.length)} total={weekHighlights.length} />
           </div>
@@ -262,8 +262,8 @@ function DefaultView({
             href="/schedule"
           />
           <div className="flex flex-col gap-3">
-            {streamableEvents.slice(0, 3).map((event, index) => (
-              <HomeTrackDisclosure key={event.id} event={event} trackNumber={index + 1} />
+            {streamableEvents.slice(0, 3).map((event) => (
+              <HomeTrackDisclosure key={event.id} event={event} />
             ))}
             <SeeAllFooter shown={Math.min(3, streamableEvents.length)} total={streamableEvents.length} />
           </div>
@@ -279,8 +279,8 @@ function DefaultView({
             href="/schedule"
           />
           <div className="flex flex-col gap-3">
-            {newsEvents.slice(0, 3).map((event, index) => (
-              <HomeTrackDisclosure key={event.id} event={event} trackNumber={index + 1} />
+            {newsEvents.slice(0, 3).map((event) => (
+              <HomeTrackDisclosure key={event.id} event={event} />
             ))}
             <SeeAllFooter shown={Math.min(3, newsEvents.length)} total={newsEvents.length} />
           </div>
@@ -345,10 +345,8 @@ function SectionHeader({
 
 function HomeTrackDisclosure({
   event,
-  trackNumber,
 }: {
   event: Event
-  trackNumber: number
 }) {
   const { favorites } = useAppState()
   const [expanded, setExpanded] = useState(false)
@@ -408,7 +406,6 @@ function HomeTrackDisclosure({
         >
           <ScheduleTrackCard
             event={event}
-            trackNumber={trackNumber}
             onCollapse={collapseExpandedCard}
           />
         </div>
@@ -433,9 +430,6 @@ function HomeTrackDisclosure({
             <div className="flex min-w-0 items-center gap-2">
               <span className="truncate text-[12px] font-semibold text-[#ff73c1]">
                 {event.idolName}
-              </span>
-              <span className="rounded-full border border-white/8 bg-white/[0.04] px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.16em] text-white/38">
-                TRK {String(trackNumber).padStart(2, '0')}
               </span>
             </div>
             <p className="mt-0.5 line-clamp-1 text-[14px] font-semibold leading-5 text-white/88">

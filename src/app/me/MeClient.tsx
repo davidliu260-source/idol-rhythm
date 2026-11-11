@@ -19,7 +19,7 @@ import {
   User,
 } from 'lucide-react'
 import IdolAvatar from '@/components/IdolAvatar'
-import { SCHEDULE_ARCHIVE_SHELL } from '@/app/schedule/scheduleTheme'
+import { PAGE_HERO_SHELL } from '@/app/schedule/scheduleTheme'
 import { useAppState } from '@/lib/appState'
 import { getBrowserSupabaseClient } from '@/lib/supabase/browserClient'
 import { getUnreadNotificationCount } from '@/lib/supabase/notifications'
@@ -83,8 +83,7 @@ export default function MeClient({
   if (!user) {
     return (
       <ConsoleShell>
-        <section className={clsx(SCHEDULE_ARCHIVE_SHELL, 'px-5 py-5')}>
-          <div className="pointer-events-none absolute inset-0 rounded-[28px] border border-white/6" />
+        <section className={clsx(PAGE_HERO_SHELL, 'px-5 py-5')}>
           <div className="relative">
             <p className="text-[11px] font-medium uppercase tracking-[0.32em] text-white/34">
               PRIVATE CONSOLE
@@ -98,7 +97,7 @@ export default function MeClient({
                   我的控制台
                 </h1>
                 <p className="mt-2 text-sm text-white/58">
-                  登入後把追蹤、收藏、提醒和通知都收進同一個 archive。
+                  登入後，追蹤的偶像、收藏、提醒和通知都會集中在這裡。
                 </p>
               </div>
             </div>
@@ -133,8 +132,7 @@ export default function MeClient({
 
   return (
     <ConsoleShell>
-      <section className={clsx(SCHEDULE_ARCHIVE_SHELL, 'px-5 py-5')}>
-        <div className="pointer-events-none absolute inset-0 rounded-[28px] border border-white/6" />
+      <section className={clsx(PAGE_HERO_SHELL, 'px-5 py-5')}>
         <div className="relative">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -310,7 +308,7 @@ export default function MeClient({
             </div>
           ) : (
             <EmptyState
-              text="還沒有收藏活動。從行程或詳情頁收進你的 archive shelf。"
+              text="還沒有收藏活動。從行程或詳情頁按愛心，收進你的圖鑑。"
               href="/atlas"
               label="去圖鑑"
             />

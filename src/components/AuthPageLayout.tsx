@@ -2,9 +2,9 @@ import type { ReactNode } from 'react'
 import Link from 'next/link'
 import clsx from 'clsx'
 import { ArrowLeft } from 'lucide-react'
-import { SCHEDULE_ARCHIVE_SHELL } from '@/app/schedule/scheduleTheme'
+import { PAGE_HERO_SHELL } from '@/app/schedule/scheduleTheme'
 
-export default function AuthArchiveLayout({
+export default function AuthPageLayout({
   backHref,
   backLabel,
   eyebrow,
@@ -36,10 +36,7 @@ export default function AuthArchiveLayout({
           {backLabel}
         </Link>
 
-        <section className={clsx(SCHEDULE_ARCHIVE_SHELL, 'px-5 py-5')}>
-          <div className="pointer-events-none absolute inset-0 rounded-[28px] border border-white/6" />
-          <div className="pointer-events-none absolute inset-0 opacity-[0.12] [background-image:radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.85)_1px,transparent_0)] [background-size:13px_13px]" />
-
+        <section className={clsx(PAGE_HERO_SHELL, 'px-5 py-5')}>
           <div className="relative">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0 flex-1">
@@ -64,7 +61,6 @@ export default function AuthArchiveLayout({
                 </div>
               ) : null}
             </div>
-
             <div className="mt-5">{children}</div>
           </div>
         </section>

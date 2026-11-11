@@ -2,7 +2,7 @@
 
 import { type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
-import { Bell, Clock3, Heart, MapPin, Minimize2, Radio, Sparkles } from 'lucide-react'
+import { Bell, Clock3, Heart, MapPin, Minimize2, Radio } from 'lucide-react'
 import clsx from 'clsx'
 import IdolAvatar from '@/components/IdolAvatar'
 import { useAppState } from '@/lib/appState'
@@ -11,14 +11,12 @@ import { EVENT_SUBTYPE_LABELS, EVENT_TYPE_LABELS, type Event } from '@/lib/mockE
 
 interface ScheduleTrackCardProps {
   event: Event
-  trackNumber: number
   compact?: boolean
   onCollapse?: () => void
 }
 
 export default function ScheduleTrackCard({
   event,
-  trackNumber,
   compact = false,
   onCollapse,
 }: ScheduleTrackCardProps) {
@@ -27,9 +25,6 @@ export default function ScheduleTrackCard({
   const isFavorited = favorites.has(event.id)
   const hasReminder = reminders.has(event.id)
   const dateLabel = getEventDateLabel(event)
-  const timeVenueText = [dateLabel, event.time, event.venueName || event.location, event.country]
-    .filter(Boolean)
-    .join('  ·  ')
 
   function navigateToDetail() {
     router.push(`/events/${event.id}`)
@@ -87,23 +82,17 @@ export default function ScheduleTrackCard({
                 <span className="truncate text-[13px] font-semibold tracking-[0.02em] text-[#ff61b7]">
                   {event.idolName}
                 </span>
-                {event.originalTitle && (
-                  <span className="hidden text-[10px] uppercase tracking-[0.24em] text-white/30 sm:inline">
-                    archive
-                  </span>
-                )}
               </div>
               <h3 className="mt-1 text-[17px] font-semibold leading-[1.26] text-white">
                 {event.title}
               </h3>
             </div>
 
-            <div className="flex items-center gap-2">
-              {onCollapse && (
+            {onCollapse && (
+              <div className="flex items-center gap-2">
                 <CollapseButton onClick={handleCollapse} />
-              )}
-              <TrackCode trackNumber={trackNumber} />
-            </div>
+              </div>
+            )}
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -141,11 +130,6 @@ export default function ScheduleTrackCard({
         </div>
 
         <HeartButton active={isFavorited} onClick={handleFavorite} />
-      </div>
-
-      <div className="relative mt-3 flex items-center justify-between gap-3 text-[10px] uppercase tracking-[0.2em] text-white/28">
-        <span className="truncate">cassette archive</span>
-        <span className="truncate text-right">{timeVenueText}</span>
       </div>
     </div>
   )
@@ -249,15 +233,6 @@ function CollapseButton({
     >
       <Minimize2 className="h-4 w-4" />
     </button>
-  )
-}
-
-function TrackCode({ trackNumber }: { trackNumber: number }) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-white/8 bg-white/[0.045] px-2 py-1 text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
-      <Sparkles className="h-2.5 w-2.5" />
-      {`TRK ${String(trackNumber).padStart(2, '0')}`}
-    </span>
   )
 }
 

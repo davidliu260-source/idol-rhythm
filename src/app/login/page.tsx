@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
 import { Mail, ShieldCheck } from 'lucide-react'
-import AuthArchiveLayout from '@/components/AuthArchiveLayout'
+import AuthPageLayout from '@/components/AuthPageLayout'
 import { getCurrentUser } from '@/lib/supabase/auth'
 import LoginForm from './LoginForm'
 
@@ -17,12 +17,12 @@ export default async function LoginPage({
   // Already signed in
   if (user) {
     return (
-      <AuthArchiveLayout
+      <AuthPageLayout
         backHref="/me"
         backLabel="回到個人頁"
-        eyebrow="ACCESS ARCHIVE"
+        eyebrow="IDOL · RHYTHM"
         title="會員入口"
-        description="你目前已經在 archive 內。若要查看提醒、收藏與通知入口，可以直接回到個人控制台。"
+        description="你目前已經登入。若要查看提醒、收藏與通知入口，可以直接回到個人控制台。"
         icon={<ShieldCheck className="h-5 w-5" />}
         headerAside={
           <>
@@ -59,17 +59,17 @@ export default async function LoginPage({
             </Link>
           </div>
         </div>
-      </AuthArchiveLayout>
+      </AuthPageLayout>
     )
   }
 
   return (
-    <AuthArchiveLayout
+    <AuthPageLayout
       backHref="/me"
       backLabel="回到個人頁"
-      eyebrow="ACCESS ARCHIVE"
+      eyebrow="IDOL · RHYTHM"
       title="登入會員"
-      description="把你的收藏、追蹤、提醒和通知入口同步到帳號裡。之後換裝置、登入 app，都能回到同一份 archive。"
+      description="把你的收藏、追蹤、提醒和通知入口同步到帳號裡。之後換裝置、登入 app，都能接著追你的偶像。"
       icon={<Mail className="h-5 w-5" />}
       headerAside={
         <>
@@ -89,7 +89,7 @@ export default async function LoginPage({
       ) : null}
 
       <LoginForm nextPath={next} />
-    </AuthArchiveLayout>
+    </AuthPageLayout>
   )
 }
 

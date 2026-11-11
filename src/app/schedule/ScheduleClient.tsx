@@ -180,35 +180,24 @@ function TimelineView({
         </div>
       )}
 
-      {monthGroups.map((group, index) => {
-        const previousCount = monthGroups
-          .slice(0, index)
-          .reduce((sum, item) => sum + item.events.length, 0)
-        return (
-          <MonthGroup
-            key={group.key}
-            group={group}
-            startTrack={previousCount + 1}
-            sideLabel={index % 2 === 0 ? 'SIDE A' : 'SIDE B'}
-            expanded={expandedMonths.has(group.key)}
-            onToggle={() => toggleMonth(group.key)}
-          />
-        )
-      })}
+      {monthGroups.map((group) => (
+        <MonthGroup
+          key={group.key}
+          group={group}
+          expanded={expandedMonths.has(group.key)}
+          onToggle={() => toggleMonth(group.key)}
+        />
+      ))}
     </div>
   )
 }
 
 function MonthGroup({
   group,
-  startTrack,
-  sideLabel,
   expanded,
   onToggle,
 }: {
-  group: MonthArchiveGroup
-  startTrack: number
-  sideLabel: string
+  group: MonthEventGroup
   expanded: boolean
   onToggle: () => void
 }) {
@@ -220,28 +209,24 @@ function MonthGroup({
         className="mb-3 flex w-full items-center justify-between gap-3 rounded-[22px] border border-white/8 bg-white/[0.035] px-3 py-3 text-left transition-colors hover:bg-white/[0.055]"
       >
         <div className="flex min-w-0 items-center gap-3">
-          <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-white/50">
-            {sideLabel}
-          </span>
           <div className="min-w-0">
             <p className="truncate text-[20px] font-bold leading-none text-white/90">{group.label}</p>
-            <p className="mt-1 text-[10px] uppercase tracking-[0.24em] text-[#ff88cc]/70">future archive</p>
+            <p className="mt-1 text-[10px] uppercase tracking-[0.24em] text-[#ff88cc]/70">即將舉行</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <span className="rounded-full border border-[#ff6dbd24] bg-[#ff63bd10] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#ff8ecf]">
-            {group.events.length} tracks
+            {group.events.length} 場
           </span>
           <ChevronDown className={clsx('h-4 w-4 text-white/45 transition-transform', expanded && 'rotate-180')} />
         </div>
       </button>
       {expanded && (
         <div className="flex flex-col gap-2">
-          {group.events.map((event, index) => (
+          {group.events.map((event) => (
             <TrackDisclosure
               key={event.id}
               event={event}
-              trackNumber={startTrack + index}
             />
           ))}
         </div>
@@ -252,10 +237,8 @@ function MonthGroup({
 
 function TrackDisclosure({
   event,
-  trackNumber,
 }: {
   event: Event
-  trackNumber: number
 }) {
   const { favorites } = useAppState()
   const [expanded, setExpanded] = useState(false)
@@ -315,7 +298,6 @@ function TrackDisclosure({
         >
           <ScheduleTrackCard
             event={event}
-            trackNumber={trackNumber}
             onCollapse={collapseExpandedCard}
           />
         </div>
@@ -339,9 +321,6 @@ function TrackDisclosure({
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-center gap-2">
               <span className="truncate text-[12px] font-semibold text-[#ff73c1]">{event.idolName}</span>
-              <span className="rounded-full border border-white/8 bg-white/[0.04] px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.16em] text-white/38">
-                TRK {String(trackNumber).padStart(2, '0')}
-              </span>
             </div>
             <p className="mt-0.5 line-clamp-1 text-[14px] font-semibold leading-5 text-white/88">
               {event.title}
@@ -546,12 +525,11 @@ function CalendarView({
         {selectedDate && selectedEvents.length === 0 && (
           <p className="rounded-[18px] border border-white/8 bg-white/[0.02] py-4 text-center text-xs text-white/38">該日無活動</p>
         )}
-        {selectedEvents.map((event, index) => (
+        {selectedEvents.map((event) => (
           <ScheduleTrackCard
             key={event.id}
             event={event}
             compact
-            trackNumber={index + 1}
           />
         ))}
         {!selectedDate && (
@@ -681,7 +659,7 @@ function ScheduleSearchPanel({
   )
 }
 
-interface MonthArchiveGroup {
+interface MonthEventGroup {
   key: string
   label: string
   events: Event[]
@@ -732,9 +710,9 @@ function matchesScheduleCategory(event: Event, category: ScheduleCategory): bool
   }
 }
 
-function buildFutureMonthGroups(events: Event[]): MonthArchiveGroup[] {
+function buildFutureMonthGroups(events: Event[]): MonthEventGroup[] {
   const today = startOfToday()
-  const groups = new Map<string, MonthArchiveGroup>()
+  const groups = new Map<string, MonthEventGroup>()
 
   for (const event of events) {
     const date = new Date(event.date)

@@ -215,7 +215,7 @@ export default function LoginForm({ nextPath }: { nextPath: string }) {
           {oauthSubmitting ? '導向 Google…' : '使用 Google 登入'}
         </button>
         <p className="mt-3 text-xs leading-6 text-white/46">
-          想最快進入 archive，可以直接走 Google。下面也保留 email 密碼與 magic link。
+          想最快登入，可以直接用 Google。下面也保留 email 密碼與 magic link。
         </p>
       </section>
 

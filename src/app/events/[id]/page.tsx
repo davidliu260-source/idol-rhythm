@@ -46,7 +46,6 @@ export default async function EventDetailPage({
   const statusLabel = getStatusLabel(event)
   const venueLabel = event.venueName || event.location || event.city || event.country
   const locationLine = [event.city, event.country].filter(Boolean).join(', ')
-  const trackCode = getTrackCode(event.id)
   const coverTitle = getCoverTitle(event)
   const shareText = `${event.idolName} · ${event.title}`
 
@@ -73,21 +72,12 @@ export default async function EventDetailPage({
         )}
 
         <section className="relative overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(33,27,39,0.96),rgba(18,15,24,0.98))] p-4 shadow-[0_22px_80px_rgba(0,0,0,0.42)]">
-          <div className="pointer-events-none absolute inset-0 opacity-[0.16] [background-image:radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.8)_1px,transparent_0)] [background-size:13px_13px]" />
-          <div className="pointer-events-none absolute inset-0 rounded-[26px] border border-white/6" />
-          <div className="absolute inset-y-0 left-5 w-7 bg-[linear-gradient(180deg,rgba(255,96,154,0.86),rgba(148,92,255,0.74))]" />
-
-          <div className="relative pl-12">
+          <div className="relative">
             <div className="mb-5 flex items-start justify-between gap-3">
               <div className="space-y-1">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/52">IR-{trackCode}</p>
                 <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-white/38">IDOL · RHYTHM</p>
               </div>
-              <div className="rounded-md border border-[#ff5aa8]/45 px-2 py-1 text-[11px] font-medium uppercase tracking-[0.22em] text-[#ff79bd]">
-                TRK · 01
-              </div>
             </div>
-
             <div className="mb-5">
               <p className="text-[42px] font-black uppercase leading-none tracking-normal text-[#ff5f9f]">
                 {event.idolName}
@@ -96,7 +86,6 @@ export default async function EventDetailPage({
                 {coverTitle}
               </h1>
             </div>
-
             <div className="border-t border-white/12 pt-4">
               <p className="text-[22px] font-black uppercase tracking-normal text-[#a77bff]">
                 {event.city || event.country}
@@ -105,7 +94,6 @@ export default async function EventDetailPage({
                 {locationLine || venueLabel}
               </p>
             </div>
-
             <div className="mt-4 rounded-lg border border-white/10 bg-white/[0.025] p-3">
               <div className="flex items-start gap-2 text-xs text-white/74">
                 <CalendarDays className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-[#ff86c4]" />
@@ -118,15 +106,9 @@ export default async function EventDetailPage({
                 </div>
               )}
             </div>
-
             <div className="mt-4 grid grid-cols-2 gap-2">
-              <CassetteSpec label="Status" value={statusLabel} tone="green" />
-              <CassetteSpec label="Type" value={typeLabel} tone="violet" />
-            </div>
-
-            <div className="mt-4 flex items-end justify-between gap-3 text-[10px] uppercase tracking-[0.16em] text-white/36">
-              <span>© 2026 Idol Rhythm</span>
-              <span>VOL.05 · 2026</span>
+              <SpecTile label="狀態" value={statusLabel} tone="green" />
+              <SpecTile label="類型" value={typeLabel} tone="violet" />
             </div>
           </div>
         </section>
@@ -216,7 +198,7 @@ export default async function EventDetailPage({
   )
 }
 
-function CassetteSpec({
+function SpecTile({
   label,
   value,
   tone,
@@ -356,10 +338,6 @@ function getSourceTypeLabel(type: string): string {
     unknown: '來源類型未標記',
   }
   return labels[type] ?? type
-}
-
-function getTrackCode(id: string): string {
-  return id.replace(/[^a-z0-9]/gi, '').slice(0, 6).toUpperCase().padEnd(6, '0')
 }
 
 function getCoverTitle(event: Event): string {
