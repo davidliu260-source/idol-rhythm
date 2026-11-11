@@ -106,7 +106,10 @@ export async function GET(
     )
   }
 
-  const { result, error } = await runActiveCrawlerSources(supabase, { dryRun })
+  const { result, error } = await runActiveCrawlerSources(supabase, {
+    dryRun,
+    trigger: 'vercel-cron',
+  })
   if (!result) {
     return NextResponse.json(
       {

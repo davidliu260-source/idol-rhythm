@@ -1,9 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import clsx from 'clsx'
 import {
+  CalendarDays,
   ChevronRight,
+  Clock3,
+  Heart,
+  MapPin,
   Newspaper,
   Play,
   Sparkles,
@@ -11,10 +16,17 @@ import {
   UserPlus,
   Zap,
 } from 'lucide-react'
-import { type Event } from '@/lib/mockEvents'
+import {
+  EVENT_SUBTYPE_LABELS,
+  EVENT_TYPE_LABELS,
+  SOURCE_CONFIG,
+  type Event,
+} from '@/lib/mockEvents'
 import { type Idol } from '@/lib/mockIdols'
 import { useAppState } from '@/lib/appState'
-import EventCard from './EventCard'
+import { getEventDateLabel } from '@/lib/eventDisplay'
+import IdolAvatar from './IdolAvatar'
+import ScheduleTrackCard from '@/app/schedule/ScheduleTrackCard'
 
 const MAX_FOLLOWED = 8
 const MAX_MORE = 6
@@ -68,7 +80,7 @@ export default function HomeTimeline({
   const hasFollows = mounted && following.ids.length > 0
 
   if (hasFollows) {
-    return <FollowedView events={events} followedSlugs={following.ids} />
+    return <FollowedView events={events} followedIds={following.ids} />
   }
 
   return <DefaultView events={events} showFollowHint={mounted} />
@@ -78,12 +90,12 @@ export default function HomeTimeline({
 
 function FollowedView({
   events,
-  followedSlugs,
+  followedIds,
 }: {
   events: Event[]
-  followedSlugs: string[]
+  followedIds: string[]
 }) {
-  const followedSet = new Set(followedSlugs)
+  const followedSet = new Set(followedIds)
 
   // F2: keep the totals so we can show "查看全部 N 場 →" footers when truncated.
   const followedSorted = events
@@ -92,12 +104,12 @@ function FollowedView({
   const followedTotal = followedSorted.length
   const followedEvents = followedSorted.slice(0, MAX_FOLLOWED)
 
-  const followedIds = new Set(followedEvents.map((e) => e.id))
+  const followedEventIds = new Set(followedEvents.map((e) => e.id))
   const otherSorted = events
     .filter(
       (e) =>
         !followedSet.has(e.idolId) &&
-        !followedIds.has(e.id) &&
+        !followedEventIds.has(e.id) &&
         isFutureOrToday(e.date),
     )
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
@@ -105,30 +117,31 @@ function FollowedView({
   const otherEvents = otherSorted.slice(0, MAX_MORE)
 
   return (
-    <div className="flex flex-col gap-6">
-      <section>
+    <div className="flex flex-col gap-5">
+      <section className="rounded-[26px] border border-white/8 bg-white/[0.035] p-4">
         <SectionHeader
           icon={<Sparkles className="h-4 w-4 text-primary" />}
           title="我追蹤的近期行程"
           count={followedTotal}
-          href="/schedule"
+          href="/atlas"
         />
         {followedEvents.length > 0 ? (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             {followedEvents.map((event) => (
-              <EventCard key={event.id} event={event} />
+              <HomeTrackDisclosure key={event.id} event={event} />
             ))}
             <SeeAllFooter
               shown={followedEvents.length}
               total={followedTotal}
+              href="/atlas"
             />
           </div>
         ) : (
-          <div className="rounded-2xl border border-card-border bg-card px-4 py-5 text-center">
-            <p className="text-sm text-muted">追蹤的偶像目前沒有公開行程</p>
+          <div className="rounded-[22px] border border-white/8 bg-white/[0.035] px-4 py-5 text-center">
+            <p className="text-sm text-white/54">追蹤的偶像目前沒有公開行程</p>
             <Link
               href="/schedule"
-              className="mt-1 inline-block text-xs text-primary"
+              className="mt-2 inline-block text-xs font-semibold text-[#ff8bc8]"
             >
               查看完整行程 →
             </Link>
@@ -137,16 +150,16 @@ function FollowedView({
       </section>
 
       {otherEvents.length > 0 && (
-        <section>
+        <section className="rounded-[26px] border border-white/8 bg-white/[0.035] p-4">
           <SectionHeader
             icon={<Star className="h-4 w-4 text-yellow-400" />}
             title="更多星動行程"
             count={otherTotal}
             href="/schedule"
           />
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             {otherEvents.map((event) => (
-              <EventCard key={event.id} event={event} compact />
+              <HomeTrackDisclosure key={event.id} event={event} />
             ))}
             <SeeAllFooter shown={otherEvents.length} total={otherTotal} />
           </div>
@@ -179,17 +192,17 @@ function DefaultView({
   )
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       {showFollowHint && (
-        <div className="rounded-xl bg-primary-dim border border-primary/30 px-3 py-2.5 flex items-start gap-2">
-          <UserPlus className="h-3.5 w-3.5 text-primary flex-shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 rounded-[22px] border border-[#ff6cb7]/18 bg-[#ff4ca1]/10 px-3 py-3">
+          <UserPlus className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#ff8bc8]" />
           <div className="flex-1 flex flex-col gap-1">
-            <p className="text-xs text-text-base leading-snug">
+            <p className="text-xs leading-5 text-white/68">
               追蹤偶像後，這裡會優先顯示你的專屬行程
             </p>
             <Link
               href="/idols"
-              className="self-start text-xs font-semibold text-primary"
+              className="self-start text-xs font-semibold text-[#ff8bc8]"
             >
               去選偶像 →
             </Link>
@@ -197,7 +210,7 @@ function DefaultView({
         </div>
       )}
 
-      <section>
+      <section className="rounded-[26px] border border-white/8 bg-white/[0.035] p-4">
         <SectionHeader
           icon={<Zap className="h-4 w-4 text-primary" />}
           title="今日不能錯過"
@@ -205,17 +218,17 @@ function DefaultView({
           href="/schedule"
         />
         {todayEvents.length > 0 ? (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             {todayEvents.map((event) => (
-              <EventCard key={event.id} event={event} />
+              <HomeTrackDisclosure key={event.id} event={event} />
             ))}
           </div>
         ) : (
-          <div className="rounded-2xl border border-card-border bg-card px-4 py-5 text-center">
-            <p className="text-sm text-muted">今天沒有公開確認的活動</p>
+          <div className="rounded-[22px] border border-white/8 bg-white/[0.035] px-4 py-5 text-center">
+            <p className="text-sm text-white/54">今天沒有公開確認的活動</p>
             <Link
               href="/schedule"
-              className="mt-1 inline-block text-xs text-primary"
+              className="mt-2 inline-block text-xs font-semibold text-[#ff8bc8]"
             >
               查看完整行程 →
             </Link>
@@ -224,16 +237,16 @@ function DefaultView({
       </section>
 
       {weekHighlights.length > 0 && (
-        <section>
+        <section className="rounded-[26px] border border-white/8 bg-white/[0.035] p-4">
           <SectionHeader
             icon={<Star className="h-4 w-4 text-yellow-400" />}
             title="本週重點"
             count={weekHighlights.length}
             href="/schedule"
           />
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             {weekHighlights.slice(0, 3).map((event) => (
-              <EventCard key={event.id} event={event} compact />
+              <HomeTrackDisclosure key={event.id} event={event} />
             ))}
             <SeeAllFooter shown={Math.min(3, weekHighlights.length)} total={weekHighlights.length} />
           </div>
@@ -241,16 +254,16 @@ function DefaultView({
       )}
 
       {streamableEvents.length > 0 && (
-        <section>
+        <section className="rounded-[26px] border border-white/8 bg-white/[0.035] p-4">
           <SectionHeader
             icon={<Play className="h-4 w-4 text-red-400" />}
             title="最近可看"
             count={streamableEvents.length}
             href="/schedule"
           />
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             {streamableEvents.slice(0, 3).map((event) => (
-              <EventCard key={event.id} event={event} compact />
+              <HomeTrackDisclosure key={event.id} event={event} />
             ))}
             <SeeAllFooter shown={Math.min(3, streamableEvents.length)} total={streamableEvents.length} />
           </div>
@@ -258,16 +271,16 @@ function DefaultView({
       )}
 
       {newsEvents.length > 0 && (
-        <section>
+        <section className="rounded-[26px] border border-white/8 bg-white/[0.035] p-4">
           <SectionHeader
             icon={<Newspaper className="h-4 w-4 text-sky-400" />}
             title="最新情報"
             count={newsEvents.length}
             href="/schedule"
           />
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             {newsEvents.slice(0, 3).map((event) => (
-              <EventCard key={event.id} event={event} compact />
+              <HomeTrackDisclosure key={event.id} event={event} />
             ))}
             <SeeAllFooter shown={Math.min(3, newsEvents.length)} total={newsEvents.length} />
           </div>
@@ -282,12 +295,20 @@ function DefaultView({
  * full list fits inside the displayed slice (shown >= total) — keeps the
  * homepage uncluttered when traffic is low.
  */
-function SeeAllFooter({ shown, total }: { shown: number; total: number }) {
+function SeeAllFooter({
+  shown,
+  total,
+  href = '/schedule',
+}: {
+  shown: number
+  total: number
+  href?: string
+}) {
   if (shown >= total) return null
   return (
     <Link
-      href="/schedule"
-      className="rounded-2xl border border-card-border bg-card/60 px-4 py-2.5 text-xs font-medium text-primary text-center hover:bg-card transition-colors"
+      href={href}
+      className="rounded-[18px] border border-white/8 bg-white/[0.035] px-4 py-2.5 text-center text-xs font-semibold text-[#ff8bc8] transition-colors hover:bg-white/[0.055]"
     >
       查看全部 {total} 場 →
     </Link>
@@ -306,18 +327,148 @@ function SectionHeader({
   href: string
 }) {
   return (
-    <div className="flex items-center gap-2 mb-3">
+    <div className="mb-3 flex items-center gap-2">
       {icon}
-      <h2 className="text-sm font-semibold text-text-base">{title}</h2>
+      <h2 className="text-sm font-bold text-white">{title}</h2>
       {count !== undefined && count > 0 && (
-        <span className="text-xs text-primary font-medium">{count} 場</span>
+        <span className="text-xs font-medium text-[#ff8bc8]">{count} 場</span>
       )}
       <Link
         href={href}
-        className="ml-auto flex items-center gap-0.5 text-xs text-muted"
+        className="ml-auto flex items-center gap-0.5 text-xs font-medium text-white/42"
       >
         全部 <ChevronRight className="h-3 w-3" />
       </Link>
     </div>
   )
+}
+
+function HomeTrackDisclosure({
+  event,
+}: {
+  event: Event
+}) {
+  const { favorites } = useAppState()
+  const [expanded, setExpanded] = useState(false)
+  const [expandedVisible, setExpandedVisible] = useState(false)
+  const collapseTimerRef = useRef<number | null>(null)
+  const isFavorited = favorites.has(event.id)
+  const dateLabel = getEventDateLabel(event)
+  const locationLabel = event.venueName || event.location || event.city || event.country
+
+  useEffect(() => {
+    return () => {
+      if (collapseTimerRef.current !== null) {
+        window.clearTimeout(collapseTimerRef.current)
+      }
+    }
+  }, [])
+
+  function toggleFavorite(e: React.MouseEvent<HTMLButtonElement>) {
+    e.stopPropagation()
+    favorites.toggle(event.id)
+  }
+
+  function openExpandedCard() {
+    if (collapseTimerRef.current !== null) {
+      window.clearTimeout(collapseTimerRef.current)
+      collapseTimerRef.current = null
+    }
+    setExpanded(true)
+    window.requestAnimationFrame(() => {
+      setExpandedVisible(true)
+    })
+  }
+
+  function collapseExpandedCard() {
+    setExpandedVisible(false)
+    collapseTimerRef.current = window.setTimeout(() => {
+      setExpanded(false)
+      collapseTimerRef.current = null
+    }, 180)
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      openExpandedCard()
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {expanded ? (
+        <div
+          className={clsx(
+            'origin-top transition-all duration-200 ease-out',
+            expandedVisible ? 'scale-100 opacity-100' : 'scale-[0.98] opacity-0',
+          )}
+        >
+          <ScheduleTrackCard
+            event={event}
+            onCollapse={collapseExpandedCard}
+          />
+        </div>
+      ) : (
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={openExpandedCard}
+          onKeyDown={handleKeyDown}
+          className="group flex w-full cursor-pointer items-center gap-3 rounded-[18px] border border-white/8 bg-white/[0.028] px-3 py-2.5 text-left transition-all hover:border-[#ff63bd]/18 hover:bg-white/[0.045] active:scale-[0.99]"
+        >
+          <div className="rounded-[14px] border border-white/8 bg-white/[0.035] p-1">
+            <IdolAvatar
+              name={event.idolName}
+              avatarUrl={event.idolAvatarUrl}
+              color={idolPrimaryColor(event.idolId)}
+              size="sm"
+              className="rounded-[10px]"
+            />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="truncate text-[12px] font-semibold text-[#ff73c1]">
+                {event.idolName}
+              </span>
+            </div>
+            <p className="mt-0.5 line-clamp-1 text-[14px] font-semibold leading-5 text-white/88">
+              {event.title}
+            </p>
+            <div className="mt-1 flex min-w-0 items-center gap-2 text-[10px] text-white/42">
+              <span className="inline-flex items-center gap-1">
+                <Clock3 className="h-3 w-3 text-[#ff92c7]" />
+                {dateLabel}
+              </span>
+              {locationLabel && (
+                <span className="inline-flex min-w-0 items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  <span className="truncate">{locationLabel}</span>
+                </span>
+              )}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={toggleFavorite}
+            aria-label={isFavorited ? '取消收藏' : '收藏'}
+            className={clsx(
+              'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border transition-all',
+              isFavorited
+                ? 'border-[#ff5db7]/30 bg-[#ff5db7]/18 text-[#ff78c4] shadow-[0_0_18px_rgba(255,93,183,0.22)]'
+                : 'border-white/8 bg-white/[0.03] text-white/36 group-hover:text-white/65',
+            )}
+          >
+            <Heart className={clsx('h-4 w-4', isFavorited && 'fill-current')} />
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function idolPrimaryColor(idolId: string): string {
+  const palette = ['#6d4cff', '#ff5fae', '#00c2ff', '#7a5cff', '#4fd1a5', '#ff8d4d']
+  const hash = Array.from(idolId).reduce((sum, char) => sum + char.charCodeAt(0), 0)
+  return palette[hash % palette.length]
 }

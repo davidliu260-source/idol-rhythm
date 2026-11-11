@@ -40,6 +40,9 @@ export const EVENT_SUBTYPE_LABELS: Record<EventSubType, string> = {
   release: '專輯發行',
   announcement: '官方公告',
   magazine: '雜誌媒體',
+  popup_store: '快閃店',
+  exhibition: '展覽',
+  brand_event: '品牌活動',
 }
 
 export const EVENT_TYPE_COLORS: Record<EventType, string> = {

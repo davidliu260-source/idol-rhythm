@@ -17,11 +17,15 @@ interface Candidate {
   sourceName: string | null
   sourceType: string | null
   sourceUrl: string | null
+  detectedEventType: string | null
+  detectedEventSubType: string | null
   reviewStatus: 'pending' | 'approved' | 'rejected'
   aiConfidence: number | null
   hasIdol: boolean
   createdAt: string
   needsRecheck: boolean
+  verificationStatus: string | null
+  verifiedAt: string | null
 }
 
 // ── Data fetcher ──────────────────────────────────────────────────────────────
@@ -34,7 +38,7 @@ async function getCandidates(): Promise<{ candidates: Candidate[]; error: string
 
   const { data, error } = await supabase
     .from('event_candidates')
-    .select('id, raw_title, detected_idol_id, detected_date, source_name, source_type, source_url, review_status, ai_confidence, created_at, needs_recheck, idols(name)')
+    .select('id, raw_title, detected_idol_id, detected_event_type, detected_event_sub_type, detected_date, source_name, source_type, source_url, review_status, ai_confidence, created_at, needs_recheck, verification_status, verified_at, idols(name)')
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -54,11 +58,15 @@ async function getCandidates(): Promise<{ candidates: Candidate[]; error: string
     sourceName: row.source_name as string | null,
     sourceType: row.source_type as string | null,
     sourceUrl: row.source_url as string | null,
+    detectedEventType: row.detected_event_type as string | null,
+    detectedEventSubType: row.detected_event_sub_type as string | null,
     reviewStatus: row.review_status as 'pending' | 'approved' | 'rejected',
     aiConfidence: row.ai_confidence as number | null,
     hasIdol: !!row.detected_idol_id,
     createdAt: row.created_at as string,
     needsRecheck: (row.needs_recheck as boolean | null) ?? false,
+    verificationStatus: (row.verification_status as string | null) ?? null,
+    verifiedAt: (row.verified_at as string | null) ?? null,
   }))
 
   // Sort: pending first, then approved, then rejected; within group by created_at desc

@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
+import { generateChineseDisplayWithClaude } from '@/lib/ai/generateChineseDisplay'
 
 // ── Guard ──────────────────────────────────────────────────────────────────────
 
@@ -19,6 +20,21 @@ async function requireActiveAdmin(): Promise<void> {
 function revalidateCandidatePaths(id: string): void {
   revalidatePath('/admin/event-candidates')
   revalidatePath(`/admin/event-candidates/${id}`)
+}
+
+function isProtectedTranslationStatus(status: unknown): boolean {
+  return status === 'manual' || status === 'reviewed'
+}
+
+export interface GenerateChineseActionResult {
+  ok: boolean
+  error?: string
+}
+
+export interface ResolveRecheckActionResult {
+  ok: boolean
+  error?: string
+  synced?: boolean // true when display fields were synced to the approved event
 }
 
 // ── Actions ───────────────────────────────────────────────────────────────────
@@ -48,6 +64,145 @@ export async function rejectCandidate(id: string): Promise<void> {
 
   revalidateCandidatePaths(id)
   redirect(`/admin/event-candidates/${id}`)
+}
+
+export async function generateCandidateChineseDisplay(
+  id: string,
+): Promise<GenerateChineseActionResult> {
+  try {
+    await requireActiveAdmin()
+
+    const supabase = getSupabaseServerClient()
+    if (!supabase) throw new Error('Supabase 未設定')
+
+    const { data: candidate, error: fetchError } = await supabase
+      .from('event_candidates')
+      .select('*, idols(name)')
+      .eq('id', id)
+      .single()
+
+    if (fetchError || !candidate) {
+      throw new Error(`找不到候選活動：${fetchError?.message ?? '無資料'}`)
+    }
+
+    if (candidate.review_status !== 'pending') {
+      throw new Error('只有待審核候選可以產生繁中顯示文案')
+    }
+
+    if (isProtectedTranslationStatus(candidate.translation_status)) {
+      throw new Error('此候選的中文欄位已是人工編輯或已審閱狀態，為避免覆蓋不自動產生')
+    }
+
+    if (
+      candidate.display_title_zh ||
+      candidate.display_summary_zh ||
+      candidate.location_name_zh
+    ) {
+      throw new Error('此候選已有中文顯示欄位，第一版不支援覆蓋既有內容')
+    }
+
+    const dateText =
+      (candidate.detected_date_label as string | null) ||
+      [
+        candidate.detected_start_date as string | null,
+        candidate.detected_end_date as string | null,
+      ].filter(Boolean).join(' - ') ||
+      (candidate.detected_date as string | null)
+
+    const locationText = [
+      candidate.detected_city as string | null,
+      candidate.detected_venue_name as string | null,
+      candidate.detected_address as string | null,
+    ].filter(Boolean).join(' / ')
+
+    const generated = await generateChineseDisplayWithClaude({
+      title: candidate.raw_title as string,
+      content: candidate.raw_content as string | null,
+      idolName: ((candidate.idols as unknown) as { name: string } | null)?.name ?? null,
+      eventType: candidate.detected_event_type as string | null,
+      eventSubType: candidate.detected_event_sub_type as string | null,
+      dateText,
+      locationText,
+      sourceName: candidate.source_name as string | null,
+      sourceType: candidate.source_type as string | null,
+    })
+
+    const { error: updateError } = await supabase
+      .from('event_candidates')
+      .update({
+        display_title_zh: generated.displayTitleZh,
+        display_summary_zh: generated.displaySummaryZh,
+        location_name_zh: generated.locationNameZh,
+        translation_status: 'machine',
+        translation_source: 'ai',
+        translation_updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+
+    if (updateError) {
+      throw new Error(
+        `寫入繁中欄位失敗：${updateError.code ? `[${updateError.code}] ` : ''}${updateError.message}`,
+      )
+    }
+
+    revalidateCandidatePaths(id)
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+}
+
+export async function markCandidateChineseReviewed(
+  id: string,
+): Promise<GenerateChineseActionResult> {
+  try {
+    await requireActiveAdmin()
+
+    const supabase = getSupabaseServerClient()
+    if (!supabase) throw new Error('Supabase 未設定')
+
+    const { data: candidate, error: fetchError } = await supabase
+      .from('event_candidates')
+      .select('translation_status, display_title_zh, display_summary_zh, location_name_zh')
+      .eq('id', id)
+      .single()
+
+    if (fetchError || !candidate) {
+      throw new Error(`找不到候選活動：${fetchError?.message ?? '無資料'}`)
+    }
+
+    if (candidate.translation_status !== 'machine') {
+      throw new Error('只有機器產生狀態可以標記已審閱')
+    }
+
+    if (
+      !candidate.display_title_zh &&
+      !candidate.display_summary_zh &&
+      !candidate.location_name_zh
+    ) {
+      throw new Error('缺少中文欄位，無法標記已審閱')
+    }
+
+    const { error: updateError } = await supabase
+      .from('event_candidates')
+      .update({
+        translation_status: 'reviewed',
+        translation_updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .eq('translation_status', 'machine')
+
+    if (updateError) {
+      throw new Error(
+        `標記已審閱失敗：${updateError.code ? `[${updateError.code}] ` : ''}${updateError.message}`,
+      )
+    }
+
+    revalidateCandidatePaths(id)
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
 }
 
 /**
@@ -114,6 +269,10 @@ export async function approveCandidate(id: string): Promise<void> {
   // it can reach public pages.
 
   const today = new Date().toISOString().slice(0, 10)
+  const eventDate =
+    (candidate.detected_start_date as string | null) ??
+    (candidate.detected_date as string | null) ??
+    today
 
   const { data: eventData, error: eventError } = await supabase
     .from('events')
@@ -122,15 +281,28 @@ export async function approveCandidate(id: string): Promise<void> {
       idol_name: idol.name,
       title: candidate.raw_title,
       type: candidate.detected_event_type ?? 'official',
-      sub_type: null,
+      sub_type: (candidate.detected_event_sub_type as string | null) ?? null,
       status: 'confirmed',
       trust_level: 'pending',
-      date: candidate.detected_date ?? today,
+      date: eventDate,
       time: null,
       country: '',
       country_flag: '',
       location: null,
       description: candidate.raw_content ?? null,
+      display_title_zh: (candidate.display_title_zh as string | null) ?? null,
+      display_summary_zh: (candidate.display_summary_zh as string | null) ?? null,
+      location_name_zh: (candidate.location_name_zh as string | null) ?? null,
+      translation_status: (candidate.translation_status as string | null) ?? 'none',
+      translation_source: (candidate.translation_source as string | null) ?? null,
+      translation_updated_at: (candidate.translation_updated_at as string | null) ?? null,
+      start_date: eventDate,
+      end_date: (candidate.detected_end_date as string | null) ?? null,
+      date_label: (candidate.detected_date_label as string | null) ?? null,
+      city: (candidate.detected_city as string | null) ?? null,
+      venue_name: (candidate.detected_venue_name as string | null) ?? null,
+      address: (candidate.detected_address as string | null) ?? null,
+      map_url: (candidate.detected_map_url as string | null) ?? null,
       tags: [],
       ticket_url: null,
       stream_url: null,
@@ -187,4 +359,112 @@ export async function approveCandidate(id: string): Promise<void> {
 
   // redirect() throws a special Next.js error — must not be inside try/catch
   redirect(`/admin/events/${newEventId}`)
+}
+
+/**
+ * Resolves the needs_recheck flag on a candidate.
+ *
+ * Order of operations:
+ *   A. If review_status === 'approved' AND approved_event_id exists:
+ *      1. Sync Chinese display fields from candidate to the linked event FIRST.
+ *         Fields synced: display_title_zh, display_summary_zh, location_name_zh,
+ *         translation_status, translation_source, translation_updated_at.
+ *      2. If event sync fails: return ok:false + error. needs_recheck is NOT cleared.
+ *      3. If event sync succeeds: clear needs_recheck. Return ok:true, synced:true.
+ *   B. Otherwise (pending / rejected / no approved_event_id):
+ *      1. Clear needs_recheck directly. Return ok:true, synced:false.
+ *
+ * Clearing needs_recheck only happens after a successful event sync (when required),
+ * so a sync failure leaves the candidate in a retryable state.
+ */
+export async function resolveRecheck(id: string): Promise<ResolveRecheckActionResult> {
+  try {
+    await requireActiveAdmin()
+
+    const supabase = getSupabaseServerClient()
+    if (!supabase) throw new Error('Supabase 未設定')
+
+    // Fetch candidate fields needed for sync and flag-clear
+    const { data: candidate, error: fetchError } = await supabase
+      .from('event_candidates')
+      .select(
+        'review_status, approved_event_id, display_title_zh, display_summary_zh, location_name_zh, translation_status, translation_source',
+      )
+      .eq('id', id)
+      .single()
+
+    if (fetchError || !candidate) {
+      throw new Error(`找不到候選活動：${fetchError?.message ?? '無資料'}`)
+    }
+
+    let synced = false
+
+    // -- Path A: approved candidate with linked event -------------------------
+    if (
+      candidate.review_status === 'approved' &&
+      candidate.approved_event_id
+    ) {
+      const approvedEventId = candidate.approved_event_id as string
+
+      // Build sync payload from non-null candidate display fields
+      type EventUpdatePayload = {
+        display_title_zh?: string | null
+        display_summary_zh?: string | null
+        location_name_zh?: string | null
+        translation_status?: string | null
+        translation_source?: string | null
+        translation_updated_at?: string | null
+      }
+      const syncPayload: EventUpdatePayload = {}
+
+      if (candidate.display_title_zh != null)
+        syncPayload.display_title_zh = candidate.display_title_zh as string
+      if (candidate.display_summary_zh != null)
+        syncPayload.display_summary_zh = candidate.display_summary_zh as string
+      if (candidate.location_name_zh != null)
+        syncPayload.location_name_zh = candidate.location_name_zh as string
+      if (candidate.translation_status != null)
+        syncPayload.translation_status = candidate.translation_status as string
+      if (candidate.translation_source != null)
+        syncPayload.translation_source = candidate.translation_source as string
+
+      if (Object.keys(syncPayload).length > 0) {
+        syncPayload.translation_updated_at = new Date().toISOString()
+
+        // Step A-1: Sync event fields FIRST — if this fails, abort (do not clear flag)
+        const { error: syncError } = await supabase
+          .from('events')
+          .update(syncPayload)
+          .eq('id', approvedEventId)
+
+        if (syncError) {
+          // Sync failed: needs_recheck is NOT cleared, candidate is retryable.
+          return {
+            ok: false,
+            error: `活動欄位同步失敗：${syncError.code ? `[${syncError.code}] ` : ''}${syncError.message}（重審標記未清除，可重試）`,
+          }
+        }
+
+        revalidatePath(`/admin/events/${approvedEventId}`)
+        synced = true
+      }
+    }
+
+    // -- Step: Clear needs_recheck (sync already succeeded, or no sync needed) --
+    const { error: clearError } = await supabase
+      .from('event_candidates')
+      .update({ needs_recheck: false })
+      .eq('id', id)
+
+    if (clearError) {
+      throw new Error(
+        `清除重審標記失敗：${clearError.code ? `[${clearError.code}] ` : ''}${clearError.message}`,
+      )
+    }
+
+    revalidateCandidatePaths(id)
+    return { ok: true, synced }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
 }

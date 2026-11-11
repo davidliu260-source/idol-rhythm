@@ -13,8 +13,19 @@ interface SupabaseEventRow {
   status: string
   trust_level: string
   date: string
+  start_date: string | null
+  end_date: string | null
+  date_label: string | null
   time: string | null
   location: string | null
+  location_name_zh: string | null
+  city: string | null
+  venue_name: string | null
+  address: string | null
+  map_url: string | null
+  display_title_zh: string | null
+  display_summary_zh: string | null
+  translation_status: string | null
   country: string
   country_flag: string
   description: string | null
@@ -70,6 +81,11 @@ function rowToEvent(row: SupabaseEventRow): Event {
     type: (primarySource?.type ?? undefined) as SourceType | undefined,
     url: primarySource?.url ?? undefined,
   }
+  const displayTitleZh = row.display_title_zh?.trim()
+  const originalTitle =
+    displayTitleZh && displayTitleZh !== row.title ? row.title : undefined
+  const displayLocation = row.location_name_zh?.trim() || row.location || undefined
+  const startDate = row.start_date ?? row.date
 
   return {
     id: row.id,
@@ -78,17 +94,31 @@ function rowToEvent(row: SupabaseEventRow): Event {
     idolId: row.idols?.slug ?? row.idol_id,
     idolName: row.idol_name,
     idolAvatarUrl: row.idols?.avatar_url ?? null,
-    title: row.title,
+    title: displayTitleZh || row.title,
+    originalTitle,
     type: row.type as EventType,
     subType: (row.sub_type ?? undefined) as EventSubType | undefined,
     status: row.status as EventStatus,
-    date: row.date,
+    date: startDate,
+    startDate,
+    endDate: row.end_date ?? undefined,
+    dateLabel: row.date_label ?? undefined,
     time: row.time ?? undefined,
-    location: row.location ?? undefined,
+    location: displayLocation,
+    originalLocation:
+      displayLocation && row.location && displayLocation !== row.location
+        ? row.location
+        : undefined,
+    city: row.city ?? undefined,
+    venueName: row.venue_name ?? undefined,
+    address: row.address ?? undefined,
+    mapUrl: row.map_url ?? undefined,
     country: row.country,
     countryFlag: row.country_flag,
     source,
     description: row.description ?? '',
+    displaySummaryZh: row.display_summary_zh ?? undefined,
+    translationStatus: (row.translation_status ?? undefined) as Event['translationStatus'],
     isFavorited: false, // UI state — managed by localStorage / auth layer
     ticketUrl: row.ticket_url ?? undefined,
     streamUrl: row.stream_url ?? undefined,

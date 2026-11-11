@@ -16,11 +16,22 @@ export interface UpdateDraftPayload {
   subType: string
   status: string
   date: string
+  startDate: string
+  endDate: string
+  dateLabel: string
   time: string
   country: string
   countryFlag: string
   location: string
+  city: string
+  venueName: string
+  address: string
+  mapUrl: string
   description: string
+  displayTitleZh: string
+  displaySummaryZh: string
+  locationNameZh: string
+  translationStatus: string
   tags: string[]
   ticketUrl: string
   streamUrl: string
@@ -55,6 +66,10 @@ export async function updateDraftEvent(
   if (!payload.title.trim())       return { error: '活動標題不可空白' }
   if (!payload.date)               return { error: '日期不可空白' }
   if (!payload.idolId)             return { error: '請選擇偶像' }
+  const startDate = payload.startDate || payload.date
+  if (payload.endDate && payload.endDate < startDate) {
+    return { error: '結束日期不可早於開始日期' }
+  }
   const trustLevel = inferTrustLevelFromSource({
     sourceName: payload.sourceLabel,
     sourceType: payload.sourceType,
@@ -87,12 +102,30 @@ export async function updateDraftEvent(
       sub_type:     payload.subType || null,
       status:       payload.status,
       trust_level:  trustLevel,
-      date:         payload.date,
+      date:         startDate,
       time:         payload.time || null,
       country:      payload.country.trim(),
       country_flag: payload.countryFlag.trim(),
       location:     payload.location.trim() || null,
       description:  payload.description.trim() || null,
+      display_title_zh:      payload.displayTitleZh.trim() || null,
+      display_summary_zh:    payload.displaySummaryZh.trim() || null,
+      location_name_zh:      payload.locationNameZh.trim() || null,
+      translation_status:    payload.translationStatus || 'none',
+      translation_source:    payload.translationStatus === 'manual' ? 'admin' : null,
+      translation_updated_at:
+        payload.displayTitleZh.trim() ||
+        payload.displaySummaryZh.trim() ||
+        payload.locationNameZh.trim()
+          ? new Date().toISOString()
+          : null,
+      start_date:   startDate,
+      end_date:     payload.endDate || null,
+      date_label:   payload.dateLabel.trim() || null,
+      city:         payload.city.trim() || null,
+      venue_name:   payload.venueName.trim() || null,
+      address:      payload.address.trim() || null,
+      map_url:      payload.mapUrl.trim() || null,
       tags:         payload.tags,
       ticket_url:   payload.ticketUrl.trim() || null,
       stream_url:   payload.streamUrl.trim() || null,

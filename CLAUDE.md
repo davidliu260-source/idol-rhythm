@@ -1,7 +1,7 @@
 # Idol Rhythm — Claude Code / Codex 工作規範
 
 > **適用對象：Claude Code CLI、Codex、任何 AI coding agent。**
-> 本文件是唯一維護中的規範與索引，其他 MD 檔案為輔助參考。
+> 本文件維護工作規則與安全邊界；工作排程、進度索引與 migration 狀態請看 `WORKING.md`。
 
 ---
 
@@ -13,8 +13,25 @@
 | 本地路徑 | `~/Desktop/idol-rhythm` |
 | GitHub | `davidliu260-source/idol-rhythm` |
 | 技術棧 | Next.js 14 App Router + TypeScript + Tailwind CSS + Supabase |
-| 目前階段 | S1 / C1 / I1a / I1b-A / J7d-A / 忘記密碼 / M1a / admin 刪除草稿 / M1b 第一批 + 第二批 + M1b-3（75 個 active idol）/ trust_level 單一真相 / Supabase SSR middleware / 後台 4 頁 filter tabs + 搜尋 pilot / 後台 idols「缺資料」tab / I1b-B AI 搜圖（Wikimedia + 可重搜）/ I1b-C avatar 來源紀錄 + 多色 placeholder / 前台 polish 6 改動 / #45 description + color 補齊 / Source Inventory A / YG crawler 工作單 / YG artist schedule crawler 完成。下一步建議：WAKEONE / SM / Weverse crawler 工作單或技術探測；另有「快閃店支援」與「後台用戶統計」待排程 |
-| 輔助參考 | `ADMIN_ROADMAP.md`（後台分階段開發路線）、`AI_PIPELINE_PLAN.md`（爬蟲架構設計文件）、`SOURCE_INVENTORY_A.md`（官方來源盤點研究附件；不是流程索引，流程仍以本檔為準）|
+| Supabase 帳號 | **GitHub 登入**的帳號（組織 `ming-app`，Free 方案）；專案 `idol-rhythm`，Project ID `rdrthazsonkefggedbjr`，region `ap-southeast-2`。Owner 一律用 **Chrome** 操作此 Supabase |
+| 瀏覽器分工 | idol-rhythm 的 Supabase → **Chrome**；telegram bot 的 Supabase（另一個 email 登入帳號）→ **Safari**。兩者不要在同一個瀏覽器登入，避免操作錯專案（2026-11-09 Owner 決定不搬家，維持兩個帳號分開） |
+| 工作排程 | `WORKING.md`（目前階段、進度索引、migration 狀態、API / 目錄 / 設計索引） |
+
+---
+
+## 角色與分工（2026-07-14 起，比照 telegram照片生成bot 專案）
+
+| 角色 | 職責 |
+| --- | --- |
+| **Claude（PM / 審核）** | 讀 repo、開票（ticket / 工作單）、定 acceptance criteria、審核 Codex 的 PR、維護 CLAUDE.md / WORKING.md、跑驗證查詢與診斷 |
+| **Codex（實作）** | 只依 Claude 開出的票施工，一次一張票，不得超 scope、不得自行 merge |
+| **使用者（Owner）** | 確認產品規則、把票貼給 Codex、批准 merge |
+
+**PM 硬界線：**
+1. Claude **不得自己寫 `src/` code / migration / schema 實作**——一律開票交 Codex。文件（`*.md`）與驗證 SQL 查詢屬 PM 職責，可直接動手。
+2. **每次派工必附「可一鍵複製」的完整指令 code block**：含任務、真因、要做的步驟、限制（不要動什麼）、驗收條件、feature branch 名、PR 規則。不能只丟票號。
+3. Codex 的 PR 由 Claude review 後回報，使用者最終確認 merge。
+4. **高風險任務**（migration / RLS / 爬蟲 / AI / 付款 / 部署）：PM 先寫工作單 `*.md` 規劃 → 再開實作票交 Codex，PR 標 `high-risk` label → Claude review → Owner 最終 merge。**不走 GPT audit**（此流程已於 2026-07-14 廢除，比照 telegram照片生成bot 專案）。工作單本身就是計畫，不需外部 audit 關卡。
 
 ---
 
@@ -24,7 +41,7 @@
 2. **先確認邊界再動手**：任務有歧義時，先回報疑問點，等確認後才實作
 3. 只做任務明確要求的事，不猜測未來需求、不預先抽象、不順手重構
 4. **不得修改** ming-app、Omens 或任何非 idol-rhythm 專案
-5. **更新任何 MD 索引時，CLAUDE.md 必須同步更新**（AGENTS.md 已廢棄，不需維護）
+5. **更新工作排程 / 進度 / migration / API / 目錄索引時，改 `WORKING.md`；更新規則與安全邊界時，改 `CLAUDE.md`**（AGENTS.md 已廢棄，不需維護）
 
 ---
 
@@ -122,6 +139,8 @@
 - **修了 2 次還沒中就停下重讀**：不要連開 3 個症狀治療 PR；第二次修錯時主動承認假設可能有問題，重新讀整個流程
 - **完成 ≠ 結束**：build pass、commit、push 都不等於實際運作。Silent-hang（Promise 不 resolve 也不 reject）、catch 沒命中、async finally 沒跑 都算未完成。預設懷疑「表面平靜」
 - **長 session 主動 checkpoint**：累積 5+ PRs 時主動整理一次成果盤點；換主題前先 summary，避免後面迷路
+- **service_role 不會自動有權限**：本專案每張表都要用 migration 明確 `GRANT` 給 service_role（例：018、020、039、042、061）。新的排程或後台程式要用 service_role 讀寫某張表時，先確認該表已授權
+  - 反例：通知排程（N6 / N7，PR #119 / #122）上線後每天回 500，半年沒人發現，因為 `events` / `reminders` / `user_follows` 從來沒授權給 service_role（2026-11-10 盤點才查到，M061 修正）。排程失敗目前**沒有任何警報**，上線後要實際看一次 Vercel 日誌確認回 200
 
 ---
 
@@ -142,7 +161,7 @@ idol-rhythm 的資料品質直接決定爬蟲匹配率與前台正確性。搜�
 
 進來新工作時，**先讀本檔**，然後：
 
-1. **找出使用者要做哪個代號**（例如 I1b-B、M1a、J7d-B）— 從進度索引找狀態 🔒 / 🔲 的項目
+1. **找出使用者要做哪個代號**（例如 I1b-B、M1a、J7d-B）— 從 `WORKING.md` 進度索引找狀態 🔒 / 🔲 的項目
 2. **若是 🔒「待 GPT 工作單」**：使用者會貼 GPT review 結論給你，再開實作 PR
 3. **若是 🔲「待辦」且不涉 migration / Storage / RLS**：可直接開 feature branch 實作
 4. **若是 🔲 但涉及 migration / Storage / RLS / AI / 爬蟲 / 付款**：先寫工作單草案 PR，等使用者拿給 GPT review
@@ -155,265 +174,29 @@ idol-rhythm 的資料品質直接決定爬蟲匹配率與前台正確性。搜�
 
 **Worktree 注意：** 本 repo 開 worktree 在 `.claude/worktrees/<name>`，無法直接 `git checkout main`。改用 `git fetch origin main && git checkout -b <new-branch> origin/main`。
 
-**來源盤點注意：** `SOURCE_INVENTORY_A.md` 是 PR #70 產出的研究附件，用來支援 M1b-3 seed 與 crawler 工作單。它不是新的工作紀錄中心；session 交接、進度索引、下一步仍以本 `CLAUDE.md` 為唯一入口。
+**文件分工注意：** `CLAUDE.md` 是規則與安全邊界入口；`WORKING.md` 是工作排程、進度索引、migration 狀態與 API / 目錄索引。`SOURCE_INVENTORY_A.md` 等文件只是研究附件，不是新的工作紀錄中心。
+
+**交接閱讀順序（給未來 Claude Code / Codex）：**
+1. 先讀 `CLAUDE.md`：規則、安全邊界、工作流程。
+2. 再讀 `WORKING.md`：目前做到哪裡、下一步做什麼、migration 狀態、API / 目錄索引。
+3. 依任務主題按需補讀：
+   - crawler / AI pipeline：`AI_PIPELINE_PLAN.md`
+   - 官方來源研究：`SOURCE_INVENTORY_A.md`
+   - 特定來源工作單：`CRAWLER_WORK_ORDER_YG.md`、`CRAWLER_WORK_ORDER_WAKEONE.md`、`CRAWLER_WORK_ORDER_SMTOWN.md`
+   - 中文顯示 / 快閃店規劃：`DISPLAY_LOCALIZATION_AND_POPUP_WORK_ORDER.md`
+   - 中文生成規劃：`CHINESE_GENERATION_WORK_ORDER.md`
+   - 主流漏網藝人 seed 規劃：`MAINSTREAM_ARTIST_SEED_WORK_ORDER.md`
+
+**不要把以下文件當作目前真相來源：**
+- `AGENTS.md`：已廢棄，只保留 redirect。
+- `PROJECT_STATUS.md`：歷史交接快照，已落後 `WORKING.md`。
+- `MVP_SCOPE.md`、`PRODUCT_SPEC.md`：產品早期規劃 / 歷史背景。
+- `SUPABASE_SCHEMA.md`、`ADMIN_WRITE_PLAN.md`：早期草稿 / 安全方案，實際狀態以 migrations + `WORKING.md` 為準。
+- `00_Obsidian首頁.md`、`TASK_驗證 draft 不出現在前台.md`：個人筆記 / 單次任務卡，不作為 agent 工作入口。
 
 ---
 
-## 已完成進度索引
+## 工作排程與索引
 
-| # | 階段 | 說明 | 狀態 |
-|---|---|---|---|
-| 1 | MVP foundation | 頁面骨架、mock data、元件 | ✅ |
-| 2 | UI polish | demo data 補強、暗色主題 | ✅ |
-| 3 | 資料模型 | types.ts、型別收斂 | ✅ |
-| 4 | localStorage 個人化 | 收藏、追蹤、提醒持久化 | ✅ |
-| 5 | Supabase schema | migrations 001–010 | ✅ |
-| 6 | Admin 後台基礎 | 登入、guard、dashboard | ✅ |
-| 7 | Admin Events 管理 | 新增 / 編輯 / 發布 / 下架（migrations 003–007）| ✅ |
-| 8 | 前台接 Supabase | 全頁 fallback mock | ✅ |
-| 9 | Admin Idols 管理 | H1–H3（migrations 008–010）| ✅ |
-| 10 | is_active toggle | Phase H4（migration 011）| ✅ |
-| 11 | Candidates 審核 | Approve / Reject（migration 012）| ✅ |
-| 12 | Auth Milestone 1 | Email magic link + saved_events（migration 013）| ✅ |
-| 13 | Auth Milestone 2 | Google OAuth | ✅ |
-| 14 | Auth Milestone 3 | Email + Password 登入 / 註冊 | ✅ |
-| 15 | Auth Milestone 4 | user_follows 持久化（migration 015）| ✅ |
-| 16 | J0 | AI pipeline 設計文件 | ✅ |
-| 17 | J1 | 手動匯入候選表單（migration 016）| ✅ |
-| 18 | J2 | BLACKPINK 官方 tour fetcher | ✅ |
-| 19 | J4 | source_hash 去重（migration 017）| ✅ |
-| 20 | J3 | AI 解析公告（Claude Haiku）| ✅ |
-| 21 | J5 | Vercel Cron dry-run 觸發 | ✅ |
-| 22 | J5b | Cron 安全寫入 event_candidates（migration 018）| ✅ |
-| 23 | J6a | crawler_sources table + admin UI（migration 019）| ✅ |
-| 24 | J6b | crawler_sources RLS + Blackpink 整合（migration 020）| ✅ |
-| 25 | J6c→J6d | JYP 平台化 fetcher jyp_schedule（migrations 021/022）| ✅ |
-| 26 | J6e | Cron fan-out 跨所有 active sources | ✅ |
-| 27 | J6f | 12 個月視窗 + 過去日期過濾 | ✅ |
-| 28 | J7a | Stray Kids 種子（migration 023，PR #16）| ✅ migration 已執行 |
-| 29 | J7b | 批量審核 UI（approve / reject）| ✅ PR #17 merged |
-| 30 | J7e | 批量發布 + trust_level 切換 | ✅ PR #18 merged |
-| 31 | J7c | 過期候選清理 | ✅ PR #19 merged |
-| 32 | 個人化首頁 | user_follows 過濾 timeline + 倒數 UI | ✅ 早期完成（PR #8 `42e0d42`）|
-| 33 | S1 | 行程篩選器修正：真實偶像資料 + 篩選功能正常 | ✅ PR #21 merged |
-| 34 | C1 | 個人行事曆：月曆視圖 + 登入後收藏活動整合 | ✅ PR #22 merged（含 #23–#26 連續修補：EventCard Link 重構、stopPropagation、mock UUID 防護）|
-| 35 | Remove mock fallback | 前台不再 fallback mock，純 Supabase 資料 | ✅ PR #27 merged |
-| 36 | I1a | 藝人頭像基礎：migration 025 加 avatar_url + 後台手動 URL + IdolAvatar 元件 + 前台 5 處替換（/idols、首頁追蹤 strip、首頁倒數卡、EventCard compact/full、/me 追蹤、/events/[id] hero — 詳情頁補在 PR #38）| ✅ PR #31 + #38 merged |
-| 37 | J7d-A | 候選內容變更偵測：migration 026 加 content_hash + needs_recheck，fetcher 偵測 + 標旗（不動 review_status / approved_event_id / raw 欄位），後台 badge | ✅ PR #34 merged |
-| 38 | I1b-A | 藝人頭像 Storage 手動上傳：migration 027 建 public bucket idol-avatars + RLS、後台檔案上傳 server action、EditIdolForm 上傳 UI（保留手動 URL 逃生口）| ✅ PR #36 merged |
-| 39 | 忘記密碼 | /forgot-password + /reset-password 兩頁 + LoginForm 加連結；走 Supabase resetPasswordForEmail + updateUser；無 migration | ✅ PR #37 merged |
-| 40 | I1b-B | 後台 AI 搜圖（Wikimedia 第一版，admin 必選一張）+ 可編輯關鍵字再搜 + sharp 512x512 webp 縮圖 | ✅ PR #63 + #64 merged（不接 Google CSE，純 Wikimedia 無 key）|
-| 41 | J7d-B | resolve 按鈕（admin 清 needs_recheck）+ 需重審篩選 tab + approved event 自動同步策略 | 🔲 待辦（J7d-A 跑一段時間累積實況後決定；後台「需重審」tab 已在 PR #54 鋪好顯示路徑）|
-| 42 | M1a | 多藝人聚合爬蟲框架（kpopofficial.com）：A 加 idols.alt_names、B idolMatcher + parser/fetcher、C seed crawler_sources + 接 cron fan-out | ✅ PR #40 + #41 + #42 merged（migrations 028 + 029 已執行）|
-| 42.5 | admin 刪除草稿 | /admin/events 工具列加批量刪除草稿按鈕（migration 030 GRANT DELETE + RLS）| ✅ PR #43 merged（migration 030 已執行）|
-| 43 | M1b 第一批 | JYP 系 5 個團（ITZY/NMIXX/DAY6/Xdinary Heroes/2PM）+ 1 個 solo（J.Y. Park）+ JYP schedule 來源；只需 migrations 031/032 | ✅ PR #45 + #46 merged（migrations 031 + 032 已執行）|
-| 43.5 | trust_level 單一真相 | 修「設官方+發布」後前台仍顯示「待確認」的 bug；rowToEvent 改用 events.trust_level，event_sources.level backfill | ✅ PR #47 merged（migration 033 已執行）|
-| 43.6 | Supabase SSR middleware | 補上 src/middleware.ts 自動 refresh session cookies；修 /me /favorites 卡載入 / 顯示未登入；前置三輪嘗試（PR #49/#50/#51）都是症狀治療 | ✅ PR #52 merged（無 migration）|
-| 43.7 | 後台 4 頁 filter tabs + 搜尋 pilot | /admin/events、/admin/idols、/admin/event-candidates、/admin/sources 加入 tabs（含 counts）+ 搜尋框 + 空狀態提示；不動審核 / 發布 / 詳情邏輯 | ✅ PR #48 + #53 + #54 + #55 merged（無 migration）|
-| 44 | M1b 第二批 | 主流 K-pop 51 個（HYBE / SM / YG / Starship / KQ / WAKEONE / S2 / THEBLACKLABEL / F&F / Modhaus / Cube / FNC / WM / RBW + SM/YG 經典團）；公司歸屬照 2026/05 校正（fromis_9/AKMU/Kep1er/BIBI 修正）；含 035 HYBE 前綴正規化 | ✅ PR #58 + #59 + #60 merged（migrations 034 + 035 + 036 已執行）|
-| 45 | 補新藝人 UI | 51+ 個藝人需補 avatar / 描述 / 主色；後台「缺資料」filter tab 已就緒，AI 搜圖能加速處理。2026-05-19 已手動補齊所有現有 active idols 的 description / color，並刪除測試髒資料 `test` / `少女時代(slug)`；目前主要剩 avatar 人工補圖 | 🔲 持續中（avatar 人工處理）|
-| 45.5 | 後台 idols「缺資料」filter tab | tab 顯示 avatar/description 任一缺漏的藝人，琥珀色提示 + 卡片內「缺頭像/缺描述」徽章 | ✅ PR #62 merged |
-| 45.6 | I1b-C avatar 來源紀錄 + 安全 placeholder | migration 037 加 5 個 avatar_source_* 欄位；三種上傳路徑（手動上傳 / AI 搜圖 / 手動 URL）自動寫 provider；IdolAvatar 改用 name-hash 12 色 fallback（修「前台頭像全部同色」）| ✅ PR #65 merged（migration 037 已執行）|
-| 45.7 | 前台 polish 批 | F1 /idols filter 軸改公司分 / F2 首頁 section「查看全部 N 場」/ F3 /events/[id] 連結待補 placeholder / F4 /favorites 加搜尋 / F-scroll /schedule 藝人 chip 滾動指示 | ✅ PR #66 merged（無 migration）|
-| 45.8 | F5 /idols/[slug] 偶像詳情頁 | 前台公開偶像詳情：hero（avatar/agency/idol.color 漸層）+ meta + 描述 + 即將/已結束活動列表 + 追蹤按鈕；停用偶像 404 隱私保護 | ✅ PR #67 merged（無 migration）|
-| 46 | M2 | 跨來源活動去重（event_key soft-hash，同演唱會多來源合併）| 🔲 待辦（當實際有跨來源重複發生再做）|
-| 47 | 帳號設定 | 改 email、刪除帳號、2FA | 🔲 待辦 |
-| 48 | M3 | Custom SMTP / Resend（上線前避免 rate limit）| 🔲 待辦 |
-| 49 | Apple Sign-In | 上 App Store 前再做 | 🔲 待辦 |
-| 50 | 站內通知系統 | 鈴鐺 + 通知列表頁 + 通知設定 toggle，整合 /me 通知設定 + 未來 PWA / native push | 🔲 待辦（替代 email 寄送）|
-| 51 | Source Inventory A | 官方來源盤點研究附件：覆蓋現有 55 個 active idol、M1b-3 seed 候選、BLACKPINK/BTS/BIGBANG 等 solo / 分隊來源；標出 P0 crawler 候選（JYP extension / YG schedule / WAKEONE notice / SMTOWN notice / Weverse 技術探測）。文件在 `SOURCE_INVENTORY_A.md`，但工作流程索引仍以本檔為準 | ✅ PR #70 merged（無 migration / 無 DB 變更 / 無 crawler）|
-| 52 | M1b-3 | migration 038：依 Source Inventory A 新增 20 個 solo / 獨立藝人 / 分隊 / 大團成員（Rain、IU、TAEYEON、G-DRAGON、BLACKPINK solo、BTS solo、NCT 分隊、PLAVE、(G)I-DLE、STAYC），並修 aespa agency typo（`SSM Entertainment` → `SM Entertainment`）| ✅ PR #72 merged（migration 038 已執行；目前 75 個 active idol）|
-| 53 | YG crawler 工作單 | `CRAWLER_WORK_ORDER_YG.md`：設計 YG artist schedule / notice crawler，覆蓋 BLACKPINK group / BABYMONSTER / TREASURE；不含 BLACKPINK solo / THEBLACKLABEL；只做工作單，未寫 crawler | ✅ PR #73 merged（無 migration / 無 DB 變更 / 無 crawler）|
-| 54 | 快閃店搜尋與呈現 | 新增 pop-up store / 快閃店 類活動的搜尋、資料分類與前台呈現。需先評估 `event_type` / `sub_type` 是否已有可承載欄位；若需新增 enum 或 filter，先寫工作單與 migration SQL。來源上可從 official notice / brand collaboration / ticketing secondary 抓候選，trust_level 仍須保守 | 🔲 待辦（可能涉及 migration / UI / crawler filter）|
-| 55 | 後台用戶統計 | Admin analytics：未來用戶數、註冊趨勢、活躍用戶、收藏 / 追蹤 / reminder 使用量、來源候選審核漏斗等。需先定義指標與隱私邊界；讀 auth.users 可能需要 service_role 或 Supabase admin API，不可暴露到 client | 🔲 待辦（先工作單，再實作 dashboard）|
-| 56 | YG artist schedule crawler | `yg_artist_schedule` 官方來源 crawler：走 YG `/api/artist/schedule/list/{artistId}/{year}/{month}` JSON endpoint，覆蓋 BLACKPINK group / BABYMONSTER / TREASURE；接入 cron/manual sync fan-out；migration 040 seed 三個 official crawler_sources；只進 event_candidates，不自動審核 / 發布 | ✅ PR 待 merge（migration 040 merge 後需手動執行）|
-| 57 | 中文顯示 + 快閃店資料模型工作單 | `DISPLAY_LOCALIZATION_AND_POPUP_WORK_ORDER.md`：規劃原文保留、中文展示欄位、AI/規則中文摘要、人工覆寫、快閃店日期區間與地點模型、sub_type 擴充、活動類型圖示系統與後續 PR 拆分；僅工作單，未改 DB / UI / crawler | ✅ PR #78 merged（無 migration）|
-
----
-
-## Migration 索引
-
-| Migration | 說明 | 狀態 |
-|---|---|---|
-| 001 | 完整 schema（tables + enums + RLS 21 條）| ✅ 已執行 |
-| 002 | admin_users table + GRANT + self-read policy | ✅ 已執行 |
-| 003 | events + event_sources INSERT policy | ✅ 已執行 |
-| 004 | idols SELECT policy（admin 讀偶像下拉）| ✅ 已執行 |
-| 005 | events + event_sources SELECT policy（admin 讀草稿）| ✅ 已執行 |
-| 006 | events column-level GRANT UPDATE (is_published, published_at) + UPDATE policy | ✅ 已執行 |
-| 007 | events content GRANT UPDATE + draft UPDATE；event_sources GRANT DELETE | ✅ 已執行 |
-| 008 | GRANT INSERT ON idols + INSERT policy | ✅ 已執行 |
-| 009 | GRANT SELECT ON idols TO anon（修正前台讀取）| ✅ 已執行 |
-| 010 | idols content fields GRANT UPDATE + UPDATE policy | ✅ 已執行 |
-| 011 | GRANT UPDATE (is_active) ON idols（Phase H4）| ✅ 已執行 |
-| 012 | event_candidates GRANT SELECT/UPDATE + admin SELECT/UPDATE policy | ✅ 已執行 |
-| 013 | saved_events GRANT SELECT/INSERT/DELETE TO authenticated | ✅ 已執行 |
-| 014 | reminders GRANT SELECT/INSERT/DELETE TO authenticated | ✅ 已執行 |
-| 015 | user_follows GRANT SELECT/INSERT/DELETE TO authenticated | ✅ 已執行 |
-| 016 | event_candidates GRANT INSERT + INSERT RLS policy | ✅ 已執行 |
-| 017 | ADD COLUMN source_hash + raw_data；unique index（J4）| ✅ 已執行 |
-| 018 | GRANT SELECT/INSERT/UPDATE ON event_candidates TO service_role（J5b）| ✅ 已執行 |
-| 019 | crawler_sources table（J6a）| ✅ 已執行 |
-| 020 | crawler_sources RLS + service_role GRANT（J6b）| ✅ 已執行 |
-| 021 | Seed TWICE idol + JYP schedule source（J6c）| ✅ 已執行 |
-| 022 | ADD COLUMN config jsonb；TWICE → parser_type='jyp_schedule'（J6d）| ✅ 已執行 |
-| 023 | Seed Stray Kids idol + JYP schedule source（J7a）| ✅ 已執行 |
-| 024 | GRANT SELECT ON events + event_sources TO anon（修復前台 0 筆活動）| ✅ 已執行 |
-| 025 | ADD COLUMN idols.avatar_url + GRANT UPDATE（I1a）| ✅ 已執行 |
-| 026 | ADD COLUMN event_candidates.content_hash + needs_recheck + 部分索引 + GRANT UPDATE（J7d-A）| ✅ 已執行 |
-| 027 | Storage bucket idol-avatars + 4 條 RLS policy（I1b-A，public read、admin write）| ✅ 已執行 |
-| 028 | ADD COLUMN idols.alt_names text[] + GRANT UPDATE（M1a-A，聚合爬蟲名稱匹配）| ✅ 已執行 |
-| 029 | Seed crawler_sources for kpopofficial-concerts（M1a-C）| ✅ 已執行 |
-| 030 | GRANT DELETE ON events + admin_delete_draft_events RLS（後台刪除草稿）| ✅ 已執行 |
-| 031 | Seed 5 JYP 藝人 + JYP schedule sources（ITZY/NMIXX/DAY6/Xdinary Heroes/2PM）| ✅ 已執行 |
-| 032 | Seed J.Y. Park idol + JYP schedule source（第一個 solo entry）| ✅ 已執行 |
-| 033 | UPDATE event_sources.level = events.trust_level（trust_level 單一真相 backfill）| ✅ 已執行 |
-| 034 | Seed 27 個主流 K-pop 藝人（BTS / SEVENTEEN / aespa / NCT / IVE / ATEEZ / KATSEYE 等）| ✅ 已執行 |
-| 035 | UPDATE HYBE sub-label agency 加「HYBE /」前綴（修 /admin/idols HYBE filter 命中失敗）| ✅ 已執行 |
-| 036 | Seed 24 個 Tier 2 / 經典藝人（&TEAM / TAEYANG / ROSÉ / EXO / SHINee / BIGBANG / MAMAMOO 等）| ✅ 已執行 |
-| 037 | ADD COLUMN idols.avatar_source_url / provider / license / author / note + GRANT UPDATE（I1b-C）| ✅ 已執行 |
-| 038 | Seed 20 個 solo / 分隊 / 大團成員（Rain / IU / TAEYEON / G-DRAGON / BLACKPINK solo / BTS solo / NCT 分隊 / PLAVE / (G)I-DLE / STAYC）+ 修 aespa agency typo | ✅ 已執行 |
-| 039 | GRANT SELECT ON idols TO service_role + 停用 BLACKPINK 2025 舊巡演頁 source | ✅ 已執行 |
-| 040 | Seed BLACKPINK / BABYMONSTER / TREASURE 官方 YG Schedule crawler_sources（parser_type=`yg_artist_schedule`）| ⏳ PR merge 後待手動執行 |
-
----
-
-## Env 設定
-
-| 環境變數 | 本地 `.env.local` | Vercel Production | Vercel Preview |
-|---|---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | ✅ | ✅ | ✅ |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | ✅ | ✅ |
-| `ANTHROPIC_API_KEY` | ✅ | ✅ | ✅ |
-| `CRON_SECRET` | ✅ | ✅ | — |
-| `SUPABASE_SERVICE_ROLE_KEY` | ✅ | ✅ | ❌ 不可設 |
-
-> ⚠️ `SUPABASE_SERVICE_ROLE_KEY` 必須是 Supabase → Settings → API → `service_role` 的 JWT（`eyJ...`），不是 `sb_secret_...`。絕不可加 `NEXT_PUBLIC_` 前綴，不可進版控，不可設在 Preview 環境。
-
----
-
-## 目錄結構
-
-```
-src/
-├── middleware.ts                                # Supabase SSR session refresh（每個 request）
-├── app/
-│   ├── layout.tsx / page.tsx / error.tsx / not-found.tsx
-│   ├── schedule/page.tsx
-│   ├── idols/
-│   │   ├── page.tsx + IdolsClient.tsx          # 列表 + agency filter（PR #66 F1）
-│   │   └── [slug]/page.tsx + FollowIdolButton.tsx   # 偶像詳情頁（PR #67 F5）
-│   ├── events/[id]/page.tsx                    # 含 ticket/stream「連結待補」placeholder（PR #66 F3）
-│   ├── favorites/page.tsx + FavoritesClient.tsx
-│   ├── me/page.tsx + MeClient.tsx
-│   ├── login/page.tsx + LoginForm.tsx
-│   ├── auth/callback/route.ts
-│   └── admin/
-│       ├── page.tsx                          # Dashboard
-│       ├── login/page.tsx + LoginForm.tsx
-│       ├── events/
-│       │   ├── page.tsx + EventsClient.tsx     # filter tabs + 搜尋（PR #48）
-│       │   ├── [id]/page.tsx + actions.ts
-│       │   ├── [id]/edit/page.tsx + EditEventForm.tsx + actions.ts
-│       │   └── new/page.tsx + NewEventForm.tsx + actions.ts
-│       ├── idols/
-│       │   ├── page.tsx + IdolsClient.tsx      # filter tabs + 搜尋 +「缺資料」tab（PR #53 / #62）
-│       │   ├── [id]/page.tsx + actions.ts
-│       │   ├── [id]/edit/page.tsx + EditIdolForm.tsx + actions.ts + AiImageSearchModal.tsx
-│       │   └── new/page.tsx + NewIdolForm.tsx + actions.ts
-│       ├── sources/
-│       │   ├── page.tsx + SourcesClient.tsx    # 爬蟲來源列表 + tabs + 搜尋（PR #55）
-│       │   └── [id]/page.tsx + RunSourceButton.tsx   # 詳情 + 手動觸發（J6b）
-│       └── event-candidates/
-│           ├── page.tsx + CandidatesClient.tsx # filter tabs + 搜尋（PR #54）
-│           ├── CrawlerButton.tsx
-│           ├── [id]/page.tsx + actions.ts
-│           ├── new/page.tsx + NewCandidateForm.tsx + actions.ts
-│           └── parse/page.tsx + ParseClient.tsx + actions.ts
-├── components/
-│   ├── BottomNav.tsx
-│   ├── EventCard.tsx
-│   ├── EventDetailActions.tsx
-│   ├── EventTypeBadge.tsx
-│   ├── HomePersonalized.tsx
-│   └── SourceBadge.tsx
-└── lib/
-    ├── types.ts
-    ├── appState.tsx
-    ├── mockIdols.ts / mockEvents.ts
-    ├── supabase/
-    │   ├── client.ts                         # anon client（前台唯讀）
-    │   ├── serverClient.ts                   # cookie server client
-    │   ├── browserClient.ts                  # cookie browser client
-    │   ├── serviceClient.ts                  # service_role（cron 專用）
-    │   ├── events.ts                         # getPublishedEvents / getActiveIdols / getEventById / getIdolBySlug
-    │   ├── auth.ts                           # getCurrentUser()
-    │   ├── adminAuth.ts                      # getCurrentAdmin()
-    │   └── adminStats.ts                     # getAdminStats()
-    ├── imageSearch/
-    │   └── wikimedia.ts                      # Wikimedia / Wikipedia image search（I1b-B 第一版）
-    ├── crawlers/
-    │   ├── sourceHash.ts                     # SHA-256 source_hash
-    │   ├── contentHash.ts                    # SHA-256 content_hash（J7d-A drift 偵測）
-    │   ├── crawlerSource.ts                  # getCrawlerSourceByKey()、updateRunStatus()
-    │   ├── idolMatcher.ts                    # 聚合來源 idol 名稱匹配（M1a-B，含 alt_names）
-    │   ├── blackpinkOfficialTour.ts          # BLACKPINK HTML parser（cheerio）
-    │   ├── jypSchedule.ts                    # JYP JSON API 通用 parser
-    │   ├── runJypScheduleFetcher.ts          # jyp_schedule fetcher（12 個月，config.groupId）
-    │   ├── ygArtistSchedule.ts               # YG official schedule parser（JSON endpoint）
-    │   ├── runYgArtistScheduleFetcher.ts     # yg_artist_schedule fetcher（12 個月，config.artistId）
-    │   ├── kpopofficialConcerts.ts           # kpopofficial.com HTML parser（M1a-B）
-    │   └── runKpopofficialConcertsFetcher.ts # kpopofficial 聚合 fetcher（M1a-B + C）
-    └── ai/
-        └── parseCandidate.ts                 # Claude Haiku wrapper
-
-supabase/
-├── migrations/001–040（見 Migration 索引）
-└── seed.sql
-
-public/manifest.json
-vercel.json                                   # Cron "0 1 * * *"（09:00 Taipei）
-```
-
----
-
-## API Routes 索引
-
-| Route | 方法 | 說明 |
-|---|---|---|
-| `/api/cron/sync-candidates` | GET | Vercel Cron fan-out（J6e；Bearer CRON_SECRET；dispatch by parser_type）|
-| `/api/admin/crawlers/blackpink-tour/run` | POST | BLACKPINK 手動觸發（admin guard）|
-| `/api/admin/crawlers/jyp-schedule/run` | POST | JYP 手動觸發（body: {sourceKey}）|
-| `/api/admin/crawlers/twice-schedule/run` | POST | 相容 shim → jyp-schedule('twice-jyp-schedule')|
-| `/api/admin/crawlers/kpopofficial-concerts/run` | POST | kpopofficial 聚合手動觸發（admin guard；body: {sourceKey}）|
-| `/api/admin/crawlers/yg-artist-schedule/run` | POST | YG official schedule 手動觸發（admin guard；body: {sourceKey}）|
-| `/api/admin/ai/parse-candidate` | POST | AI 解析公告（admin guard + Claude Haiku）|
-| `/api/admin/idols/[id]/ai-search-image` | GET | I1b-B 後台 AI 搜圖（Wikimedia；admin guard；?q= 自訂關鍵字）|
-| `/api/admin/event-candidates/bulk-review` | POST | 批量 approve / reject 候選（J7b）|
-| `/api/admin/events/bulk-publish` | POST | 批量發布 / 下架 / 刪除草稿 + trust_level 切換（J7e + PR #43）|
-| `/api/admin/event-candidates/cleanup-expired` | POST | 一鍵清理 pending + detected_date < today 候選（J7c）|
-| `/auth/callback` | GET | Magic link / OAuth callback |
-
----
-
-## 設計規範
-
-### 色彩 Token（tailwind.config.ts）
-
-| Token | 色碼 | 說明 |
-|---|---|---|
-| `bg` | `#08080f` | 主底色 |
-| `card` | `#0f0f1e` | 卡片底 |
-| `card-border` | `#1e1e36` | 邊框 |
-| `primary` | `#e91e8c` | 主色（熱粉）|
-| `violet` | `#8b5cf6` | 輔色 |
-| `text-base` | `#f0f0ff` | 主文字 |
-| `muted` | `#6b6b9a` | 次文字 |
-
-### 元件慣例
-
-- 卡片：`rounded-2xl border border-card-border bg-card`
-- 主色按鈕：`bg-primary text-white rounded-xl`
-- 次要按鈕：`border border-card-border bg-transparent text-muted`
-- 底部安全距離：`pb-24`；最大寬度：`max-w-md`（448px）mobile-first
-- 預設 Server Component；需要 `useState` / `usePathname` 才加 `'use client'`
+- 目前階段、已完成進度、待辦、migration 狀態、Env、目錄結構、API Routes、設計規範：請看 `WORKING.md`。
+- 新 session 先讀本檔確認規則，再依任務需要讀 `WORKING.md` 的相關段落。

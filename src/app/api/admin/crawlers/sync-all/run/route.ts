@@ -60,7 +60,9 @@ export async function POST(): Promise<NextResponse<SyncAllResponse>> {
     )
   }
 
-  const { result, error } = await runActiveCrawlerSources(supabase)
+  const { result, error } = await runActiveCrawlerSources(supabase, {
+    trigger: 'admin-manual',
+  })
   if (!result) {
     return json(
       {

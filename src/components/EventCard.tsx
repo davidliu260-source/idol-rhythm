@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { MapPin, Clock, Heart, Bell, Share2, ExternalLink } from 'lucide-react'
 import { type Event, formatEventDate } from '@/lib/mockEvents'
+import { getEventDateLabel } from '@/lib/eventDisplay'
 import { useAppState } from '@/lib/appState'
 import SourceBadge from './SourceBadge'
 import EventTypeBadge from './EventTypeBadge'
@@ -19,7 +20,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
   const { favorites, reminders } = useAppState()
   const isFavorited = favorites.has(event.id)
   const hasReminder = reminders.has(event.id)
-  const dateLabel = formatEventDate(event.date)
+  const dateLabel = getEventDateLabel(event)
   const isToday = dateLabel.startsWith('今天')
 
   const navigateToDetail = () => router.push(`/events/${event.id}`)

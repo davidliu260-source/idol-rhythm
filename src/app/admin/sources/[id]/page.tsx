@@ -105,7 +105,7 @@ export default async function AdminSourceDetailPage({
         </div>
       )}
 
-      {isAdmin && source.isActive && (
+      {isAdmin && (source.isActive || source.parserType === 'generic_webpage') && (
         <div className="px-4 mb-4">
           <RunSourceButton
             parserType={source.parserType}

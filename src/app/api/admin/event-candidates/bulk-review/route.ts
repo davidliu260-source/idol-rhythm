@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
-import { getReviewSourceInfo } from '@/lib/admin/sourceReview'
 
 interface BulkReviewRequest {
   ids: string[]
@@ -79,18 +78,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkRevie
           errors.push({ id, message: `「${candidate.raw_title}」缺少偶像對應，無法批量核准` })
           continue
         }
-        const sourceInfo = getReviewSourceInfo({
-          sourceName: candidate.source_name as string | null,
-          sourceType: candidate.source_type as string | null,
-          sourceUrl: candidate.source_url as string | null,
-        })
-        if (sourceInfo.needsOriginalSource) {
-          errors.push({
-            id,
-            message: `「${candidate.raw_title}」是${sourceInfo.shortLabel}，請逐筆確認原始佐證後再核准`,
-          })
-          continue
-        }
 
         const { data: idol, error: idolErr } = await supabase
           .from('idols')
@@ -104,6 +91,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkRevie
         }
 
         const today = new Date().toISOString().slice(0, 10)
+        const eventDate =
+          (candidate.detected_start_date as string | null) ??
+          (candidate.detected_date as string | null) ??
+          today
         const { data: eventData, error: eventErr } = await supabase
           .from('events')
           .insert({
@@ -111,15 +102,28 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkRevie
             idol_name: idol.name,
             title: candidate.raw_title,
             type: candidate.detected_event_type ?? 'official',
-            sub_type: null,
+            sub_type: (candidate.detected_event_sub_type as string | null) ?? null,
             status: 'confirmed',
             trust_level: 'pending',
-            date: candidate.detected_date ?? today,
+            date: eventDate,
             time: null,
             country: '',
             country_flag: '',
             location: null,
             description: candidate.raw_content ?? null,
+            display_title_zh: (candidate.display_title_zh as string | null) ?? null,
+            display_summary_zh: (candidate.display_summary_zh as string | null) ?? null,
+            location_name_zh: (candidate.location_name_zh as string | null) ?? null,
+            translation_status: (candidate.translation_status as string | null) ?? 'none',
+            translation_source: (candidate.translation_source as string | null) ?? null,
+            translation_updated_at: (candidate.translation_updated_at as string | null) ?? null,
+            start_date: eventDate,
+            end_date: (candidate.detected_end_date as string | null) ?? null,
+            date_label: (candidate.detected_date_label as string | null) ?? null,
+            city: (candidate.detected_city as string | null) ?? null,
+            venue_name: (candidate.detected_venue_name as string | null) ?? null,
+            address: (candidate.detected_address as string | null) ?? null,
+            map_url: (candidate.detected_map_url as string | null) ?? null,
             tags: [],
             ticket_url: null,
             stream_url: null,

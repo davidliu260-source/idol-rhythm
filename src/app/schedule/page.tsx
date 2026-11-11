@@ -1,29 +1,42 @@
 export const dynamic = 'force-dynamic'
 
 import { Calendar } from 'lucide-react'
-import { getPublishedEvents, getActiveIdols } from '@/lib/supabase/events'
+import { getPublishedEvents } from '@/lib/supabase/events'
 import ScheduleClient from './ScheduleClient'
+import { PAGE_HERO_SHELL } from './scheduleTheme'
 
 export default async function SchedulePage() {
-  const [events, idols] = await Promise.all([
-    getPublishedEvents(),
-    getActiveIdols(),
-  ])
+  const events = await getPublishedEvents()
 
   return (
-    <div className="flex flex-col gap-0 pt-12 pb-6">
-      {/* Header */}
-      <div className="px-4 mb-4">
-        <div className="flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-primary" />
-          <h1 className="text-xl font-bold text-text-base">行程時間軸</h1>
-        </div>
-        <p className="text-xs text-muted mt-1">
-          共 {events.length} 筆已確認活動
-        </p>
-      </div>
+    <div className="relative flex flex-col gap-0 overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(255,92,178,0.12),transparent_24%),linear-gradient(180deg,#140f18_0%,#0a0910_100%)] pt-8 pb-6">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_9%,rgba(255,95,177,0.1),transparent_18%)]" />
 
-      <ScheduleClient events={events} idols={idols} />
+      <div className="px-3">
+        <div className={PAGE_HERO_SHELL}>
+          <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(255,110,193,0.55),transparent)]" />
+
+          <div className="px-4 pt-6 pb-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="inline-flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.34em] text-white/35">
+                <span className="h-2 w-2 rounded-full border border-[#ff6bbd]/60" />
+                <span>IDOL · RHYTHM</span>
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-[#ff63bd]" />
+                <h1 className="text-[34px] font-bold leading-none text-white">行程時間軸</h1>
+              </div>
+              <p className="mt-2 text-xs text-white/48">
+                共 {events.length} 筆已確認活動
+              </p>
+            </div>
+          </div>
+
+          <ScheduleClient events={events} />
+        </div>
+      </div>
     </div>
   )
 }

@@ -365,8 +365,11 @@ export async function runJypScheduleFetcher(
   //     unchanged; first post-J7d-A run for legacy rows)
   //   - existing row, content_hash equals payload → SKIP (unchanged)
   //   - existing row, content_hash differs  → FLAG needs_recheck=true,
-  //     update content_hash to new value, append a note line. Never touch
-  //     review_status, approved_event_id, or raw_* fields.
+  //     update content_hash to new value, append a note line, AND record the
+  //     newly-fetched snapshot in latest_* columns (Drift Diff v1, migration
+  //     058). Never touch review_status, approved_event_id, or the original
+  //     raw_* fields — admin compares old (raw_*) vs new (latest_*) in the
+  //     candidate detail page.
   let inserted = 0
   let wouldInsert = 0
   let skipped = 0
@@ -441,6 +444,17 @@ export async function runJypScheduleFetcher(
         needs_recheck: true,
         content_hash: payload.content_hash,
         reviewer_note: newNote,
+        // ── Drift Diff v1 (migration 058) ──
+        // Store the newly-fetched snapshot so admin can compare against the
+        // original raw_* in the candidate detail page. Original raw_* fields
+        // (raw_title / raw_content / detected_date / source_url / raw_data)
+        // are intentionally NOT overwritten — admin needs both versions to
+        // decide whether to manually edit the linked event.
+        latest_raw_title:     payload.raw_title,
+        latest_raw_content:   payload.raw_content,
+        latest_detected_date: payload.detected_date,
+        latest_source_url:    payload.source_url,
+        latest_detected_at:   new Date().toISOString(),
       })
       .eq('id', existing.id)
     if (error) {

@@ -5,7 +5,12 @@ import { ArrowLeft, FileSearch, CheckCircle2, XCircle, AlertTriangle } from 'luc
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
 import { getReviewSourceInfo } from '@/lib/admin/sourceReview'
+import EventTypeBadge from '@/components/EventTypeBadge'
 import { approveCandidate, rejectCandidate } from './actions'
+import GenerateChineseButton from './GenerateChineseButton'
+import MarkReviewedButton from './MarkReviewedButton'
+import ResolveRecheckButton from './ResolveRecheckButton'
+import VerifyCandidateButton from './VerifyCandidateButton'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -16,7 +21,19 @@ interface CandidateDetail {
   detectedIdolId: string | null
   idolName: string | null
   detectedEventType: string | null
+  detectedEventSubType: string | null
   detectedDate: string | null
+  detectedStartDate: string | null
+  detectedEndDate: string | null
+  detectedDateLabel: string | null
+  detectedCity: string | null
+  detectedVenueName: string | null
+  detectedAddress: string | null
+  displayTitleZh: string | null
+  displaySummaryZh: string | null
+  locationNameZh: string | null
+  translationStatus: string
+  translationSource: string | null
   sourceUrl: string | null
   sourceName: string | null
   sourceType: string | null
@@ -29,6 +46,24 @@ interface CandidateDetail {
   createdAt: string
   updatedAt: string
   needsRecheck: boolean
+  // Drift Diff v1 (migration 058)
+  latestRawTitle: string | null
+  latestRawContent: string | null
+  latestDetectedDate: string | null
+  latestSourceUrl: string | null
+  latestDetectedAt: string | null
+  verificationStatus: string | null
+  verifiedAt: string | null
+  verificationEvidence: Array<{
+    url: string
+    canonicalUrl?: string
+    title: string
+    citedText: string
+    sourceClass: string
+    fieldMatches: { artist: boolean; dates: boolean; venueOrCity: boolean }
+    confidence: string
+  }>
+  verificationProviderMeta: Record<string, unknown> | null
 }
 
 // ── Data fetcher ──────────────────────────────────────────────────────────────
@@ -51,7 +86,19 @@ async function getCandidate(id: string): Promise<CandidateDetail | null> {
     raw_content: string | null
     detected_idol_id: string | null
     detected_event_type: string | null
+    detected_event_sub_type: string | null
     detected_date: string | null
+    detected_start_date: string | null
+    detected_end_date: string | null
+    detected_date_label: string | null
+    detected_city: string | null
+    detected_venue_name: string | null
+    detected_address: string | null
+    display_title_zh: string | null
+    display_summary_zh: string | null
+    location_name_zh: string | null
+    translation_status: string | null
+    translation_source: string | null
     source_url: string | null
     source_name: string | null
     source_type: string | null
@@ -63,6 +110,17 @@ async function getCandidate(id: string): Promise<CandidateDetail | null> {
     created_at: string
     updated_at: string
     needs_recheck: boolean | null
+    // Drift Diff v1 (migration 058) — latest snapshot from crawler when
+    // content_hash drifted. NULL means no drift has been detected yet.
+    latest_raw_title: string | null
+    latest_raw_content: string | null
+    latest_detected_date: string | null
+    latest_source_url: string | null
+    latest_detected_at: string | null
+    verification_status: string | null
+    verified_at: string | null
+    verification_evidence: unknown
+    verification_provider_meta: Record<string, unknown> | null
     idols: { name: string } | null
   }
 
@@ -84,7 +142,19 @@ async function getCandidate(id: string): Promise<CandidateDetail | null> {
     detectedIdolId: row.detected_idol_id,
     idolName: row.idols?.name ?? null,
     detectedEventType: row.detected_event_type,
+    detectedEventSubType: row.detected_event_sub_type,
     detectedDate: row.detected_date,
+    detectedStartDate: row.detected_start_date,
+    detectedEndDate: row.detected_end_date,
+    detectedDateLabel: row.detected_date_label,
+    detectedCity: row.detected_city,
+    detectedVenueName: row.detected_venue_name,
+    detectedAddress: row.detected_address,
+    displayTitleZh: row.display_title_zh,
+    displaySummaryZh: row.display_summary_zh,
+    locationNameZh: row.location_name_zh,
+    translationStatus: row.translation_status ?? 'none',
+    translationSource: row.translation_source,
     sourceUrl: row.source_url,
     sourceName: row.source_name,
     sourceType: row.source_type,
@@ -97,6 +167,15 @@ async function getCandidate(id: string): Promise<CandidateDetail | null> {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     needsRecheck: row.needs_recheck ?? false,
+    latestRawTitle: row.latest_raw_title,
+    latestRawContent: row.latest_raw_content,
+    latestDetectedDate: row.latest_detected_date,
+    latestSourceUrl: row.latest_source_url,
+    latestDetectedAt: row.latest_detected_at,
+    verificationStatus: row.verification_status,
+    verifiedAt: row.verified_at,
+    verificationEvidence: Array.isArray(row.verification_evidence) ? row.verification_evidence as CandidateDetail['verificationEvidence'] : [],
+    verificationProviderMeta: row.verification_provider_meta,
   }
 }
 
@@ -114,14 +193,75 @@ function formatDatetime(iso: string): string {
   }
 }
 
-const EVENT_TYPE_LABELS: Record<string, string> = {
-  concert: '演唱會 / 見面會',
-  ticketing: '開票售票',
-  livestream: '直播',
-  streaming: '串流',
-  media: '媒體',
-  brand: '代言品牌',
-  official: '官方發布',
+const TRANSLATION_STATUS_LABELS: Record<string, string> = {
+  none: '未產生',
+  machine: '機器產生',
+  reviewed: '已審閱',
+  manual: '人工編輯',
+}
+
+function getCandidateChineseDisabledReason(candidate: CandidateDetail): string | null {
+  if (candidate.reviewStatus !== 'pending') {
+    return '只有待審核候選可以產生繁中顯示文案'
+  }
+  if (candidate.translationStatus === 'manual' || candidate.translationStatus === 'reviewed') {
+    return '中文欄位已是人工編輯或已審閱狀態，不自動覆蓋'
+  }
+  if (candidate.displayTitleZh || candidate.displaySummaryZh || candidate.locationNameZh) {
+    return '已有中文顯示欄位，第一版不支援覆蓋既有內容'
+  }
+  return null
+}
+
+function getCandidateReviewedDisabledReason(candidate: CandidateDetail): string | null {
+  if (candidate.translationStatus !== 'machine') {
+    return '只有機器產生狀態可以標記已審閱'
+  }
+  if (!candidate.displayTitleZh && !candidate.displaySummaryZh && !candidate.locationNameZh) {
+    return '缺少中文欄位，無法標記已審閱'
+  }
+  return null
+}
+
+/**
+ * One row inside the Drift Diff side-by-side panel.
+ * - `value` null/empty renders as "—".
+ * - `multiline` preserves whitespace + wraps long content (for raw_content).
+ * - `mono` uses a monospace font (for URLs).
+ * - `changed` adds a subtle highlight ring on the "latest" side so the admin
+ *   can scan which fields actually differ. The original side never sets
+ *   `changed`; the comparison is only meaningful when called from the
+ *   latest column.
+ */
+function DiffField({
+  label,
+  value,
+  multiline = false,
+  mono = false,
+  changed = false,
+}: {
+  label: string
+  value: string | null
+  multiline?: boolean
+  mono?: boolean
+  changed?: boolean
+}) {
+  return (
+    <div>
+      <div className="text-[10px] text-muted mb-0.5">{label}</div>
+      <div
+        className={`text-xs leading-relaxed ${
+          mono ? 'font-mono break-all' : 'break-words'
+        } ${multiline ? 'whitespace-pre-wrap' : ''} ${
+          changed
+            ? 'text-emerald-300 font-medium'
+            : 'text-text-base'
+        }`}
+      >
+        {value && value.length > 0 ? value : <span className="text-muted">—</span>}
+      </div>
+    </div>
+  )
 }
 
 function sourceBadgeClass(risk: string): string {
@@ -174,6 +314,8 @@ export default async function AdminCandidateDetailPage({
   const isRejected = candidate.reviewStatus === 'rejected'
   const hasIdol    = !!candidate.detectedIdolId
   const sourceInfo = getReviewSourceInfo(candidate)
+  const chineseDisabledReason = getCandidateChineseDisabledReason(candidate)
+  const reviewedDisabledReason = getCandidateReviewedDisabledReason(candidate)
 
   return (
     <div className="flex flex-col gap-0 pt-12 pb-6">
@@ -216,13 +358,87 @@ export default async function AdminCandidateDetailPage({
 
       {/* needs_recheck banner — only when crawler detected content drift */}
       {candidate.needsRecheck && (
-        <div className="px-4 mb-4">
+        <div className="px-4 mb-2">
           <div className="rounded-xl bg-orange-500/10 border border-orange-500/30 px-3 py-2.5 flex items-start gap-2">
             <AlertTriangle className="h-3.5 w-3.5 text-orange-400 flex-shrink-0 mt-0.5" />
             <p className="text-xs text-orange-300 leading-snug">
               <span className="font-semibold">內容已變更</span>
               ｜爬蟲偵測到此候選的來源內容在首次擷取後有更動，建議重新審核。詳細變更時間請見下方 reviewer note。
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* needs_recheck resolve button — admin only */}
+      {isAdmin && candidate.needsRecheck && (
+        <div className="px-4 mb-4">
+          <ResolveRecheckButton
+            candidateId={candidate.id}
+            isApproved={isApproved}
+          />
+        </div>
+      )}
+
+      {/* ── Drift Diff v1 (migration 058) ──
+         Shown whenever the crawler has ever captured a newer snapshot
+         (latestDetectedAt set), even after admin clicked 已處理. The
+         latest_* values stay around for audit. */}
+      {candidate.latestDetectedAt && (
+        <div className="px-4 mb-4">
+          <div className="rounded-xl bg-card border border-card-border p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle className="h-3.5 w-3.5 text-orange-400 flex-shrink-0" />
+              <h3 className="text-sm font-semibold text-text-base">內容變更紀錄</h3>
+              <span className="ml-auto text-[10px] text-muted tabular-nums">
+                最近偵測：{formatDatetime(candidate.latestDetectedAt)}
+              </span>
+            </div>
+
+            <p className="mb-3 rounded-lg bg-amber-500/10 border border-amber-500/25 px-3 py-2 text-[11px] text-amber-300 leading-snug">
+              此區塊只顯示來源最新版本；系統不會自動更新對應的已發布活動。如需更新，請至 <code className="font-mono">/admin/events/[id]/edit</code> 人工調整。
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {/* Original column */}
+              <div className="rounded-lg bg-card-border/20 border border-card-border p-3 space-y-2.5">
+                <div className="text-[10px] font-semibold text-muted uppercase tracking-wider">
+                  原本內容（核准時）
+                </div>
+                <DiffField label="標題" value={candidate.rawTitle} />
+                <DiffField label="日期" value={candidate.detectedDate} />
+                <DiffField label="來源 URL" value={candidate.sourceUrl} mono />
+                <DiffField label="內容" value={candidate.rawContent} multiline />
+              </div>
+
+              {/* Latest column */}
+              <div className="rounded-lg bg-emerald-500/5 border border-emerald-500/25 p-3 space-y-2.5">
+                <div className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider">
+                  新抓到內容
+                </div>
+                <DiffField
+                  label="標題"
+                  value={candidate.latestRawTitle}
+                  changed={candidate.latestRawTitle !== candidate.rawTitle}
+                />
+                <DiffField
+                  label="日期"
+                  value={candidate.latestDetectedDate}
+                  changed={candidate.latestDetectedDate !== candidate.detectedDate}
+                />
+                <DiffField
+                  label="來源 URL"
+                  value={candidate.latestSourceUrl}
+                  mono
+                  changed={candidate.latestSourceUrl !== candidate.sourceUrl}
+                />
+                <DiffField
+                  label="內容"
+                  value={candidate.latestRawContent}
+                  multiline
+                  changed={candidate.latestRawContent !== candidate.rawContent}
+                />
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -235,6 +451,51 @@ export default async function AdminCandidateDetailPage({
               <span className="font-semibold">{sourceInfo.shortLabel}</span>
               ｜{sourceInfo.hint}
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* B-2 verification — evidence only; publishing remains manual below. */}
+      {isAdmin && isPending && sourceInfo.needsOriginalSource && (
+        <div className="px-4 mb-4">
+          <VerifyCandidateButton candidateId={candidate.id} />
+        </div>
+      )}
+
+      {candidate.verificationStatus && (
+        <div className="px-4 mb-4">
+          <div className="rounded-xl bg-card border border-card-border p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <h2 className="text-sm font-semibold text-text-base">自動求證</h2>
+              <span className="text-[10px] rounded border border-violet/25 bg-violet/10 px-1.5 py-0.5 text-violet-300">
+                {candidate.verificationStatus}
+              </span>
+              {candidate.verifiedAt && (
+                <span className="ml-auto text-[10px] text-muted">{formatDatetime(candidate.verifiedAt)}</span>
+              )}
+            </div>
+            {candidate.verificationEvidence.length > 0 ? (
+              <div className="space-y-3">
+                {candidate.verificationEvidence.map((evidence, index) => (
+                  <div key={`${evidence.url}-${index}`} className="rounded-lg border border-card-border bg-card-border/10 p-3 space-y-1.5">
+                    <a href={evidence.canonicalUrl ?? evidence.url} target="_blank" rel="noreferrer" className="text-xs text-violet-300 underline break-all">
+                      {evidence.title || evidence.url}
+                    </a>
+                    <p className="text-[11px] text-muted break-all">{evidence.canonicalUrl ?? evidence.url}</p>
+                    <p className="text-xs text-text-base whitespace-pre-wrap">{evidence.citedText}</p>
+                    <div className="flex gap-2 flex-wrap text-[10px] text-muted">
+                      <span>source: {evidence.sourceClass}</span>
+                      <span>confidence: {evidence.confidence}</span>
+                      <span>artist {evidence.fieldMatches.artist ? '✓' : '✗'}</span>
+                      <span>dates {evidence.fieldMatches.dates ? '✓' : '✗'}</span>
+                      <span>venue/city {evidence.fieldMatches.venueOrCity ? '✓' : '✗'}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted">沒有可落庫的 citation evidence；此結果維持 fail closed。</p>
+            )}
           </div>
         </div>
       )}
@@ -344,6 +605,44 @@ export default async function AdminCandidateDetailPage({
           )}
         </div>
 
+        {/* Chinese display metadata */}
+        <div className="rounded-xl bg-card border border-card-border px-4 py-4 flex flex-col gap-3">
+          <p className="text-xs font-semibold text-muted uppercase tracking-wide">中文顯示</p>
+          {isAdmin && (
+            <>
+              <GenerateChineseButton
+                candidateId={candidate.id}
+                disabledReason={chineseDisabledReason}
+              />
+              {candidate.translationStatus === 'machine' && (
+                <MarkReviewedButton
+                  candidateId={candidate.id}
+                  disabledReason={reviewedDisabledReason}
+                />
+              )}
+              <Divider />
+            </>
+          )}
+          <Field label="中文標題">{candidate.displayTitleZh || <span className="text-muted/60">尚未填寫</span>}</Field>
+          {candidate.displaySummaryZh && (
+            <>
+              <Divider />
+              <Field label="中文摘要">{candidate.displaySummaryZh}</Field>
+            </>
+          )}
+          {candidate.locationNameZh && (
+            <>
+              <Divider />
+              <Field label="中文地點">{candidate.locationNameZh}</Field>
+            </>
+          )}
+          <Divider />
+          <Field label="翻譯狀態">
+            {TRANSLATION_STATUS_LABELS[candidate.translationStatus] ?? candidate.translationStatus}
+            {candidate.translationSource ? ` / ${candidate.translationSource}` : ''}
+          </Field>
+        </div>
+
         {/* Detection results */}
         <div className="rounded-xl bg-card border border-card-border px-4 py-4 flex flex-col gap-3">
           <p className="text-xs font-semibold text-muted uppercase tracking-wide">偵測結果</p>
@@ -358,7 +657,10 @@ export default async function AdminCandidateDetailPage({
             <>
               <Divider />
               <Field label="活動類型">
-                {EVENT_TYPE_LABELS[candidate.detectedEventType] ?? candidate.detectedEventType}
+                <EventTypeBadge
+                  type={candidate.detectedEventType}
+                  subType={candidate.detectedEventSubType}
+                />
               </Field>
             </>
           )}
@@ -366,6 +668,23 @@ export default async function AdminCandidateDetailPage({
             <>
               <Divider />
               <Field label="偵測日期">{candidate.detectedDate.slice(0, 10)}</Field>
+            </>
+          )}
+          {(candidate.detectedStartDate || candidate.detectedEndDate || candidate.detectedDateLabel) && (
+            <>
+              <Divider />
+              <Field label="日期區間">
+                {candidate.detectedDateLabel ||
+                  [candidate.detectedStartDate, candidate.detectedEndDate].filter(Boolean).join(' - ')}
+              </Field>
+            </>
+          )}
+          {(candidate.detectedCity || candidate.detectedVenueName || candidate.detectedAddress) && (
+            <>
+              <Divider />
+              <Field label="地點細節">
+                {[candidate.detectedCity, candidate.detectedVenueName, candidate.detectedAddress].filter(Boolean).join(' / ')}
+              </Field>
             </>
           )}
           {candidate.aiConfidence !== null && (

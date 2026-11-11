@@ -6,12 +6,14 @@ import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
 import {
   getEventById as getMockEvent,
-  EVENT_TYPE_LABELS,
-  EVENT_SUBTYPE_LABELS,
   SOURCE_CONFIG,
 } from '@/lib/mockEvents'
 import type { TrustLevel, EventSubType, EventType, EventStatus, SourceType } from '@/lib/types'
+import EventTypeBadge from '@/components/EventTypeBadge'
 import { publishEvent, unpublishEvent } from './actions'
+import GenerateChineseButton from './GenerateChineseButton'
+import MarkReviewedButton from './MarkReviewedButton'
+import { getReviewSourceInfo } from '@/lib/admin/sourceReview'
 
 // ── Admin-only types (not exported — used only in this page) ──────────────────
 
@@ -29,13 +31,24 @@ interface AdminEventDetail {
   idolId: string
   idolName: string
   title: string
+  displayTitleZh?: string
+  displaySummaryZh?: string
+  locationNameZh?: string
+  translationStatus: string
   type: EventType
   subType?: EventSubType
   status: EventStatus
   trustLevel: TrustLevel
   date: string
+  startDate?: string
+  endDate?: string
+  dateLabel?: string
   time?: string
   location?: string
+  city?: string
+  venueName?: string
+  address?: string
+  mapUrl?: string
   country: string
   countryFlag: string
   description: string
@@ -66,8 +79,12 @@ async function getAdminEvent(id: string): Promise<AdminEventDetail | null> {
 
   const row = data as {
     id: string; idol_id: string; idol_name: string; title: string
+    display_title_zh: string | null; display_summary_zh: string | null
+    location_name_zh: string | null; translation_status: string | null
     type: string; sub_type: string | null; status: string; trust_level: string
-    date: string; time: string | null; location: string | null
+    date: string; start_date: string | null; end_date: string | null
+    date_label: string | null; time: string | null; location: string | null
+    city: string | null; venue_name: string | null; address: string | null; map_url: string | null
     country: string; country_flag: string; description: string | null
     tags: string[] | null; ticket_url: string | null; stream_url: string | null
     is_published: boolean; published_at: string | null
@@ -93,13 +110,24 @@ async function getAdminEvent(id: string): Promise<AdminEventDetail | null> {
     idolId: row.idols?.slug ?? row.idol_id,
     idolName: row.idol_name,
     title: row.title,
+    displayTitleZh: row.display_title_zh ?? undefined,
+    displaySummaryZh: row.display_summary_zh ?? undefined,
+    locationNameZh: row.location_name_zh ?? undefined,
+    translationStatus: row.translation_status ?? 'none',
     type: row.type as EventType,
     subType: (row.sub_type ?? undefined) as EventSubType | undefined,
     status: row.status as EventStatus,
     trustLevel: row.trust_level as TrustLevel,
     date: row.date,
+    startDate: row.start_date ?? undefined,
+    endDate: row.end_date ?? undefined,
+    dateLabel: row.date_label ?? undefined,
     time: row.time ?? undefined,
     location: row.location ?? undefined,
+    city: row.city ?? undefined,
+    venueName: row.venue_name ?? undefined,
+    address: row.address ?? undefined,
+    mapUrl: row.map_url ?? undefined,
     country: row.country,
     countryFlag: row.country_flag,
     description: row.description ?? '',
@@ -124,6 +152,7 @@ function mockToAdminDetail(id: string): AdminEventDetail | null {
     idolId: mock.idolId,
     idolName: mock.idolName,
     title: mock.title,
+    translationStatus: 'none',
     type: mock.type,
     subType: mock.subType,
     status: mock.status,
@@ -151,6 +180,36 @@ function mockToAdminDetail(id: string): AdminEventDetail | null {
       createdAt: mock.date,
     }],
   }
+}
+
+const TRANSLATION_STATUS_LABELS: Record<string, string> = {
+  none: '未產生',
+  machine: '機器產生',
+  reviewed: '已審閱',
+  manual: '人工編輯',
+}
+
+function getEventChineseDisabledReason(event: AdminEventDetail): string | null {
+  if (event.isPublished) {
+    return '已發布活動不支援直接產生繁中欄位'
+  }
+  if (event.translationStatus === 'manual' || event.translationStatus === 'reviewed') {
+    return '中文欄位已是人工編輯或已審閱狀態，不自動覆蓋'
+  }
+  if (event.displayTitleZh || event.displaySummaryZh || event.locationNameZh) {
+    return '已有中文顯示欄位，第一版不支援覆蓋既有內容'
+  }
+  return null
+}
+
+function getEventReviewedDisabledReason(event: AdminEventDetail): string | null {
+  if (event.translationStatus !== 'machine') {
+    return '只有機器產生狀態可以標記已審閱'
+  }
+  if (!event.displayTitleZh && !event.displaySummaryZh && !event.locationNameZh) {
+    return '缺少中文欄位，無法標記已審閱'
+  }
+  return null
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -188,10 +247,32 @@ export default async function AdminEventDetailPage({
   }
 
   const trustConfig = SOURCE_CONFIG[event.trustLevel]
-  const typeLabel = EVENT_TYPE_LABELS[event.type] ?? event.type
-  const subTypeLabel = event.subType
-    ? (EVENT_SUBTYPE_LABELS[event.subType as EventSubType] ?? event.subType)
-    : null
+  const displayTitle = event.displayTitleZh || event.title
+
+  // Pre-check: will publishing be blocked by trust level?
+  // Shows a warning banner instead of crashing on submit.
+  const publishBlockReason: string | null = (() => {
+    if (event.isPublished) return null
+    const src = event.sources[0] ?? null
+    if (!src) return '此活動尚無來源紀錄，請先在編輯頁新增官方、售票或媒體來源。'
+    const { trustLevel, hint } = getReviewSourceInfo({
+      sourceName: src.label,
+      sourceType: src.type,
+      sourceUrl: src.url,
+    })
+    if (trustLevel === 'pending') {
+      return hint ?? '來源為聚合 / 社群 / 未知類型，請先補充官方、售票、主辦、場館或媒體來源後再發布。'
+    }
+    return null
+  })()
+
+  const dateDisplay =
+    event.dateLabel ||
+    (event.startDate && event.endDate
+      ? `${event.startDate.slice(0, 10)} - ${event.endDate.slice(0, 10)}`
+      : (event.startDate ?? event.date).slice(0, 10))
+  const chineseDisabledReason = getEventChineseDisabledReason(event)
+  const reviewedDisabledReason = getEventReviewedDisabledReason(event)
 
   const statusColors: Record<string, string> = {
     confirmed: 'text-emerald-400',
@@ -243,6 +324,24 @@ export default async function AdminEventDetailPage({
                 <span className="text-xs font-semibold text-amber-400">下架活動（取消發布）</span>
               </button>
             </form>
+          ) : publishBlockReason ? (
+            /* ── Publish blocked: show reason instead of crash ── */
+            <div className="flex flex-col gap-2">
+              <div className="rounded-xl bg-red-500/10 border border-red-500/25 px-3 py-2.5 flex items-start gap-2">
+                <AlertTriangle className="h-3.5 w-3.5 text-red-400 flex-shrink-0 mt-0.5" />
+                <div className="flex flex-col gap-0.5">
+                  <p className="text-xs font-semibold text-red-400">無法發布：來源不符</p>
+                  <p className="text-xs text-red-300/80 leading-snug">{publishBlockReason}</p>
+                </div>
+              </div>
+              <Link
+                href={`/admin/events/${event.id}/edit`}
+                className="flex items-center gap-2 rounded-xl bg-card border border-card-border px-3 py-2.5 hover:bg-card-border/30 transition-colors"
+              >
+                <FileEdit className="h-4 w-4 text-muted flex-shrink-0" />
+                <span className="text-xs font-medium text-muted">前往編輯頁新增官方來源</span>
+              </Link>
+            </div>
           ) : (
             /* ── Publish button ── */
             <form action={publishEvent.bind(null, event.id)}>
@@ -286,16 +385,12 @@ export default async function AdminEventDetailPage({
             <span className={`text-[10px] font-semibold ${trustConfig.color}`}>
               {trustConfig.label}
             </span>
-            <span className="text-[10px] text-muted border border-card-border rounded px-1.5 py-0.5">
-              {typeLabel}
-            </span>
-            {subTypeLabel && (
-              <span className="text-[10px] text-muted border border-card-border rounded px-1.5 py-0.5">
-                {subTypeLabel}
-              </span>
-            )}
+            <EventTypeBadge type={event.type} subType={event.subType} />
           </div>
-          <h2 className="text-base font-bold text-text-base leading-snug">{event.title}</h2>
+          <h2 className="text-base font-bold text-text-base leading-snug">{displayTitle}</h2>
+          {event.displayTitleZh && event.displayTitleZh !== event.title && (
+            <p className="text-[10px] text-muted leading-snug">原文：{event.title}</p>
+          )}
           <p className="text-xs text-muted">{event.idolName}</p>
         </div>
 
@@ -326,14 +421,67 @@ export default async function AdminEventDetailPage({
             </span>
           </Field>
           <Divider />
-          <Field label="日期">{event.date.slice(0, 10)}</Field>
+          <Field label="日期">{dateDisplay}</Field>
           {event.time && <><Divider /><Field label="時間">{event.time}</Field></>}
           <Divider />
           <Field label="國家 / 地區">
             {event.countryFlag} {event.country}
           </Field>
           {event.location && <><Divider /><Field label="地點">{event.location}</Field></>}
+          {event.locationNameZh && <><Divider /><Field label="中文地點">{event.locationNameZh}</Field></>}
+          {(event.city || event.venueName || event.address) && (
+            <>
+              <Divider />
+              <Field label="地點細節">
+                {[event.city, event.venueName, event.address].filter(Boolean).join(' / ')}
+              </Field>
+            </>
+          )}
+          {event.mapUrl && (
+            <>
+              <Divider />
+              <Field label="地圖 URL">
+                <a href={event.mapUrl} target="_blank" rel="noopener noreferrer" className="text-violet underline underline-offset-2 break-all">
+                  {event.mapUrl}
+                </a>
+              </Field>
+            </>
+          )}
         </div>
+
+        {(event.displayTitleZh ||
+          event.displaySummaryZh ||
+          event.locationNameZh ||
+          event.translationStatus !== 'none' ||
+          (isAdmin && !event.isPublished)) && (
+          <div className="rounded-xl bg-card border border-card-border px-4 py-4 flex flex-col gap-3">
+            <p className="text-xs font-semibold text-muted uppercase tracking-wide">中文顯示</p>
+            {isAdmin && !event.isPublished && (
+              <>
+                <GenerateChineseButton
+                  eventId={event.id}
+                  disabledReason={chineseDisabledReason}
+                />
+                {event.translationStatus === 'machine' && (
+                  <MarkReviewedButton
+                    eventId={event.id}
+                    disabledReason={reviewedDisabledReason}
+                  />
+                )}
+                <Divider />
+              </>
+            )}
+            {event.displayTitleZh && <Field label="中文標題">{event.displayTitleZh}</Field>}
+            {event.displayTitleZh && <Divider />}
+            {event.displaySummaryZh && <Field label="中文摘要">{event.displaySummaryZh}</Field>}
+            {event.displaySummaryZh && <Divider />}
+            {event.locationNameZh && <Field label="中文地點">{event.locationNameZh}</Field>}
+            {event.locationNameZh && <Divider />}
+            <Field label="狀態">
+              {TRANSLATION_STATUS_LABELS[event.translationStatus] ?? event.translationStatus}
+            </Field>
+          </div>
+        )}
 
         {/* Sources */}
         {event.sources.length > 0 && (

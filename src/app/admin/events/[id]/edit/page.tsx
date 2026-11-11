@@ -50,8 +50,19 @@ interface EventRow {
   status: string
   trust_level: string
   date: string
+  start_date: string | null
+  end_date: string | null
+  date_label: string | null
   time: string | null
   location: string | null
+  city: string | null
+  venue_name: string | null
+  address: string | null
+  map_url: string | null
+  display_title_zh: string | null
+  display_summary_zh: string | null
+  location_name_zh: string | null
+  translation_status: string | null
   country: string
   country_flag: string
   description: string | null
@@ -183,11 +194,22 @@ export default async function AdminEditEventPage({
     subType:     eventResult.sub_type ?? '',
     status:      eventResult.status,
     date:        eventResult.date,
+    startDate:   eventResult.start_date ?? eventResult.date,
+    endDate:     eventResult.end_date ?? '',
+    dateLabel:   eventResult.date_label ?? '',
     time:        eventResult.time ?? '',
     country:     eventResult.country,
     countryFlag: eventResult.country_flag,
     location:    eventResult.location ?? '',
+    city:        eventResult.city ?? '',
+    venueName:   eventResult.venue_name ?? '',
+    address:     eventResult.address ?? '',
+    mapUrl:      eventResult.map_url ?? '',
     description: eventResult.description ?? '',
+    displayTitleZh:   eventResult.display_title_zh ?? '',
+    displaySummaryZh: eventResult.display_summary_zh ?? '',
+    locationNameZh:   eventResult.location_name_zh ?? '',
+    translationStatus: eventResult.translation_status ?? 'none',
     tags:        (eventResult.tags ?? []).join(', '),
     ticketUrl:   eventResult.ticket_url ?? '',
     streamUrl:   eventResult.stream_url ?? '',
