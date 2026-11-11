@@ -44,7 +44,7 @@ export default async function HomePage() {
               IDOL · RHYTHM
             </p>
             <h1 className="mt-2 text-[34px] font-black leading-none tracking-normal text-white">
-              今天追什麼
+              今日活動
             </h1>
             <p className="mt-2 text-sm text-white/52">{dateStr}</p>
           </div>
