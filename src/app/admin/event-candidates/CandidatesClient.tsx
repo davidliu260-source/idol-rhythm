@@ -373,7 +373,7 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
                 onClick={() => setTab(t)}
                 className={`flex-shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                   isActive
-                    ? 'bg-violet text-white'
+                    ? 'bg-violet-500 text-white'
                     : 'bg-card border border-card-border text-muted hover:text-text-base'
                 }`}
               >
@@ -400,7 +400,7 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="搜尋活動標題 / 對應偶像 / 來源"
-            className="w-full rounded-xl bg-card border border-card-border pl-9 pr-9 py-2.5 text-xs text-text-base placeholder:text-muted focus:outline-none focus:border-violet/40"
+            className="w-full rounded-xl bg-card border border-card-border pl-9 pr-9 py-2.5 text-xs text-text-base placeholder:text-muted focus:outline-none focus:border-violet-500/40"
           />
           {query && (
             <button
@@ -481,7 +481,7 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
                   <div
                     className={`h-4 w-4 rounded border flex items-center justify-center transition-colors ${
                       isChecked
-                        ? 'bg-violet border-violet'
+                        ? 'bg-violet-500 border-violet-500'
                         : 'border-card-border bg-transparent'
                     }`}
                   >
@@ -494,7 +494,7 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
               <Link
                 href={`/admin/event-candidates/${c.id}`}
                 className={`flex-1 rounded-xl bg-card border px-4 py-3 flex flex-col gap-1.5 active:opacity-70 transition-opacity ${
-                  isChecked ? 'border-violet/50' : 'border-card-border'
+                  isChecked ? 'border-violet-500/50' : 'border-card-border'
                 }`}
               >
                 <div className="flex items-center gap-2">
@@ -515,7 +515,7 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
                         ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300'
                         : c.verificationStatus === 'provider_error'
                           ? 'bg-red-500/10 border-red-500/25 text-red-300'
-                          : 'bg-violet/10 border-violet/25 text-violet-300'
+                          : 'bg-violet-500/10 border-violet-500/25 text-violet-300'
                     }`}>
                       求證：{c.verificationStatus}
                     </span>
@@ -581,7 +581,7 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
                   onClick={autoVerify}
                   disabled={isPending || selectedHaveNonAggregator}
                   title={selectedHaveNonAggregator ? '只能對聚合 / 社群來源候選自動求證' : undefined}
-                  className="inline-flex items-center gap-1 rounded-lg border border-violet/40 bg-violet/10 px-3 py-1.5 text-xs font-semibold text-violet-200 disabled:opacity-40 active:opacity-70 transition-opacity"
+                  className="inline-flex items-center gap-1 rounded-lg border border-violet-500/40 bg-violet-500/10 px-3 py-1.5 text-xs font-semibold text-violet-200 disabled:opacity-40 active:opacity-70 transition-opacity"
                 >
                   {isPending ? '求證中…' : '自動求證'}
                 </button>
@@ -611,7 +611,7 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
               <button
                 onClick={bulkResolveRecheck}
                 disabled={isPending}
-                className="inline-flex items-center gap-1 rounded-lg bg-violet px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40 active:opacity-70 transition-opacity"
+                className="inline-flex items-center gap-1 rounded-lg bg-violet-500 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40 active:opacity-70 transition-opacity"
               >
                 <Check className="h-3 w-3" />
                 批量已處理

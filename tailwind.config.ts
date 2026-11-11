@@ -17,7 +17,6 @@ const config: Config = {
         primary: '#ff2d95',
         'primary-dim': 'rgba(255,45,149,0.15)',
         'primary-light': '#ff6bb5',
-        violet: '#8b5cf6',
         ok: '#34d399',
         warn: '#fbbf24',
         'text-base': '#f5f5ff',

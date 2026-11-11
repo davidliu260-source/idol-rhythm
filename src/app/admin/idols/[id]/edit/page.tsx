@@ -147,7 +147,7 @@ export default async function AdminEditIdolPage({
           返回偶像詳情
         </Link>
         <div className="flex items-center gap-2">
-          <FileEdit className="h-5 w-5 text-violet" />
+          <FileEdit className="h-5 w-5 text-violet-500" />
           <h1 className="text-xl font-bold text-text-base">編輯偶像資料</h1>
         </div>
         <p className="text-xs text-muted mt-1">{idol.name}</p>

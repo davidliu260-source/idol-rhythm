@@ -58,7 +58,7 @@ export default function LoginForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="admin@example.com"
-          className="rounded-xl border border-card-border bg-bg px-3 py-2.5 text-sm text-text-base placeholder:text-muted/40 focus:outline-none focus:border-violet/60 transition-colors"
+          className="rounded-xl border border-card-border bg-bg px-3 py-2.5 text-sm text-text-base placeholder:text-muted/40 focus:outline-none focus:border-violet-500/60 transition-colors"
         />
       </div>
 
@@ -75,7 +75,7 @@ export default function LoginForm() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="••••••••"
-          className="rounded-xl border border-card-border bg-bg px-3 py-2.5 text-sm text-text-base placeholder:text-muted/40 focus:outline-none focus:border-violet/60 transition-colors"
+          className="rounded-xl border border-card-border bg-bg px-3 py-2.5 text-sm text-text-base placeholder:text-muted/40 focus:outline-none focus:border-violet-500/60 transition-colors"
         />
       </div>
 
@@ -90,7 +90,7 @@ export default function LoginForm() {
       <button
         type="submit"
         disabled={loading}
-        className="mt-1 flex items-center justify-center gap-2 rounded-xl bg-violet px-4 py-3 text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
+        className="mt-1 flex items-center justify-center gap-2 rounded-xl bg-violet-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
       >
         {loading && <Loader2 className="h-4 w-4 animate-spin" />}
         {loading ? '登入中…' : '登入後台'}

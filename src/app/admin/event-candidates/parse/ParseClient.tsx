@@ -121,7 +121,7 @@ export default function ParseClient() {
           onChange={(e) => setRawText(e.target.value)}
           rows={10}
           placeholder="例：BLACKPINK DEADLINE WORLD TOUR — Hong Kong, AsiaWorld-Expo, March 14 2026 ..."
-          className="w-full rounded-xl border border-card-border bg-bg px-3 py-2.5 text-sm text-text-base placeholder:text-muted/40 focus:outline-none focus:border-violet/60 resize-y min-h-[180px]"
+          className="w-full rounded-xl border border-card-border bg-bg px-3 py-2.5 text-sm text-text-base placeholder:text-muted/40 focus:outline-none focus:border-violet-500/60 resize-y min-h-[180px]"
         />
         <span className="text-[10px] text-muted/60 self-end tabular-nums">
           {rawText.length} 字
@@ -133,7 +133,7 @@ export default function ParseClient() {
         type="button"
         onClick={handleParse}
         disabled={parsing || rawText.trim().length === 0}
-        className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet px-4 py-3 text-sm font-semibold text-white disabled:opacity-60 active:opacity-80 transition-opacity"
+        className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60 active:opacity-80 transition-opacity"
       >
         {parsing ? (
           <Loader2 className="h-4 w-4 animate-spin" />

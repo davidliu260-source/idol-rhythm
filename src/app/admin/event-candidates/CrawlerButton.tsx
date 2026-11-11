@@ -65,7 +65,7 @@ export default function CrawlerButton() {
         type="button"
         onClick={handleRun}
         disabled={running}
-        className="inline-flex items-center justify-center gap-2 rounded-xl border border-violet/40 bg-violet/10 px-3 py-2.5 text-xs font-semibold text-violet-200 disabled:opacity-60 active:opacity-80 transition-opacity"
+        className="inline-flex items-center justify-center gap-2 rounded-xl border border-violet-500/40 bg-violet-500/10 px-3 py-2.5 text-xs font-semibold text-violet-200 disabled:opacity-60 active:opacity-80 transition-opacity"
       >
         {running ? (
           <Loader2 className="h-3.5 w-3.5 animate-spin" />

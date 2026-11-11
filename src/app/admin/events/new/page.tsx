@@ -83,7 +83,7 @@ export default async function AdminNewEventPage() {
           後台活動列表
         </Link>
         <div className="flex items-center gap-2">
-          <FilePlus className="h-5 w-5 text-violet" />
+          <FilePlus className="h-5 w-5 text-violet-500" />
           <h1 className="text-xl font-bold text-text-base">新增草稿活動</h1>
         </div>
         <p className="text-xs text-muted mt-1">預設不公開，送出後仍不會出現在前台</p>
@@ -91,7 +91,7 @@ export default async function AdminNewEventPage() {
 
       {/* Warning banner */}
       <div className="px-4 mb-4">
-        <div className="rounded-xl bg-violet/10 border border-violet/25 px-3 py-2.5">
+        <div className="rounded-xl bg-violet-500/10 border border-violet-500/25 px-3 py-2.5">
           <p className="text-xs text-muted leading-snug">
             建立後 <span className="font-semibold text-text-base">is_published = false</span>，需管理員手動發布才會出現在前台。系統會依來源類型自動判斷官方 / 媒體 / 待確認。
           </p>

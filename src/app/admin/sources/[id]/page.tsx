@@ -83,7 +83,7 @@ export default async function AdminSourceDetailPage({
           資料來源列表
         </Link>
         <div className="flex items-center gap-2">
-          <Database className="h-5 w-5 text-violet" />
+          <Database className="h-5 w-5 text-violet-500" />
           <h1 className="text-xl font-bold text-text-base">{source.name}</h1>
         </div>
         <p className="text-xs text-muted mt-1 font-mono">{source.sourceKey}</p>
@@ -158,7 +158,7 @@ export default async function AdminSourceDetailPage({
                 href={source.sourceUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-violet underline underline-offset-2 break-all"
+                className="inline-flex items-center gap-1 text-violet-500 underline underline-offset-2 break-all"
               >
                 {source.sourceUrl}
                 <ExternalLink className="h-3 w-3 flex-shrink-0" />

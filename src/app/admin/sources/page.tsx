@@ -61,7 +61,7 @@ export default async function AdminSourcesPage() {
           Admin Dashboard
         </Link>
         <div className="flex items-center gap-2">
-          <Database className="h-5 w-5 text-violet" />
+          <Database className="h-5 w-5 text-violet-500" />
           <h1 className="text-xl font-bold text-text-base">資料來源管理</h1>
         </div>
         <p className="text-xs text-muted mt-1">

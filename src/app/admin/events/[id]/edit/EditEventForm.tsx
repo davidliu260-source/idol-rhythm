@@ -89,7 +89,7 @@ export interface EditEventFormProps {
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const inputCls =
-  'w-full rounded-xl border border-card-border bg-bg px-3 py-2.5 text-sm text-text-base placeholder:text-muted/40 focus:outline-none focus:border-violet/60 transition-colors'
+  'w-full rounded-xl border border-card-border bg-bg px-3 py-2.5 text-sm text-text-base placeholder:text-muted/40 focus:outline-none focus:border-violet-500/60 transition-colors'
 
 const selectCls = inputCls + ' cursor-pointer'
 
@@ -545,7 +545,7 @@ export default function EditEventForm({ eventId, idols, initial }: EditEventForm
       <button
         type="submit"
         disabled={submitting}
-        className="flex items-center justify-center gap-2 rounded-xl bg-violet px-4 py-3 text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
+        className="flex items-center justify-center gap-2 rounded-xl bg-violet-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
       >
         {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
         {submitting ? '儲存中…' : '儲存草稿變更'}

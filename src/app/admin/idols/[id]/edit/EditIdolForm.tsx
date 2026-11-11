@@ -32,7 +32,7 @@ const CATEGORY_OPTIONS = [
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const inputCls =
-  'w-full rounded-xl border border-card-border bg-bg px-3 py-2.5 text-sm text-text-base placeholder:text-muted/40 focus:outline-none focus:border-violet/60 transition-colors'
+  'w-full rounded-xl border border-card-border bg-bg px-3 py-2.5 text-sm text-text-base placeholder:text-muted/40 focus:outline-none focus:border-violet-500/60 transition-colors'
 
 const selectCls = inputCls + ' cursor-pointer'
 const disabledCls = inputCls + ' opacity-50 cursor-not-allowed'
@@ -344,7 +344,7 @@ export default function EditIdolForm({ idolId, initial }: EditIdolFormProps) {
               type="button"
               disabled={uploading}
               onClick={() => fileInputRef.current?.click()}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-violet/40 bg-violet/10 px-3 py-2 text-xs font-semibold text-violet-200 disabled:opacity-60 transition-opacity"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs font-semibold text-violet-200 disabled:opacity-60 transition-opacity"
             >
               {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
               {uploading ? '上傳中…' : '選擇圖片上傳'}
@@ -354,7 +354,7 @@ export default function EditIdolForm({ idolId, initial }: EditIdolFormProps) {
               type="button"
               disabled={uploading}
               onClick={() => setAiModalOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-violet/40 bg-violet/10 px-3 py-2 text-xs font-semibold text-violet-200 disabled:opacity-60 transition-opacity"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs font-semibold text-violet-200 disabled:opacity-60 transition-opacity"
             >
               <Sparkles className="h-3.5 w-3.5" />
               AI 搜圖
@@ -399,7 +399,7 @@ export default function EditIdolForm({ idolId, initial }: EditIdolFormProps) {
       <button
         type="submit"
         disabled={submitting}
-        className="flex items-center justify-center gap-2 rounded-xl bg-violet px-4 py-3 text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
+        className="flex items-center justify-center gap-2 rounded-xl bg-violet-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
       >
         {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
         {submitting ? '儲存中…' : '儲存變更'}
