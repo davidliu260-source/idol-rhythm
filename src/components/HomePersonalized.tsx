@@ -89,7 +89,7 @@ export default function HomePersonalized({
           </span>
           <div>
             <p className="text-[10px] font-medium uppercase tracking-[0.24em] text-white/36">
-              PRIVATE DECK
+              我的偶像
             </p>
             <h2 className="mt-1 text-xl font-black leading-none text-white">
               我的星動時刻
