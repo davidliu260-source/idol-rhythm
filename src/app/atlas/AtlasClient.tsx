@@ -8,7 +8,6 @@ import {
   ChevronDown,
   ArrowUpRight,
   CalendarDays,
-  Disc3,
   Heart,
   LibraryBig,
   Loader2,
@@ -27,7 +26,7 @@ import {
   SOURCE_CONFIG,
   type Event,
 } from '@/lib/mockEvents'
-import { SCHEDULE_ARCHIVE_SHELL } from '@/app/schedule/scheduleTheme'
+import { PAGE_HERO_SHELL } from '@/app/schedule/scheduleTheme'
 
 function matchSearch(event: Event, query: string): boolean {
   const needle = query.trim().toLowerCase()
@@ -45,7 +44,7 @@ function matchSearch(event: Event, query: string): boolean {
 export default function AtlasClient({ events }: { events: Event[] }) {
   const { favorites, user, isUserLoading } = useAppState()
   const [query, setQuery] = useState('')
-  const [openArchivedMonths, setOpenArchivedMonths] = useState<string[]>([])
+  const [openPastMonths, setOpenPastMonths] = useState<string[]>([])
   const now = useMemo(() => new Date(), [])
 
   const favorited = useMemo(
@@ -75,17 +74,17 @@ export default function AtlasClient({ events }: { events: Event[] }) {
   const pastCount = past.length
   const upcomingGroups = useMemo(() => groupEventsByMonth(upcoming, 'asc'), [upcoming])
   const pastGroups = useMemo(() => groupEventsByMonth(past, 'desc'), [past])
-  const latestArchivedMonthKey = pastGroups[0]?.key ?? null
+  const latestPastMonthKey = pastGroups[0]?.key ?? null
   const hasQuery = query.trim().length > 0
 
   useEffect(() => {
-    if (!latestArchivedMonthKey || hasQuery) return
+    if (!latestPastMonthKey || hasQuery) return
 
-    setOpenArchivedMonths((current) => {
+    setOpenPastMonths((current) => {
       if (current.length > 0) return current
-      return [latestArchivedMonthKey]
+      return [latestPastMonthKey]
     })
-  }, [latestArchivedMonthKey, hasQuery])
+  }, [latestPastMonthKey, hasQuery])
 
   if (isUserLoading) {
     return (
@@ -128,9 +127,8 @@ export default function AtlasClient({ events }: { events: Event[] }) {
             <div className="space-y-4">
               {upcoming.length > 0 && (
                 <ShelfSection
-                  side="SIDE A"
                   title="即將到來"
-                  subtitle="READY TO SPIN"
+                  subtitle="接下來要追的場次"
                   count={upcoming.length}
                   groups={upcomingGroups}
                 >
@@ -146,24 +144,23 @@ export default function AtlasClient({ events }: { events: Event[] }) {
 
               {past.length > 0 && (
                 <ShelfSection
-                  side="SIDE B"
-                  title="已歸檔"
-                  subtitle="ARCHIVED CUTS"
+                  title="已結束"
+                  subtitle="去過或錯過的場次"
                   count={past.length}
                   dimmed
                   groups={pastGroups}
                 >
                   {(group) => {
-                    const isOpen = hasQuery || openArchivedMonths.includes(group.key)
+                    const isOpen = hasQuery || openPastMonths.includes(group.key)
                     return (
-                      <ArchivedMonthBlock
+                      <PastMonthBlock
                         key={group.key}
                         label={group.label}
                         count={group.events.length}
                         events={group.events}
                         isOpen={isOpen}
                         onToggle={() =>
-                          setOpenArchivedMonths((current) =>
+                          setOpenPastMonths((current) =>
                             current.includes(group.key)
                               ? current.filter((key) => key !== group.key)
                               : [...current, group.key],
@@ -198,9 +195,7 @@ function AtlasShell({
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(180deg,rgba(255,255,255,0.018)_1px,transparent_1px)] bg-[size:34px_34px] opacity-25" />
 
       <div className="relative mx-auto flex w-full max-w-[520px] flex-col gap-4 px-4 pt-8">
-        <section className={clsx(SCHEDULE_ARCHIVE_SHELL, 'px-5 py-5')}>
-          <div className="pointer-events-none absolute inset-0 rounded-[28px] border border-white/6" />
-
+        <section className={clsx(PAGE_HERO_SHELL, 'px-5 py-5')}>
           <div className="relative">
             <div>
               <p className="text-[11px] font-medium uppercase tracking-[0.32em] text-white/34">
@@ -215,7 +210,7 @@ function AtlasShell({
                     我的圖鑑
                   </h1>
                   <p className="mt-2 text-sm text-white/58">
-                    把想追的活動收進你的 cassette shelf
+                    把想追的偶像活動收進你的圖鑑
                   </p>
                 </div>
               </div>
@@ -230,7 +225,7 @@ function AtlasShell({
               accent="violet"
             />
             <StatTile
-              label="已歸檔"
+              label="已結束"
               value={pastCount === null ? '—' : `${pastCount}`}
               accent="slate"
             />
@@ -311,7 +306,6 @@ function SearchField({
 }
 
 function ShelfSection({
-  side,
   title,
   subtitle,
   count,
@@ -319,7 +313,6 @@ function ShelfSection({
   children,
   dimmed = false,
 }: {
-  side: string
   title: string
   subtitle: string
   count: number
@@ -330,9 +323,6 @@ function ShelfSection({
   return (
     <section className="rounded-[26px] border border-white/8 bg-white/[0.035] p-4">
       <div className="mb-4 flex items-center gap-3">
-        <div className="rounded-full border border-white/8 bg-white/[0.04] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.24em] text-white/52">
-          {side}
-        </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
@@ -342,7 +332,7 @@ function ShelfSection({
               </p>
             </div>
             <div className="rounded-full border border-white/8 bg-white/[0.04] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/52">
-              {count} TRACKS
+              {count} 場
             </div>
           </div>
         </div>
@@ -371,25 +361,25 @@ function MonthGroupBlock({
       <div className="mb-3 flex items-center justify-between gap-3 rounded-[18px] border border-white/8 bg-white/[0.035] px-3 py-3">
         <div>
           <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-white/40">
-            MONTH INDEX
+            月份
           </p>
           <h3 className="mt-1 text-xl font-black leading-none text-white">{label}</h3>
         </div>
         <div className="rounded-full border border-white/8 bg-white/[0.04] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/52">
-          {count} TRACKS
+          {count} 場
         </div>
       </div>
 
       <div className="space-y-3">
-        {events.map((event, index) => (
-          <FavoriteShelfCard key={event.id} event={event} trackNumber={index + 1} />
+        {events.map((event) => (
+          <FavoriteShelfCard key={event.id} event={event} />
         ))}
       </div>
     </div>
   )
 }
 
-function ArchivedMonthBlock({
+function PastMonthBlock({
   label,
   count,
   events,
@@ -411,13 +401,13 @@ function ArchivedMonthBlock({
       >
         <div>
           <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-white/40">
-            MONTH INDEX
+            月份
           </p>
           <h3 className="mt-1 text-xl font-black leading-none text-white">{label}</h3>
         </div>
         <div className="flex items-center gap-3">
           <div className="rounded-full border border-white/8 bg-white/[0.04] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/52">
-            {count} TRACKS
+            {count} 場
           </div>
           <span
             className={clsx(
@@ -432,8 +422,8 @@ function ArchivedMonthBlock({
 
       {isOpen && (
         <div className="mt-3 space-y-3">
-          {events.map((event, index) => (
-            <FavoriteShelfCard key={event.id} event={event} trackNumber={index + 1} />
+          {events.map((event) => (
+            <FavoriteShelfCard key={event.id} event={event} />
           ))}
         </div>
       )}
@@ -443,10 +433,8 @@ function ArchivedMonthBlock({
 
 function FavoriteShelfCard({
   event,
-  trackNumber,
 }: {
   event: Event
-  trackNumber: number
 }) {
   const router = useRouter()
   const { favorites } = useAppState()
@@ -492,7 +480,6 @@ function FavoriteShelfCard({
               </h3>
             </div>
 
-            <TrackCode trackNumber={trackNumber} />
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -532,11 +519,7 @@ function FavoriteShelfCard({
             </button>
           </div>
 
-          <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/8 pt-3">
-            <div className="inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.26em] text-white/40">
-              <Disc3 className="h-3.5 w-3.5 text-[#ff8bc8]" />
-              FAVORITE ARCHIVE
-            </div>
+          <div className="mt-3 flex items-center justify-end gap-3 border-t border-white/8 pt-3">
             <div className="inline-flex items-center gap-1 text-xs font-semibold text-white/52 transition-colors group-hover:text-white/78">
               查看詳情
               <ArrowUpRight className="h-3.5 w-3.5" />
@@ -545,17 +528,6 @@ function FavoriteShelfCard({
         </div>
       </div>
     </article>
-  )
-}
-
-function TrackCode({ trackNumber }: { trackNumber: number }) {
-  return (
-    <div className="rounded-full border border-white/20 px-3 py-1.5 text-right">
-      <p className="text-[10px] font-medium uppercase tracking-[0.24em] text-white/38">TRK</p>
-      <p className="mt-0.5 text-xl font-black leading-none text-white/72">
-        {String(trackNumber).padStart(2, '0')}
-      </p>
-    </div>
   )
 }
 
@@ -600,7 +572,7 @@ function LoadingState() {
   return (
     <div className="flex flex-col items-center gap-3 rounded-[24px] border border-white/8 bg-white/[0.035] px-6 py-16 text-center">
       <Loader2 className="h-6 w-6 animate-spin text-[#ff8bc8]" />
-      <p className="text-sm font-semibold text-white">正在整理你的收藏卡帶</p>
+      <p className="text-sm font-semibold text-white">正在整理你的圖鑑</p>
       <p className="text-xs leading-5 text-white/48">同步帳號與收藏列表中…</p>
     </div>
   )
@@ -615,7 +587,7 @@ function LoginPrompt() {
         </span>
         <div>
           <h2 className="text-xl font-black leading-none text-white">登入後同步收藏</h2>
-          <p className="mt-1 text-sm text-white/52">把喜歡的活動收進你的私人 archive shelf</p>
+          <p className="mt-1 text-sm text-white/52">把喜歡的活動收進你的圖鑑</p>
         </div>
       </div>
 
@@ -647,7 +619,7 @@ function EmptyState() {
       </div>
       <h2 className="mt-4 text-2xl font-black text-white">還沒有收藏的活動</h2>
       <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-white/52">
-        先去行程頁把想追的活動收進來，這裡之後就會像你的私人卡帶櫃一樣慢慢長滿。
+        先去行程頁收藏想追的活動，你追過的偶像和去過的城市，會慢慢在這裡長出來。
       </p>
       <Link
         href="/schedule"

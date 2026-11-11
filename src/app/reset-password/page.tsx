@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { redirect } from 'next/navigation'
 import { KeyRound } from 'lucide-react'
-import AuthArchiveLayout from '@/components/AuthArchiveLayout'
+import AuthPageLayout from '@/components/AuthPageLayout'
 import { getCurrentUser } from '@/lib/supabase/auth'
 import ResetPasswordForm from './ResetPasswordForm'
 
@@ -23,7 +23,7 @@ export default async function ResetPasswordPage() {
   }
 
   return (
-    <AuthArchiveLayout
+    <AuthPageLayout
       backHref="/me"
       backLabel="返回我的"
       eyebrow="RECOVERY ACCESS"
@@ -45,6 +45,6 @@ export default async function ResetPasswordPage() {
       }
     >
       <ResetPasswordForm />
-    </AuthArchiveLayout>
+    </AuthPageLayout>
   )
 }

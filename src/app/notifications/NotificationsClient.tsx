@@ -12,7 +12,7 @@ import {
   markNotificationAsRead,
   type Notification,
 } from '@/lib/supabase/notifications'
-import { SCHEDULE_ARCHIVE_SHELL } from '@/app/schedule/scheduleTheme'
+import { PAGE_HERO_SHELL } from '@/app/schedule/scheduleTheme'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -181,7 +181,7 @@ export default function NotificationsClient() {
   if (!user) {
     return (
       <PageShell>
-        <div className={clsx(SCHEDULE_ARCHIVE_SHELL, 'px-5 py-8 text-center')}>
+        <div className={clsx(PAGE_HERO_SHELL, 'px-5 py-8 text-center')}>
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-white/8 bg-white/[0.04] text-white/60">
             <Bell className="h-7 w-7" />
           </div>
@@ -205,7 +205,7 @@ export default function NotificationsClient() {
   return (
     <PageShell>
       {/* Header */}
-      <div className={clsx(SCHEDULE_ARCHIVE_SHELL, 'px-5 py-5')}>
+      <div className={clsx(PAGE_HERO_SHELL, 'px-5 py-5')}>
         <div className="relative flex items-center gap-3">
           <Link
             href="/me#notifications"
@@ -216,7 +216,7 @@ export default function NotificationsClient() {
           </Link>
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-white/36">
-              Notification Archive
+              提醒與動態
             </p>
             <h1 className="text-2xl font-black leading-tight text-white">
               通知中心

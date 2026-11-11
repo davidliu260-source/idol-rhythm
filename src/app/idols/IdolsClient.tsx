@@ -14,7 +14,7 @@ import {
 import IdolAvatar from '@/components/IdolAvatar'
 import { useAppState } from '@/lib/appState'
 import type { Idol } from '@/lib/mockIdols'
-import { SCHEDULE_ARCHIVE_SHELL } from '../schedule/scheduleTheme'
+import { PAGE_HERO_SHELL } from '../schedule/scheduleTheme'
 
 const AGENCY_FILTERS = [
   { id: 'all', label: '全部' },
@@ -71,9 +71,7 @@ export default function IdolsClient({ idols }: { idols: Idol[] }) {
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(180deg,rgba(255,255,255,0.018)_1px,transparent_1px)] bg-[size:34px_34px] opacity-24" />
 
       <div className="relative mx-auto flex w-full max-w-[520px] flex-col gap-4 px-4 pb-6 pt-8">
-        <section className={clsx(SCHEDULE_ARCHIVE_SHELL, 'px-5 py-5')}>
-          <div className="pointer-events-none absolute inset-0 rounded-[28px] border border-white/6" />
-
+        <section className={clsx(PAGE_HERO_SHELL, 'px-5 py-5')}>
           <div className="relative">
             <div className="flex items-center gap-3">
               <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#ff6cb7]/25 bg-[#ff4ca1]/12 text-[#ff6cb7]">
@@ -81,7 +79,7 @@ export default function IdolsClient({ idols }: { idols: Idol[] }) {
               </span>
               <div>
                 <p className="text-[11px] font-medium uppercase tracking-[0.32em] text-white/34">
-                  ARCHIVE ROSTER
+                  追蹤名單
                 </p>
                 <h1 className="mt-2 text-[34px] font-black leading-none text-white">
                   偶像名冊
@@ -89,7 +87,7 @@ export default function IdolsClient({ idols }: { idols: Idol[] }) {
               </div>
             </div>
             <p className="mt-4 text-sm leading-6 text-white/58">
-              從這裡管理你的追蹤名單，之後首頁、行程與提醒都會圍繞這份 roster 展開。
+              從這裡管理你的追蹤名單，之後首頁、行程與提醒都會圍繞這份名單展開。
             </p>
           </div>
 
@@ -253,10 +251,6 @@ function IdolRosterCard({
       />
 
       <div className="relative pl-3">
-        <span className="absolute right-0 top-0 rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/42">
-          roster
-        </span>
-
         <Link href={`/idols/${idol.id}`} className="block">
           <div className="flex items-start gap-3">
             <IdolAvatar
@@ -266,7 +260,7 @@ function IdolRosterCard({
               size="md"
             />
             <div className="min-w-0 flex-1">
-              <div className="pr-[74px]">
+              <div>
                 <h3 className="text-[18px] font-black leading-[1.12] text-white break-words">
                   {idol.name}
                 </h3>

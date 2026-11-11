@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import IdolAvatar from '@/components/IdolAvatar'
 import EventCard from '@/components/EventCard'
-import { SCHEDULE_ARCHIVE_SHELL } from '@/app/schedule/scheduleTheme'
+import { PAGE_HERO_SHELL } from '@/app/schedule/scheduleTheme'
 import { getIdolBySlug, getPublishedEvents } from '@/lib/supabase/events'
 import FollowIdolButton from './FollowIdolButton'
 import SubscribeCalendarButton from './SubscribeCalendarButton'
@@ -55,8 +55,7 @@ export default async function IdolDetailPage({
           返回名冊
         </Link>
 
-        <section className={clsx(SCHEDULE_ARCHIVE_SHELL, 'px-5 py-5')}>
-          <div className="pointer-events-none absolute inset-0 rounded-[28px] border border-white/6" />
+        <section className={clsx(PAGE_HERO_SHELL, 'px-5 py-5')}>
           <div
             className="pointer-events-none absolute inset-y-6 left-5 w-1 rounded-full opacity-95"
             style={{
@@ -70,15 +69,11 @@ export default async function IdolDetailPage({
                 <p className="text-[11px] font-medium uppercase tracking-[0.32em] text-white/34">
                   ARTIST DOSSIER
                 </p>
-                <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#ff8bc8]">
-                  ARCHIVE DETAIL
-                </p>
               </div>
               <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/44">
                 {idol.category ? CATEGORY_LABELS[idol.category] ?? idol.category : 'Idol'}
               </span>
             </div>
-
             <div className="mt-5 flex items-end gap-4">
               <IdolAvatar
                 name={idol.name}
@@ -99,7 +94,6 @@ export default async function IdolDetailPage({
                 )}
               </div>
             </div>
-
             <div className="mt-5">
               <FollowIdolButton idolSlug={idol.id} idolName={idol.name} />
               <SubscribeCalendarButton slug={params.slug} />
@@ -109,7 +103,7 @@ export default async function IdolDetailPage({
 
         <section className="grid grid-cols-3 gap-2">
           <StatTile label="即將到來" value={`${upcoming.length}`} accent="pink" />
-          <StatTile label="已歸檔" value={`${past.length}`} accent="violet" />
+          <StatTile label="已結束" value={`${past.length}`} accent="violet" />
           <StatTile
             label="成員"
             value={idol.memberCount ? `${idol.memberCount}` : '—'}
@@ -197,7 +191,7 @@ export default async function IdolDetailPage({
           <section className="rounded-[26px] border border-white/8 bg-white/[0.035] p-5">
             <SectionHeader
               icon={<Calendar className="h-4 w-4 text-white/68" />}
-              title="已歸檔"
+              title="已結束"
               count={past.length}
               dimmed
             />
@@ -208,7 +202,7 @@ export default async function IdolDetailPage({
             </div>
             {past.length > 10 && (
               <p className="mt-3 text-center text-[11px] text-white/38">
-                目前先顯示最近 10 筆已歸檔行程
+                目前先顯示最近 10 筆已結束行程
               </p>
             )}
           </section>

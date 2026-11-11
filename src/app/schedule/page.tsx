@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { Calendar } from 'lucide-react'
 import { getPublishedEvents } from '@/lib/supabase/events'
 import ScheduleClient from './ScheduleClient'
-import { SCHEDULE_ARCHIVE_SHELL } from './scheduleTheme'
+import { PAGE_HERO_SHELL } from './scheduleTheme'
 
 export default async function SchedulePage() {
   const events = await getPublishedEvents()
@@ -13,7 +13,7 @@ export default async function SchedulePage() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_9%,rgba(255,95,177,0.1),transparent_18%)]" />
 
       <div className="px-3">
-        <div className={SCHEDULE_ARCHIVE_SHELL}>
+        <div className={PAGE_HERO_SHELL}>
           <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(255,110,193,0.55),transparent)]" />
 
           <div className="px-4 pt-6 pb-5">
@@ -22,11 +22,7 @@ export default async function SchedulePage() {
                 <span className="h-2 w-2 rounded-full border border-[#ff6bbd]/60" />
                 <span>IDOL · RHYTHM</span>
               </div>
-              <div className="text-[10px] font-medium uppercase tracking-[0.28em] text-white/24">
-                VOL.05 · 2026
-              </div>
             </div>
-
             <div>
               <div className="flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-[#ff63bd]" />
