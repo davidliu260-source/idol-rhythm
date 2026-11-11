@@ -90,3 +90,26 @@ export function inferTrustLevelFromSource(
 ): 'official' | 'media' | 'pending' {
   return getReviewSourceInfo(input).trustLevel
 }
+
+const TRUST_LEVEL_RANK: Record<'official' | 'media' | 'pending', number> = {
+  official: 2,
+  media: 1,
+  pending: 0,
+}
+
+/**
+ * 看全部來源，取最高信任等級（official > media > pending）。
+ * 結果與陣列順序無關；沒有來源時回 'pending'。
+ */
+export function inferTrustLevelFromSources(
+  inputs: ReadonlyArray<ReviewSourceInput> | null | undefined,
+): 'official' | 'media' | 'pending' {
+  let highest: 'official' | 'media' | 'pending' = 'pending'
+  for (const input of inputs ?? []) {
+    const trustLevel = inferTrustLevelFromSource(input)
+    if (TRUST_LEVEL_RANK[trustLevel] > TRUST_LEVEL_RANK[highest]) {
+      highest = trustLevel
+    }
+  }
+  return highest
+}

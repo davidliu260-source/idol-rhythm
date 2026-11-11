@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
-import { inferTrustLevelFromSource } from '@/lib/admin/sourceReview'
+import { inferTrustLevelFromSources } from '@/lib/admin/sourceReview'
 
 type BulkAction = 'publish_auto' | 'unpublish' | 'delete_drafts'
 
@@ -87,12 +87,14 @@ export async function POST(
     const now = new Date().toISOString()
 
     for (const row of rows ?? []) {
-      const source = Array.isArray(row.event_sources) ? row.event_sources[0] : null
-      const trustLevel = inferTrustLevelFromSource({
-        sourceName: source?.label ?? null,
-        sourceType: source?.type ?? null,
-        sourceUrl: source?.url ?? null,
-      })
+      const sources = Array.isArray(row.event_sources) ? row.event_sources : []
+      const trustLevel = inferTrustLevelFromSources(
+        sources.map((source) => ({
+          sourceName: source?.label ?? null,
+          sourceType: source?.type ?? null,
+          sourceUrl: source?.url ?? null,
+        })),
+      )
 
       if (trustLevel === 'pending') continue
 
