@@ -6,7 +6,8 @@ import { getEventCategory } from '@/lib/eventCategory'
 import { countTomorrowTickets, getDaysUntil, getHomeSubtitleClauses, selectNextEvent } from '@/lib/nextEventHero'
 import HomeNotificationBell from '@/components/HomeNotificationBell'
 import HomePersonalized from '@/components/HomePersonalized'
-import HomeTimeline from '@/components/HomeTimeline'
+import HomeUpcomingList from '@/components/HomeUpcomingList'
+import { listUpcomingEvents } from '@/lib/upcomingEvents'
 import HomeNextEventHero from '@/components/HomeNextEventHero'
 
 export default async function HomePage() {
@@ -15,6 +16,7 @@ export default async function HomePage() {
     getActiveIdols(),
   ])
   const now = new Date()
+  const upcomingEvents = listUpcomingEvents(events, now)
   const dateStr = formatToday(now)
   const nextEvent = selectNextEvent(events, now)
   const subtitleClauses = getHomeSubtitleClauses({
@@ -55,7 +57,7 @@ export default async function HomePage() {
         <HomeNextEventHero event={nextEvent} now={now} />
 
         <HomePersonalized events={events} idols={idols} />
-        <HomeTimeline events={events} idols={idols} />
+        <HomeUpcomingList events={upcomingEvents} />
       </div>
     </div>
   )
