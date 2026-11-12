@@ -8,6 +8,7 @@ import { getEventCategory } from '@/lib/eventCategory'
 import { countTomorrowTickets, getDaysUntil, getHomeSubtitleClauses, selectNextEvent } from '@/lib/nextEventHero'
 import HomeNotificationBell from '@/components/HomeNotificationBell'
 import HomePersonalized from '@/components/HomePersonalized'
+import HomeFollowedIdols from '@/components/HomeFollowedIdols'
 import HomeUpcomingList from '@/components/HomeUpcomingList'
 import { listUpcomingEvents } from '@/lib/upcomingEvents'
 import HomeNextEventHero from '@/components/HomeNextEventHero'
@@ -62,9 +63,10 @@ export default async function HomePage() {
         {showCategoryFilter && <HomeCategoryFilterBar counts={categoryCounts} />}
         <HomeNextEventHero event={nextEvent} now={now} />
 
-        <HomePersonalized events={events} idols={idols} />
+        <HomePersonalized events={events} />
         <HomeUpcomingList events={upcomingEvents} />
         {showCategoryFilter && <HomeCategoryLegend counts={categoryCounts} />}
+        <HomeFollowedIdols idols={idols} />
         </HomeCategoryFilterProvider>
       </div>
     </div>
