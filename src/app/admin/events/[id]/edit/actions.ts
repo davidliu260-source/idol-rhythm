@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
-import { inferTrustLevelFromSource } from '@/lib/admin/sourceReview'
+import { planDraftSourceChanges, applyDraftSourcePlan, type DraftSourceFormRow } from '@/lib/admin/sourceReview'
 
 // ── Payload type ──────────────────────────────────────────────────────────────
 
@@ -35,16 +35,13 @@ export interface UpdateDraftPayload {
   tags: string[]
   ticketUrl: string
   streamUrl: string
-  // Source (single source — Phase G uses delete-all + re-insert)
-  sourceLabel: string
-  sourceType: string
-  sourceUrl: string
+  sources: DraftSourceFormRow[]
 }
 
 // ── Action ────────────────────────────────────────────────────────────────────
 
 /**
- * Updates a DRAFT event and replaces its event_sources (delete-all + re-insert).
+ * 先插入、成功後刪除來源；trust_level 最後依全部來源寫入。
  *
  * Returns { error } on validation / DB failure.
  * On success, calls redirect() — so the return type is effectively never in
@@ -62,7 +59,6 @@ export async function updateDraftEvent(
   if (!supabase) return { error: 'Supabase 未設定' }
 
   // ── Input validation ───────────────────────────────────────────────────────
-  if (!payload.sourceLabel.trim()) return { error: '來源名稱不可空白' }
   if (!payload.title.trim())       return { error: '活動標題不可空白' }
   if (!payload.date)               return { error: '日期不可空白' }
   if (!payload.idolId)             return { error: '請選擇偶像' }
@@ -70,12 +66,6 @@ export async function updateDraftEvent(
   if (payload.endDate && payload.endDate < startDate) {
     return { error: '結束日期不可早於開始日期' }
   }
-  const trustLevel = inferTrustLevelFromSource({
-    sourceName: payload.sourceLabel,
-    sourceType: payload.sourceType,
-    sourceUrl: payload.sourceUrl,
-  })
-
   // ── Verify event exists and is a draft ────────────────────────────────────
   const { data: existing, error: fetchError } = await supabase
     .from('events')
@@ -90,7 +80,16 @@ export async function updateDraftEvent(
     return { error: '已發布活動不支援透過此頁編輯，請先下架再編輯' }
   }
 
-  // ── Step 1: UPDATE events content fields ──────────────────────────────────
+  const { data: sources, error: sourcesError } = await supabase
+    .from('event_sources').select('id, label, type, url').eq('event_id', eventId)
+  if (sourcesError) {
+    return { error: `讀取現有來源失敗：${sourcesError.code ? `[${sourcesError.code}] ` : ''}${sourcesError.message}（未做任何變更）` }
+  }
+  const planned = planDraftSourceChanges(sources ?? [], payload.sources)
+  if (!planned.ok) return { error: planned.error }
+  const { plan } = planned
+
+  // ── Step A: UPDATE events content fields ──────────────────────────────────
   // updated_at is handled automatically by the trg_events_updated_at trigger.
   const { error: updateError } = await supabase
     .from('events')
@@ -101,7 +100,6 @@ export async function updateDraftEvent(
       type:         payload.type,
       sub_type:     payload.subType || null,
       status:       payload.status,
-      trust_level:  trustLevel,
       date:         startDate,
       time:         payload.time || null,
       country:      payload.country.trim(),
@@ -134,38 +132,33 @@ export async function updateDraftEvent(
 
   if (updateError) {
     return {
-      error: `更新活動失敗：${updateError.code ? `[${updateError.code}] ` : ''}${updateError.message}`,
+      error: `更新活動失敗：${updateError.code ? `[${updateError.code}] ` : ''}${updateError.message}（來源未變動）`,
     }
   }
 
-  // ── Step 2: DELETE all existing event_sources for this event ──────────────
-  // RLS DELETE policy only allows this when the parent event is a draft.
-  const { error: deleteError } = await supabase
-    .from('event_sources')
-    .delete()
-    .eq('event_id', eventId)
+  // Step B: 先插入、成功後才刪除指定的舊來源。
+  const result = await applyDraftSourcePlan(plan, {
+    insertSources: async (rows) => {
+      const { data, error } = await supabase.from('event_sources')
+        .insert(rows.map((r) => ({ event_id: eventId, level: r.level, label: r.label, type: r.type, url: r.url })))
+        .select('id')
+      if (error) return { error: `${error.code ? `[${error.code}] ` : ''}${error.message}` }
+      return { ids: (data ?? []).map((r) => r.id as string) }
+    },
+    deleteSources: async (ids) => {
+      const { data, error } = await supabase.from('event_sources')
+        .delete().eq('event_id', eventId).in('id', ids).select('id')
+      if (error) return { error: `${error.code ? `[${error.code}] ` : ''}${error.message}` }
+      return { deletedIds: (data ?? []).map((r) => r.id as string) }
+    },
+  })
+  if (!result.ok) return { error: `活動資訊已更新，但${result.error}` }
 
-  if (deleteError) {
-    return {
-      error: `刪除舊來源失敗：${deleteError.code ? `[${deleteError.code}] ` : ''}${deleteError.message}（活動資訊已更新，來源未變動）`,
-    }
-  }
-
-  // ── Step 3: INSERT new event_source ───────────────────────────────────────
-  const { error: insertError } = await supabase
-    .from('event_sources')
-    .insert({
-      event_id: eventId,
-      level:    trustLevel,
-      label:    payload.sourceLabel.trim(),
-      type:     payload.sourceType,
-      url:      payload.sourceUrl.trim() || null,
-    })
-
-  if (insertError) {
-    return {
-      error: `新增來源失敗：${insertError.code ? `[${insertError.code}] ` : ''}${insertError.message}（活動資訊已更新，但來源已被清空，請重試）`,
-    }
+  // Step C: 即使來源未變動，也以全部來源校正可信度。
+  const { error: trustError } = await supabase.from('events')
+    .update({ trust_level: plan.trustLevel }).eq('id', eventId)
+  if (trustError) {
+    return { error: `來源已更新，但可信度更新失敗：${trustError.code ? `[${trustError.code}] ` : ''}${trustError.message}，請重新整理頁面後再按一次儲存` }
   }
 
   // ── Revalidate and redirect ───────────────────────────────────────────────
