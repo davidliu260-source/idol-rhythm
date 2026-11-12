@@ -72,7 +72,9 @@ interface EventRow {
   is_published: boolean
   idols?: { id: string } | null
   event_sources?: Array<{
-    label: string
+    id: string
+    created_at: string
+    label: string | null
     type: string | null
     url: string | null
   }> | null
@@ -84,7 +86,7 @@ async function getEventForEdit(id: string): Promise<EventRow | null> {
 
   const { data, error } = await supabase
     .from('events')
-    .select('*, idols(id), event_sources(label, type, url)')
+    .select('*, idols(id), event_sources(id, label, type, url, created_at)')
     .eq('id', id)
     .single()
 
@@ -185,7 +187,9 @@ export default async function AdminEditEventPage({
   }
 
   // ── Build initial values for the form ─────────────────────────────────────
-  const firstSource = (eventResult.event_sources ?? [])[0]
+  const sortedSources = [...(eventResult.event_sources ?? [])].sort((a, b) =>
+    a.created_at === b.created_at ? a.id.localeCompare(b.id) : a.created_at.localeCompare(b.created_at),
+  )
 
   const initial: EditEventFormProps['initial'] = {
     idolId:      eventResult.idols?.id ?? eventResult.idol_id,
@@ -213,9 +217,9 @@ export default async function AdminEditEventPage({
     tags:        (eventResult.tags ?? []).join(', '),
     ticketUrl:   eventResult.ticket_url ?? '',
     streamUrl:   eventResult.stream_url ?? '',
-    sourceLabel: firstSource?.label ?? '',
-    sourceType:  firstSource?.type ?? 'official_sns',
-    sourceUrl:   firstSource?.url ?? '',
+    sources: sortedSources.length > 0
+      ? sortedSources.map((s) => ({ id: s.id, label: s.label ?? '', type: s.type ?? 'unknown', url: s.url ?? '' }))
+      : [{ id: null, label: '', type: 'unknown', url: '' }],
   }
 
   return (
@@ -240,7 +244,7 @@ export default async function AdminEditEventPage({
       <div className="px-4 mb-4">
         <div className="rounded-xl bg-violet-500/10 border border-violet-500/25 px-3 py-2.5">
           <p className="text-xs text-muted leading-snug">
-            只可編輯草稿（未發布）活動。來源資訊儲存時將全部取代。
+            只可編輯草稿（未發布）活動。可新增、修改、刪除來源（至少一筆）；活動可信度取全部來源中最高者。
           </p>
         </div>
       </div>

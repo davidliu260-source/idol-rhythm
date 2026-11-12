@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Loader2 } from 'lucide-react'
-import { getReviewSourceInfo } from '@/lib/admin/sourceReview'
+import { getReviewSourceInfo, inferTrustLevelFromSources, type DraftSourceFormRow } from '@/lib/admin/sourceReview'
 import { updateDraftEvent } from './actions'
 
 // ── Option lists (same as NewEventForm) ──────────────────────────────────────
@@ -80,9 +80,7 @@ export interface EditEventFormProps {
     tags: string        // comma-separated string for display
     ticketUrl: string
     streamUrl: string
-    sourceLabel: string
-    sourceType: string
-    sourceUrl: string
+    sources: DraftSourceFormRow[]
   }
 }
 
@@ -125,9 +123,16 @@ export default function EditEventForm({ eventId, idols, initial }: EditEventForm
   const [tags,         setTags]         = useState(initial.tags)
   const [ticketUrl,    setTicketUrl]    = useState(initial.ticketUrl)
   const [streamUrl,    setStreamUrl]    = useState(initial.streamUrl)
-  const [sourceLabel,  setSourceLabel]  = useState(initial.sourceLabel)
-  const [sourceType,   setSourceType]   = useState(initial.sourceType || 'official_sns')
-  const [sourceUrl,    setSourceUrl]    = useState(initial.sourceUrl)
+  const nextSourceKey = useRef(initial.sources.length)
+  const [sources, setSources] = useState<Array<DraftSourceFormRow & { key: string }>>(() =>
+    initial.sources.map((row, i) => ({ ...row, key: row.id ?? `new-${i}` })),
+  )
+  const overallTrust = inferTrustLevelFromSources(sources.map((row) => ({
+    sourceName: row.label, sourceType: row.type, sourceUrl: row.url,
+  })))
+  function updateSource(key: string, patch: Partial<DraftSourceFormRow>) {
+    setSources((rows) => rows.map((row) => row.key === key ? { ...row, ...patch } : row))
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -172,9 +177,7 @@ export default function EditEventForm({ eventId, idols, initial }: EditEventForm
       tags:        tagArray,
       ticketUrl,
       streamUrl,
-      sourceLabel,
-      sourceType,
-      sourceUrl,
+      sources: sources.map(({ key, ...row }) => row),
     })
 
     // If updateDraftEvent returns (i.e. did NOT redirect), there was an error
@@ -421,47 +424,40 @@ export default function EditEventForm({ eventId, idols, initial }: EditEventForm
       {/* 來源資訊 */}
       <Section title="來源資訊">
         <p className="text-[10px] text-muted/60 leading-snug -mt-1">
-          儲存時將取代所有既有來源（delete-all + re-insert）
+          可新增、修改、刪除來源，至少保留一筆。活動可信度取全部來源中最高者。
         </p>
-        <Field label="來源名稱" required>
-          <input
-            type="text"
-            required
-            value={sourceLabel}
-            onChange={(e) => setSourceLabel(e.target.value)}
-            placeholder="例：@BIGHIT_MUSIC"
-            className={inputCls}
-          />
-        </Field>
-
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="來源類型" required>
-            <select
-              value={sourceType}
-              onChange={(e) => setSourceType(e.target.value)}
-              className={selectCls}
-            >
-              {SOURCE_TYPE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-          </Field>
-
-          <Field label="來源 URL">
-            <input
-              type="url"
-              value={sourceUrl}
-              onChange={(e) => setSourceUrl(e.target.value)}
-              placeholder="https://…"
-              className={inputCls}
-            />
-          </Field>
-        </div>
-        <AutoTrustNotice
-          sourceName={sourceLabel}
-          sourceType={sourceType}
-          sourceUrl={sourceUrl}
-        />
+        {sources.map((row, i) => (
+          <div key={row.key} className="flex flex-col gap-3 rounded-xl border border-card-border p-3">
+            <p className="text-xs font-semibold text-muted">來源 {i + 1}</p>
+            <Field label="來源名稱" required>
+              <input type="text" required value={row.label}
+                onChange={(e) => updateSource(row.key, { label: e.target.value })}
+                placeholder="例：@BIGHIT_MUSIC" className={inputCls} />
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="來源類型" required>
+                <select value={row.type} onChange={(e) => updateSource(row.key, { type: e.target.value })} className={selectCls}>
+                  {SOURCE_TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </Field>
+              <Field label="來源 URL">
+                <input type="url" value={row.url} onChange={(e) => updateSource(row.key, { url: e.target.value })}
+                  placeholder="https://…" className={inputCls} />
+              </Field>
+            </div>
+            <AutoTrustNotice sourceName={row.label} sourceType={row.type} sourceUrl={row.url} />
+            <button type="button" disabled={sources.length === 1}
+              onClick={() => setSources((rows) => rows.filter((item) => item.key !== row.key))}
+              className="text-xs text-red-400 disabled:opacity-40">刪除此來源</button>
+          </div>
+        ))}
+        <button type="button" className="text-xs text-violet-500" onClick={() => {
+          const key = `new-${nextSourceKey.current++}`
+          setSources((rows) => [...rows, { key, id: null, label: '', type: 'unknown', url: '' }])
+        }}>＋ 新增來源</button>
+        <p className="text-xs text-text-base">
+          整體可信度（全部來源取最高）：{overallTrust === 'official' ? '官方確認' : overallTrust === 'media' ? '媒體確認' : '待確認草稿'}
+        </p>
       </Section>
 
       {/* 連結 / 標籤 / 說明 */}
