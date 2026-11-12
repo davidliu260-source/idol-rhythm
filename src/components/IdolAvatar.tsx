@@ -2,6 +2,9 @@
 
 import { useState } from 'react'
 import clsx from 'clsx'
+import { pickFallbackColor } from '@/lib/idolRingColor'
+
+export { pickFallbackColor }
 
 type Size = 'xs' | 'sm' | 'md' | 'lg'
 
@@ -72,38 +75,6 @@ export default function IdolAvatar({
       {initial.toUpperCase()}
     </div>
   )
-}
-
-// ── Stable name → color palette ─────────────────────────────────────────────
-// Chosen to be visually distinct on the dark background and to feel "K-pop"
-// enough (not corporate primary palette). Twelve entries gives ~8% collision
-// rate over 50 idols, which is fine — collisions just mean two cards share
-// a color, not that they're indistinguishable (initial letters differ).
-
-const FALLBACK_PALETTE = [
-  '#e91e8c', // primary pink (project base)
-  '#8b5cf6', // violet
-  '#f59e0b', // amber
-  '#10b981', // emerald
-  '#3b82f6', // blue
-  '#ef4444', // red
-  '#ec4899', // pink
-  '#14b8a6', // teal
-  '#a855f7', // purple
-  '#f97316', // orange
-  '#06b6d4', // cyan
-  '#84cc16', // lime
-]
-
-function pickFallbackColor(name: string): string {
-  // Tiny FNV-1a-ish hash. We don't need cryptographic distribution; we just
-  // need "same name → same color" so the placeholder is stable across renders.
-  let h = 2166136261
-  for (let i = 0; i < name.length; i++) {
-    h ^= name.charCodeAt(i)
-    h = (h * 16777619) >>> 0
-  }
-  return FALLBACK_PALETTE[h % FALLBACK_PALETTE.length]
 }
 
 const SIZE_CLASSES: Record<Size, { wrap: string; text: string }> = {

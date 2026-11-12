@@ -4,22 +4,22 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Bell, ChevronRight, Heart, LibraryBig, LogIn, Sparkles, Star } from 'lucide-react'
 import { type Event } from '@/lib/mockEvents'
-import { getIdolById, type Idol } from '@/lib/mockIdols'
+import { getIdolById } from '@/lib/mockIdols'
 import { useAppState } from '@/lib/appState'
 import IdolAvatar from './IdolAvatar'
 
 // Display caps (per work order)
-const MAX_FOLLOWING = 5
 const MAX_REMINDERS = 3
 const MAX_FAVORITES = 3
 
 /**
  * Personalized home dashboard ("我的星動時刻").
  *
- * Surfaces three pieces of user state on the homepage:
- *   1. Followed idols           — from useAppState().following
- *   2. Upcoming reminded events — from useAppState().reminders
- *   3. Upcoming saved events    — from useAppState().favorites
+ * Surfaces two pieces of user state on the homepage:
+ *   1. Upcoming reminded events — from useAppState().reminders
+ *   2. Upcoming saved events    — from useAppState().favorites
+ *
+ * Followed avatar row moved to HomeFollowedIdols in T30e.
  *
  * Both reminders and favorites are UI-only countdowns: no Email/Push/cron
  * dispatch is implemented here.
@@ -30,10 +30,8 @@ const MAX_FAVORITES = 3
  */
 export default function HomePersonalized({
   events,
-  idols,
 }: {
   events: Event[]
-  idols: Idol[]
 }) {
   const { user, isUserLoading, following, favorites, reminders } = useAppState()
   const [mounted, setMounted] = useState(false)
@@ -46,10 +44,6 @@ export default function HomePersonalized({
   // useStoredSet reads localStorage on client only; cloud-mode sets fetch
   // async after auth resolves. Server-render with zeros, hydrate to real
   // counts once mounted.
-
-  const followingIdols = mounted
-    ? idols.filter((i) => following.has(i.id)).slice(0, MAX_FOLLOWING)
-    : []
 
   const now = new Date()
 
@@ -139,51 +133,6 @@ export default function HomePersonalized({
           </div>
         </div>
       )}
-
-      <Subsection
-        title="已追蹤偶像"
-        count={counts.following}
-        href="/idols"
-        icon={<Star className="h-3.5 w-3.5 text-primary" />}
-      >
-        {followingIdols.length > 0 ? (
-          <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1 -mx-1 px-1">
-            {followingIdols.map((idol) => (
-              <Link
-                key={idol.id}
-                href="/idols"
-                className="flex flex-col items-center gap-1.5 flex-shrink-0"
-              >
-                <IdolAvatar
-                  name={idol.name}
-                  avatarUrl={idol.avatarUrl}
-                  color={idol.color}
-                  size="lg"
-                  className="!h-14 !w-14 !text-xl ring-2 ring-[#ff6cb7]/30"
-                />
-                <span className="max-w-[56px] truncate text-center text-xs text-white/54">
-                  {idol.name}
-                </span>
-              </Link>
-            ))}
-            <Link
-              href="/idols"
-              className="flex flex-col items-center gap-1.5 flex-shrink-0"
-            >
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-dashed border-white/16 text-xl text-white/42">
-                +
-              </div>
-              <span className="text-xs text-white/42">追蹤</span>
-            </Link>
-          </div>
-        ) : (
-          <EmptyHint
-            text="還沒追蹤偶像，先到偶像頁選擇你關注的人"
-            linkText="去選偶像"
-            href="/idols"
-          />
-        )}
-      </Subsection>
 
       <Subsection
         title="近期提醒"
