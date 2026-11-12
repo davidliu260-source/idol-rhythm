@@ -1,4 +1,4 @@
-import { Mic, Heart, ShoppingBag, Coffee, Image as ImageIcon, Ticket, Megaphone, LayoutGrid, type LucideIcon } from 'lucide-react'
+import { Mic, Heart, ShoppingBag, Coffee, Image as ImageIcon, Ticket, Ellipsis, LayoutGrid, type LucideIcon } from 'lucide-react'
 import type { CategoryGlyphId } from '@/lib/eventCategory'
 
 interface Props {
@@ -9,7 +9,7 @@ interface Props {
 }
 const ICONS: Record<CategoryGlyphId, LucideIcon> = {
   concert: Mic, fanmeet: Heart, popup: ShoppingBag, cafe: Coffee,
-  exhibition: ImageIcon, ticket: Ticket, other: Megaphone, all: LayoutGrid,
+  exhibition: ImageIcon, ticket: Ticket, other: Ellipsis, all: LayoutGrid,
 }
 export default function CategoryIcon({ category, size = 16, strokeWidth = 1.9, className }: Props) {
   const Icon = ICONS[category]
