@@ -1,5 +1,7 @@
 export const dynamic = 'force-dynamic'
 
+import { countUpcomingByCategory } from '@/lib/upcomingFilters'
+import { HomeCategoryFilterProvider, HomeCategoryFilterBar, HomeCategoryLegend } from '@/components/HomeCategoryFilter'
 import { Fragment } from 'react'
 import { getPublishedEvents, getActiveIdols } from '@/lib/supabase/events'
 import { getEventCategory } from '@/lib/eventCategory'
@@ -17,6 +19,8 @@ export default async function HomePage() {
   ])
   const now = new Date()
   const upcomingEvents = listUpcomingEvents(events, now)
+  const categoryCounts = countUpcomingByCategory(upcomingEvents, now)
+  const showCategoryFilter = categoryCounts.total > 0
   const dateStr = formatToday(now)
   const nextEvent = selectNextEvent(events, now)
   const subtitleClauses = getHomeSubtitleClauses({
@@ -28,6 +32,7 @@ export default async function HomePage() {
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(180deg,rgba(255,255,255,0.018)_1px,transparent_1px)] bg-[size:34px_34px] opacity-24" />
 
       <div className="relative mx-auto flex w-full max-w-[520px] flex-col gap-5 px-4 pt-[18px]">
+        <HomeCategoryFilterProvider>
         <header>
           <div className="flex items-center justify-between gap-4">
             <p className="text-[11px] font-extrabold uppercase tracking-[0.32em] text-white/60">
@@ -54,10 +59,13 @@ export default async function HomePage() {
           </div>
         </header>
 
+        {showCategoryFilter && <HomeCategoryFilterBar counts={categoryCounts} />}
         <HomeNextEventHero event={nextEvent} now={now} />
 
         <HomePersonalized events={events} idols={idols} />
         <HomeUpcomingList events={upcomingEvents} />
+        {showCategoryFilter && <HomeCategoryLegend counts={categoryCounts} />}
+        </HomeCategoryFilterProvider>
       </div>
     </div>
   )
