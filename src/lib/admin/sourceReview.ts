@@ -113,3 +113,25 @@ export function inferTrustLevelFromSources(
   }
   return highest
 }
+
+const PUBLISH_BLOCK_NO_SOURCE_REASON =
+  '此活動尚無來源紀錄，請先在編輯頁新增官方、售票或媒體來源。'
+const PUBLISH_BLOCK_PENDING_REASON =
+  '來源為聚合 / 社群 / 未知類型，請先補充官方、售票、主辦、場館或媒體來源後再發布。'
+
+/**
+ * 詳情頁「發布會被擋下」原因。擋／不擋完全由 inferTrustLevelFromSources 決定
+ * （與 publishEvent、bulk-publish 一致）；只有判成 pending 之後才挑提示文字。
+ * 回 null 表示可以發布。
+ */
+export function getPublishBlockReason(
+  inputs: ReadonlyArray<ReviewSourceInput> | null | undefined,
+): string | null {
+  if (inferTrustLevelFromSources(inputs) !== 'pending') return null
+  const list = inputs ?? []
+  if (list.length === 0) return PUBLISH_BLOCK_NO_SOURCE_REASON
+  if (list.length === 1) {
+    return getReviewSourceInfo(list[0]).hint ?? PUBLISH_BLOCK_PENDING_REASON
+  }
+  return PUBLISH_BLOCK_PENDING_REASON
+}

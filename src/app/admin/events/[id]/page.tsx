@@ -13,7 +13,7 @@ import EventTypeBadge from '@/components/EventTypeBadge'
 import { publishEvent, unpublishEvent } from './actions'
 import GenerateChineseButton from './GenerateChineseButton'
 import MarkReviewedButton from './MarkReviewedButton'
-import { getReviewSourceInfo } from '@/lib/admin/sourceReview'
+import { getPublishBlockReason } from '@/lib/admin/sourceReview'
 
 // ── Admin-only types (not exported — used only in this page) ──────────────────
 
@@ -250,21 +250,16 @@ export default async function AdminEventDetailPage({
   const displayTitle = event.displayTitleZh || event.title
 
   // Pre-check: will publishing be blocked by trust level?
-  // Shows a warning banner instead of crashing on submit.
-  const publishBlockReason: string | null = (() => {
-    if (event.isPublished) return null
-    const src = event.sources[0] ?? null
-    if (!src) return '此活動尚無來源紀錄，請先在編輯頁新增官方、售票或媒體來源。'
-    const { trustLevel, hint } = getReviewSourceInfo({
-      sourceName: src.label,
-      sourceType: src.type,
-      sourceUrl: src.url,
-    })
-    if (trustLevel === 'pending') {
-      return hint ?? '來源為聚合 / 社群 / 未知類型，請先補充官方、售票、主辦、場館或媒體來源後再發布。'
-    }
-    return null
-  })()
+  // Uses all sources, same rule as publishEvent and bulk-publish.
+  const publishBlockReason: string | null = event.isPublished
+    ? null
+    : getPublishBlockReason(
+        event.sources.map((src) => ({
+          sourceName: src.label,
+          sourceType: src.type,
+          sourceUrl: src.url,
+        })),
+      )
 
   const dateDisplay =
     event.dateLabel ||
