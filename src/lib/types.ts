@@ -123,6 +123,7 @@ export interface Event {
   isFavorited: boolean
   ticketUrl?: string
   streamUrl?: string
+  publishedAt?: string
   tags: string[]
 }
 
