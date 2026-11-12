@@ -2,11 +2,15 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Bell, Heart, Share2 } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, Bell, Heart, Share2 } from 'lucide-react'
 import { useAppState } from '@/lib/appState'
 import clsx from 'clsx'
 
-export function EventDetailBackBtn() {
+const heroButtonClass = 'grid h-11 w-11 place-items-center rounded-full bg-black/[0.24] text-white transition-colors hover:bg-black/[0.32] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white'
+
+type ActionVariant = 'default' | 'hero'
+
+export function EventDetailBackBtn({ variant = 'default' }: { variant?: ActionVariant } = {}) {
   const router = useRouter()
 
   function handleBack() {
@@ -21,42 +25,45 @@ export function EventDetailBackBtn() {
     <button
       type="button"
       onClick={handleBack}
-      className="inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.04] px-3 py-2 text-sm font-medium text-white/72 transition-colors hover:text-white"
+      className={variant === 'hero' ? heroButtonClass : "inline-flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.04] px-3 py-2 text-sm font-medium text-white/72 transition-colors hover:text-white"}
       aria-label="返回上一頁"
     >
-      <ArrowLeft className="h-4 w-4" />
-      返回
+      <>{variant === 'hero' ? <ChevronLeft className="h-[19px] w-[19px]" strokeWidth={1.9} /> : <><ArrowLeft className="h-4 w-4" />返回</>}</>
     </button>
   )
 }
 
-export function EventDetailFavoriteBtn({ eventId }: { eventId: string }) {
+export function EventDetailFavoriteBtn({ eventId, variant = 'default' }: { eventId: string; variant?: ActionVariant }) {
   const { favorites } = useAppState()
   const isFavorited = favorites.has(eventId)
   return (
     <button
+      type="button"
       onClick={() => favorites.toggle(eventId)}
-      className="rounded-full bg-white/10 backdrop-blur-sm p-2"
+      className={variant === 'hero' ? heroButtonClass : "rounded-full bg-white/10 backdrop-blur-sm p-2"}
       aria-label={isFavorited ? '取消收藏' : '收藏'}
     >
       <Heart
-        className={clsx('h-4 w-4 transition-colors', isFavorited ? 'fill-primary text-primary' : 'text-white')}
+        strokeWidth={variant === 'hero' ? 1.9 : undefined}
+        className={clsx(variant === 'hero' ? 'h-[19px] w-[19px] transition-colors' : 'h-4 w-4 transition-colors', isFavorited ? 'fill-primary text-primary' : 'text-white')}
       />
     </button>
   )
 }
 
-export function EventDetailReminderBtn({ eventId }: { eventId: string }) {
+export function EventDetailReminderBtn({ eventId, variant = 'default' }: { eventId: string; variant?: ActionVariant }) {
   const { reminders } = useAppState()
   const hasReminder = reminders.has(eventId)
   return (
     <button
+      type="button"
       onClick={() => reminders.toggle(eventId)}
-      className="rounded-full bg-white/10 backdrop-blur-sm p-2"
+      className={variant === 'hero' ? heroButtonClass : "rounded-full bg-white/10 backdrop-blur-sm p-2"}
       aria-label={hasReminder ? '取消提醒' : '設定提醒'}
     >
       <Bell
-        className={clsx('h-4 w-4 transition-colors', hasReminder ? 'text-primary' : 'text-white')}
+        strokeWidth={variant === 'hero' ? 1.9 : undefined}
+        className={clsx(variant === 'hero' ? 'h-[19px] w-[19px] transition-colors' : 'h-4 w-4 transition-colors', hasReminder ? 'text-primary' : 'text-white')}
       />
     </button>
   )

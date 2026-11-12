@@ -1,32 +1,12 @@
 export const dynamic = 'force-dynamic'
 
 import { notFound } from 'next/navigation'
-import {
-  CalendarDays,
-  Clock3,
-  ExternalLink,
-  Globe2,
-  MapPin,
-  Radio,
-  Sparkles,
-  Ticket,
-  Tv,
-} from 'lucide-react'
-import {
-  EVENT_SUBTYPE_LABELS,
-  EVENT_TYPE_LABELS,
-  getEventById as getMockEventById,
-  type Event,
-} from '@/lib/mockEvents'
-import { getIdolById } from '@/lib/mockIdols'
+import { ExternalLink, Sparkles, Ticket, Tv } from 'lucide-react'
+import { getEventById as getMockEventById } from '@/lib/mockEvents'
 import { getEventById as getSupabaseEventById } from '@/lib/supabase/events'
-import { getEventDateLabel } from '@/lib/eventDisplay'
-import {
-  EventDetailBackBtn,
-  EventDetailFavoriteBtn,
-  EventDetailReminderBtn,
-  EventDetailShareBtn,
-} from '@/components/EventDetailActions'
+import { EventDetailShareBtn } from '@/components/EventDetailActions'
+import EventDetailHero from '@/components/EventDetailHero'
+import EventDetailInfoRows from '@/components/EventDetailInfoRows'
 
 export default async function EventDetailPage({
   params,
@@ -37,33 +17,16 @@ export default async function EventDetailPage({
   const event = supabaseEvent ?? getMockEventById(params.id)
   if (!event) return notFound()
 
-  const idol = getIdolById(event.idolId)
-  const dateLabel = getEventDateLabel(event)
   const isDemoEvent = !supabaseEvent
   const summaryText = event.displaySummaryZh?.trim() || event.description.trim()
   const hasLocalizedSummary = Boolean(event.displaySummaryZh?.trim())
-  const typeLabel = getTypeLabel(event)
-  const statusLabel = getStatusLabel(event)
-  const venueLabel = event.venueName || event.location || event.city || event.country
-  const locationLine = [event.city, event.country].filter(Boolean).join(', ')
-  const coverTitle = getCoverTitle(event)
   const shareText = `${event.idolName} · ${event.title}`
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_14%_0%,rgba(255,83,171,0.16),transparent_24%),linear-gradient(180deg,#141019_0%,#08070d_100%)] pb-8 text-white">
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(180deg,rgba(255,255,255,0.018)_1px,transparent_1px)] bg-[size:34px_34px] opacity-35" />
-
-      <div className="relative mx-auto flex w-full max-w-[520px] flex-col gap-4 px-4 pt-10">
-        <div className="flex items-center justify-between gap-3">
-          <EventDetailBackBtn />
-
-          <div className="flex items-center gap-2">
-            <EventDetailShareBtn title={event.title} text={shareText} />
-            <EventDetailReminderBtn eventId={event.id} />
-            <EventDetailFavoriteBtn eventId={event.id} />
-          </div>
-        </div>
-
+    <div className="relative min-h-screen overflow-hidden bg-[#08070d] pb-8 text-white">
+      <div className="relative mx-auto flex w-full max-w-[520px] flex-col">
+        <EventDetailHero event={event} />
+        <div className="flex flex-col gap-4 px-4">
         {isDemoEvent && (
           <div className="rounded-[18px] border border-amber-300/20 bg-amber-300/10 px-3.5 py-3 text-xs leading-relaxed text-amber-100">
             <span className="font-semibold">Demo 展示資料</span>
@@ -71,68 +34,7 @@ export default async function EventDetailPage({
           </div>
         )}
 
-        <section className="relative overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(33,27,39,0.96),rgba(18,15,24,0.98))] p-4 shadow-[0_22px_80px_rgba(0,0,0,0.42)]">
-          <div className="relative">
-            <div className="mb-5 flex items-start justify-between gap-3">
-              <div className="space-y-1">
-                <p className="text-[10px] font-medium uppercase tracking-[0.28em] text-white/38">IDOL · RHYTHM</p>
-              </div>
-            </div>
-            <div className="mb-5">
-              <p className="text-[42px] font-black uppercase leading-none tracking-normal text-[#ff5f9f]">
-                {event.idolName}
-              </p>
-              <h1 className="mt-4 text-[34px] font-black uppercase leading-[1.03] tracking-normal text-white">
-                {coverTitle}
-              </h1>
-            </div>
-            <div className="border-t border-white/12 pt-4">
-              <p className="text-[22px] font-black uppercase tracking-normal text-[#a77bff]">
-                {event.city || event.country}
-              </p>
-              <p className="mt-1 text-sm font-semibold uppercase tracking-normal text-white/78">
-                {locationLine || venueLabel}
-              </p>
-            </div>
-            <div className="mt-4 rounded-lg border border-white/10 bg-white/[0.025] p-3">
-              <div className="flex items-start gap-2 text-xs text-white/74">
-                <CalendarDays className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-[#ff86c4]" />
-                <span>{dateLabel}{event.time ? ` · ${event.time}` : ''}</span>
-              </div>
-              {venueLabel && (
-                <div className="mt-2 flex items-start gap-2 text-xs text-white/62">
-                  <MapPin className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-[#ff86c4]" />
-                  <span>{venueLabel}</span>
-                </div>
-              )}
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <SpecTile label="狀態" value={statusLabel} tone="green" />
-              <SpecTile label="類型" value={typeLabel} tone="violet" />
-            </div>
-          </div>
-        </section>
-
-        <section className="grid grid-cols-1 gap-3 rounded-[22px] border border-white/8 bg-white/[0.035] p-4 sm:grid-cols-3">
-          <InfoTile
-            icon={<CalendarDays className="h-4 w-4" />}
-            label="日期 / 時間"
-            value={`${dateLabel}${event.time ? ` · ${event.time}` : ''}`}
-            meta={event.endDate ? '多日行程' : undefined}
-          />
-          <InfoTile
-            icon={<Globe2 className="h-4 w-4" />}
-            label="地點 / 場館"
-            value={venueLabel || event.country}
-            meta={locationLine || event.country}
-          />
-          <InfoTile
-            icon={<Clock3 className="h-4 w-4" />}
-            label="狀態"
-            value={statusLabel}
-            meta={typeLabel}
-          />
-        </section>
+        <EventDetailInfoRows event={event} />
 
         {summaryText && (
           <section className="rounded-[22px] border border-white/8 bg-white/[0.035] p-4">
@@ -193,53 +95,7 @@ export default async function EventDetailPage({
           />
           <ShareAction title={event.title} text={shareText} />
         </section>
-      </div>
-    </div>
-  )
-}
-
-function SpecTile({
-  label,
-  value,
-  tone,
-}: {
-  label: string
-  value: string
-  tone: 'green' | 'violet'
-}) {
-  return (
-    <div className="rounded-lg border border-white/10 bg-black/10 px-3 py-2.5">
-      <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-white/36">{label}</p>
-      <div className="mt-1 flex items-center gap-2">
-        <span className={tone === 'green' ? 'h-2 w-2 rounded-full bg-emerald-300' : 'h-2 w-2 rounded-full bg-violet-300'} />
-        <span className={tone === 'green' ? 'text-xs font-semibold text-emerald-300' : 'text-xs font-semibold text-violet-300'}>
-          {value}
-        </span>
-      </div>
-    </div>
-  )
-}
-
-function InfoTile({
-  icon,
-  label,
-  value,
-  meta,
-}: {
-  icon: React.ReactNode
-  label: string
-  value: string
-  meta?: string
-}) {
-  return (
-    <div className="flex gap-3 sm:flex-col">
-      <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-white/8 bg-white/[0.04] text-[#b6a9ff]">
-        {icon}
-      </span>
-      <div className="min-w-0">
-        <p className="text-[11px] font-medium text-white/40">{label}</p>
-        <p className="mt-1 text-sm font-semibold leading-5 text-white">{value}</p>
-        {meta && <p className="mt-1 text-xs leading-4 text-white/42">{meta}</p>}
+        </div>
       </div>
     </div>
   )
@@ -314,20 +170,6 @@ function ShareAction({ title, text }: { title: string; text: string }) {
   )
 }
 
-function getTypeLabel(event: Event): string {
-  if (event.subType && event.subType in EVENT_SUBTYPE_LABELS) {
-    return EVENT_SUBTYPE_LABELS[event.subType]
-  }
-  return EVENT_TYPE_LABELS[event.type] || event.type
-}
-
-function getStatusLabel(event: Event): string {
-  if (event.status === 'confirmed') return '官方確認'
-  if (event.status === 'tentative') return '待確認'
-  if (event.status === 'postponed') return '延期'
-  return '已取消'
-}
-
 function getSourceTypeLabel(type: string): string {
   const labels: Record<string, string> = {
     official_sns: '官方社群平台公告',
@@ -338,11 +180,4 @@ function getSourceTypeLabel(type: string): string {
     unknown: '來源類型未標記',
   }
   return labels[type] ?? type
-}
-
-function getCoverTitle(event: Event): string {
-  return event.title
-    .replace(event.idolName, '')
-    .replace(/^[\s·:-]+/, '')
-    .trim() || event.title
 }
