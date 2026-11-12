@@ -5,9 +5,12 @@ import type { Event } from '@/lib/types'
 import { useAppState } from '@/lib/appState'
 import { CATEGORY_NEUTRALS } from '@/lib/eventCategory'
 import { filterFollowedEvents, getRemainingCount, getVisibleEvents, INITIAL_VISIBLE } from '@/lib/upcomingEvents'
+import { filterByCategory } from '@/lib/upcomingFilters'
+import { useHomeCategoryFilter } from './HomeCategoryFilter'
 import UpcomingEventCard from './UpcomingEventCard'
 
 export default function HomeUpcomingList({ events }: { events: Event[] }) {
+  const { selected, setSelected } = useHomeCategoryFilter()
   const { following } = useAppState()
   const [mounted, setMounted] = useState(false)
   const [tab, setTab] = useState<'all' | 'following'>('all')
@@ -37,8 +40,11 @@ export default function HomeUpcomingList({ events }: { events: Event[] }) {
     }
   }, [expanded])
 
+  useEffect(() => { setExpanded(false) }, [selected])
+
   const activeTab = hasFollowing ? tab : 'all'
-  const filtered = activeTab === 'following' ? filterFollowedEvents(events, following.ids) : events
+  const tabFiltered = activeTab === 'following' ? filterFollowedEvents(events, following.ids) : events
+  const filtered = filterByCategory(tabFiltered, selected)
   const visible = getVisibleEvents(filtered, expanded)
   const remaining = getRemainingCount(filtered.length, expanded)
   function selectTab(next: 'all' | 'following') {
@@ -48,7 +54,7 @@ export default function HomeUpcomingList({ events }: { events: Event[] }) {
   }
 
   return (
-    <section aria-label="接下來的活動">
+    <section id="home-upcoming" className="scroll-mt-4" aria-label="接下來的活動">
       <div className="flex items-baseline justify-between">
         <h2 className="text-2xl font-black">接下來<small className="ml-2 text-sm font-semibold" style={{ color: CATEGORY_NEUTRALS.faint }}>{filtered.length} 場</small></h2>
         {hasFollowing && <div className="flex items-baseline text-sm">
@@ -60,8 +66,9 @@ export default function HomeUpcomingList({ events }: { events: Event[] }) {
       <div ref={list} className="mt-4 flex flex-col gap-[10px]">
         {visible.map(event => <UpcomingEventCard key={event.id} event={event} />)}
         {filtered.length === 0 && <div className="py-6 text-sm" style={{ color: CATEGORY_NEUTRALS.muted }}>
-          <p>{activeTab === 'following' ? '追蹤的偶像目前沒有公開行程' : '目前沒有即將到來的活動'}</p>
-          {activeTab === 'following' && <button type="button" className="mt-2 text-white" onClick={() => selectTab('all')}>查看完整行程 →</button>}
+          <p>{events.length === 0 ? '目前沒有即將到來的活動' : tabFiltered.length === 0 ? '追蹤的偶像目前沒有公開行程' : '這個類型近期沒有活動'}</p>
+          {events.length > 0 && tabFiltered.length === 0 && <button type="button" className="mt-2 text-white" onClick={() => selectTab('all')}>查看完整行程 →</button>}
+          {tabFiltered.length > 0 && <button type="button" className="mt-2 text-white" onClick={() => setSelected('all')}>看全部</button>}
         </div>}
       </div>
       {remaining > 0 && <button type="button" className="mt-3 block h-[46px] w-full rounded-[23px] text-center text-[14.5px] font-bold leading-[46px]" style={{ color: CATEGORY_NEUTRALS.muted, boxShadow: `inset 0 0 0 1px ${CATEGORY_NEUTRALS.line}` }} onClick={() => { focusAfterExpand.current = true; setExpanded(true) }}>再看 {remaining} 場</button>}
