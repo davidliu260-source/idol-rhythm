@@ -122,6 +122,7 @@ function rowToEvent(row: SupabaseEventRow): Event {
     isFavorited: false, // UI state — managed by localStorage / auth layer
     ticketUrl: row.ticket_url ?? undefined,
     streamUrl: row.stream_url ?? undefined,
+    publishedAt: row.published_at ?? undefined,
     tags: row.tags ?? [],
   }
 }
