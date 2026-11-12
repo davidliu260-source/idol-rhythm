@@ -1,5 +1,6 @@
 // 檢查 T30a 活動類型判斷與色彩 token：node scripts/check-event-category.mjs
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { EVENT_CATEGORY_ORDER, EVENT_CATEGORIES, ALL_CATEGORY, CATEGORY_NEUTRALS, HERO_SCRIM_ALPHA, withAlpha, mixHex, relativeLuminance, contrastRatio, heroGradient, getCategoryTokens, getEventCategory } from '../src/lib/eventCategory.ts'
 
 const order = ['concert', 'popup', 'fanmeet', 'cafe', 'exhibition', 'ticket', 'other']
@@ -132,4 +133,9 @@ for (const id of order) {
 for (const key of ['faint','muted','text']) for (const bg of ['#07070f','#0b0a11','#15141d']) minimum(CATEGORY_NEUTRALS[key], bg, 4.5, `${key}/${bg}`)
 console.log(`INFO #6c6982 對 #0b0a11 = ${contrastRatio('#6c6982', '#0b0a11').toFixed(2)}（舊 faint 未達標）`)
 console.log('PASS D 所有類別與中性色對比度門檻')
+const iconSource = readFileSync(new URL('../src/components/category/CategoryIcon.tsx', import.meta.url), 'utf8')
+assert.match(iconSource, /other:\s*Ellipsis/)
+assert.equal(iconSource.includes('Megaphone'), false)
+assert.equal(EVENT_CATEGORIES.other.accent, '#9aa0b8')
+console.log('PASS 其他小圖示為 Ellipsis（⋯），中性灰 #9aa0b8 不變')
 console.log('OK T30a 活動類型判斷與色彩 token 檢查全部通過')
