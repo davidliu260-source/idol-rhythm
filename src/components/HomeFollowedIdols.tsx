@@ -31,13 +31,13 @@ export default function HomeFollowedIdols({ idols }: { idols: Idol[] }) {
         ))}
         <li className="flex-none">
           <Link href="/idols" aria-label="加入追蹤偶像" className={`flex min-w-[72px] flex-col items-center ${focus}`}>
-            <div aria-hidden="true" className="grid h-[58px] w-[58px] place-items-center rounded-full border-[1.5px] border-dashed border-white/25 text-[26px] font-normal text-[#a09db4]">+</div>
+            <div aria-hidden="true" className="grid h-[58px] w-[58px] place-items-center rounded-full border-[1.5px] border-dashed border-white/35 text-[26px] font-normal text-[#a09db4]">+</div>
             <span className="mt-3 block text-[13px] font-bold text-white">加入</span>
           </Link>
         </li>
       </ul>
       {mounted && !following.isLoading && followed.length === 0 && (
-        <Link href="/idols" className="mt-3 block text-[13px] leading-5 text-[#a09db4]">追蹤偶像後，這裡會優先顯示你的專屬行程</Link>
+        <Link href="/idols" className="block min-h-[44px] py-3 text-[13px] leading-5 text-[#a09db4]">追蹤偶像後，這裡會優先顯示你的專屬行程</Link>
       )}
     </section>
   )
