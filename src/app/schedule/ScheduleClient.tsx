@@ -1,5 +1,6 @@
 'use client'
 
+import { taipeiToday, toDateKey, isEventEnded } from '@/lib/taipeiDate'
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Clock3, Heart, ListFilter, MapPin, Search, Waves, X } from 'lucide-react'
 import clsx from 'clsx'
@@ -369,7 +370,7 @@ function CalendarView({
   events: Event[]
 }) {
   const { favorites, user } = useAppState()
-  const today = useMemo(() => new Date(), [])
+  const today = useMemo(() => dateFromKey(taipeiToday()), [])
   const [cursor, setCursor] = useState<Date>(() => new Date(today.getFullYear(), today.getMonth(), 1))
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
 
@@ -377,8 +378,8 @@ function CalendarView({
   const eventsByDay = useMemo(() => {
     const map = new Map<string, Event[]>()
     for (const e of events) {
-      const d = new Date(e.date)
-      const key = dayKey(d)
+      const key = toDateKey(e.date)
+      if (key === null) continue
       const arr = map.get(key)
       if (arr) arr.push(e)
       else map.set(key, [e])
@@ -514,7 +515,7 @@ function CalendarView({
         {selectedDate && (
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs font-semibold text-white/58">
-              {formatEventDate(selectedDate.toISOString())}
+              {formatEventDate(dayKey(selectedDate))}
               {selectedEvents.length > 0 && `（${selectedEvents.length} 筆）`}
             </p>
             <span className="rounded-full border border-white/8 bg-white/[0.035] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.22em] text-white/34">
@@ -711,12 +712,12 @@ function matchesScheduleCategory(event: Event, category: ScheduleCategory): bool
 }
 
 function buildFutureMonthGroups(events: Event[]): MonthEventGroup[] {
-  const today = startOfToday()
+  const now = new Date()
   const groups = new Map<string, MonthEventGroup>()
 
   for (const event of events) {
     const date = new Date(event.date)
-    if (date < today) continue
+    if (isEventEnded(event, now) === true) continue
     const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
     const label = `${date.getFullYear()} 年 ${date.getMonth() + 1} 月`
     const group = groups.get(key)
@@ -752,9 +753,9 @@ function getEmptyStateMessage(category: ScheduleCategory, searchQuery: string): 
   }
 }
 
-function startOfToday(): Date {
-  const today = new Date()
-  return new Date(today.getFullYear(), today.getMonth(), today.getDate())
+function dateFromKey(key: string): Date {
+  const [y, m, d] = key.split('-').map(Number)
+  return new Date(y, m - 1, d)
 }
 
 function getSearchHaystack(event: Event): string {

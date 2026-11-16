@@ -1,5 +1,6 @@
 'use server'
 
+import { taipeiToday } from '@/lib/taipeiDate'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
@@ -268,7 +269,7 @@ export async function approveCandidate(id: string): Promise<void> {
   // if published. Admin must change trust_level to 'official' or 'media' before
   // it can reach public pages.
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = taipeiToday()
   const eventDate =
     (candidate.detected_start_date as string | null) ??
     (candidate.detected_date as string | null) ??

@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic'
 
+import { isEventEnded } from '@/lib/taipeiDate'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -33,10 +34,10 @@ export default async function IdolDetailPage({
 
   const now = new Date()
   const upcoming = idolEvents
-    .filter((event) => new Date(event.date) >= now)
+    .filter((event) => isEventEnded(event, now) === false)
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
   const past = idolEvents
-    .filter((event) => new Date(event.date) < now)
+    .filter((event) => isEventEnded(event, now) === true)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
   const typeLabel =

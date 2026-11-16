@@ -1,5 +1,6 @@
 'use client'
 
+import { isEventEnded } from '@/lib/taipeiDate'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -58,14 +59,14 @@ export default function AtlasClient({ events }: { events: Event[] }) {
   const upcoming = useMemo(
     () =>
       visible
-        .filter((event) => new Date(event.date) >= now)
+        .filter((event) => isEventEnded(event, now) === false)
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
     [visible, now],
   )
   const past = useMemo(
     () =>
       visible
-        .filter((event) => new Date(event.date) < now)
+        .filter((event) => isEventEnded(event, now) === true)
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
     [visible, now],
   )

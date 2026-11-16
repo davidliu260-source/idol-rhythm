@@ -1,5 +1,6 @@
 'use client'
 
+import { isOnTaipeiToday, isWithinTaipeiDays, toDateKey, taipeiToday } from '@/lib/taipeiDate'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import clsx from 'clsx'
@@ -31,28 +32,13 @@ import ScheduleTrackCard from '@/app/schedule/ScheduleTrackCard'
 const MAX_FOLLOWED = 8
 const MAX_MORE = 6
 
-function isToday(dateStr: string): boolean {
-  const d = new Date(dateStr)
-  const now = new Date()
-  return (
-    d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate()
-  )
-}
+function isToday(dateStr: string): boolean { return isOnTaipeiToday(dateStr) }
 
-function isUpcomingWithin(dateStr: string, days: number): boolean {
-  const d = new Date(dateStr)
-  const now = new Date()
-  const cutoff = new Date(now)
-  cutoff.setDate(cutoff.getDate() + days)
-  return d >= now && d <= cutoff
-}
+function isUpcomingWithin(dateStr: string, days: number): boolean { return isWithinTaipeiDays(dateStr, days) }
 
 function isFutureOrToday(dateStr: string): boolean {
-  const d = new Date(dateStr)
-  d.setHours(23, 59, 59, 999)
-  return d.getTime() >= Date.now()
+  const key = toDateKey(dateStr)
+  return key !== null && key >= taipeiToday()
 }
 
 /**

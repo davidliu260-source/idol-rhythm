@@ -1,3 +1,4 @@
+import { taipeiToday } from '../taipeiDate'
 import { getSupabaseClient } from './client'
 
 export interface AdminStats {
@@ -19,7 +20,7 @@ export async function getAdminStats(): Promise<AdminStats> {
     return { activeIdols: null, publishedEvents: null, pendingCandidates: null, upcomingEvents: null }
   }
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = taipeiToday()
 
   const [idolsRes, publishedRes, candidatesRes, upcomingRes] = await Promise.allSettled([
     supabase

@@ -1,3 +1,4 @@
+import { addDaysToKey, taipeiToday, isOnTaipeiToday, isWithinTaipeiDays, toDateKey, diffDayKeys } from './taipeiDate'
 import type {
   Event,
   EventType,
@@ -81,12 +82,9 @@ export const SOURCE_CONFIG: Record<
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const today = new Date()
+const pad2 = (n: number) => String(n).padStart(2, '0')
 const d = (offset: number, hour = 19, min = 0) => {
-  const dt = new Date(today)
-  dt.setDate(dt.getDate() + offset)
-  dt.setHours(hour, min, 0, 0)
-  return dt.toISOString()
+  return `${addDaysToKey(taipeiToday(), offset)}T${pad2(hour)}:${pad2(min)}:00+08:00`
 }
 
 const src = (
@@ -554,26 +552,16 @@ export function getEventsByIdol(idolId: string): Event[] {
 }
 
 export function getTodayEvents(): Event[] {
-  const today = new Date()
   return MOCK_EVENTS.filter((e) => {
     if (!VISIBLE_TRUST_LEVELS.includes(e.source.level)) return false
-    const d = new Date(e.date)
-    return (
-      d.getFullYear() === today.getFullYear() &&
-      d.getMonth() === today.getMonth() &&
-      d.getDate() === today.getDate()
-    )
+    return isOnTaipeiToday(e.date)
   })
 }
 
 export function getUpcomingEvents(days = 14): Event[] {
-  const now = new Date()
-  const cutoff = new Date(now)
-  cutoff.setDate(cutoff.getDate() + days)
   return MOCK_EVENTS.filter((e) => {
     if (!VISIBLE_TRUST_LEVELS.includes(e.source.level)) return false
-    const d = new Date(e.date)
-    return d >= now && d <= cutoff
+    return isWithinTaipeiDays(e.date, days)
   }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 }
 
@@ -584,25 +572,19 @@ export function getFavoritedEvents(): Event[] {
 }
 
 export function getEventsByTypes(types: EventType[], days = 14): Event[] {
-  const now = new Date()
-  const cutoff = new Date(now)
-  cutoff.setDate(cutoff.getDate() + days)
   return MOCK_EVENTS.filter((e) => {
     if (!VISIBLE_TRUST_LEVELS.includes(e.source.level)) return false
     if (!types.includes(e.type)) return false
-    const d = new Date(e.date)
-    return d >= now && d <= cutoff
+    return isWithinTaipeiDays(e.date, days)
   }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 }
 
 export function formatEventDate(dateStr: string): string {
-  const d = new Date(dateStr)
-  const now = new Date()
-  const diffDays = Math.floor((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-  const weekdays = ['日', '一', '二', '三', '四', '五', '六']
-  const month = d.getMonth() + 1
-  const day = d.getDate()
-  const wd = weekdays[d.getDay()]
+  const key = toDateKey(dateStr)
+  if (key === null) return dateStr
+  const diffDays = diffDayKeys(taipeiToday(), key)
+  const [year, month, day] = key.split('-').map(Number)
+  const wd = '日一二三四五六'[new Date(Date.UTC(year, month - 1, day)).getUTCDay()]
 
   if (diffDays === 0) return `今天 (週${wd})`
   if (diffDays === 1) return `明天 (週${wd})`

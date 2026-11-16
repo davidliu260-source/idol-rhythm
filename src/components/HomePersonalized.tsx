@@ -1,5 +1,6 @@
 'use client'
 
+import { isEventEnded, toDateKey, diffDayKeys, taipeiToday } from '@/lib/taipeiDate'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Bell, ChevronRight, Heart, LibraryBig, LogIn, Sparkles, Star } from 'lucide-react'
@@ -49,14 +50,14 @@ export default function HomePersonalized({
 
   const upcomingReminders = mounted
     ? events
-        .filter((e) => reminders.has(e.id) && new Date(e.date) >= now)
+        .filter((e) => reminders.has(e.id) && isEventEnded(e, now) === false)
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
         .slice(0, MAX_REMINDERS)
     : []
 
   const upcomingFavorites = mounted
     ? events
-        .filter((e) => favorites.has(e.id) && new Date(e.date) >= now)
+        .filter((e) => favorites.has(e.id) && isEventEnded(e, now) === false)
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
         .slice(0, MAX_FAVORITES)
     : []
@@ -258,7 +259,7 @@ function CountdownCard({ event, now }: { event: Event; now: Date }) {
   // event.idolId = slug, and mock events use 'bts' / 'blackpink' etc. So
   // both data sources match. Unknown slugs fall back to a generic gradient.
   const idol = getIdolById(event.idolId)
-  const label = getCountdownLabel(new Date(event.date), now)
+  const label = getCountdownLabel(event.date, now)
 
   return (
     <Link href={`/events/${event.id}`} className="flex-shrink-0 w-40">
@@ -284,23 +285,20 @@ function CountdownCard({ event, now }: { event: Event; now: Date }) {
 }
 
 /**
- * Date-only countdown label:
+ * 台北曆日 countdown label:
  *   same day → "今天"
  *   next day → "明天"
  *   2+ days  → "剩 N 天"
  *
- * Compares calendar dates (not datetimes), so an event at any hour today
+ * Compares 台北曆日 (not datetimes), so an event at any hour today
  * counts as 「今天」regardless of clock time.
  */
-function getCountdownLabel(eventDate: Date, now: Date): string {
-  const eventDay = new Date(eventDate)
-  eventDay.setHours(0, 0, 0, 0)
-  const today = new Date(now)
-  today.setHours(0, 0, 0, 0)
-  const diffDays = Math.round(
-    (eventDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
-  )
-  if (diffDays === 0) return '今天'
-  if (diffDays === 1) return '明天'
-  return `剩 ${diffDays} 天`
+function getCountdownLabel(eventDate: string, now: Date): string {
+  const key = toDateKey(eventDate)
+  if (key === null) return ''
+  const diff = diffDayKeys(taipeiToday(now), key)
+  if (diff < 0) return '進行中'
+  if (diff === 0) return '今天'
+  if (diff === 1) return '明天'
+  return `剩 ${diff} 天`
 }

@@ -1,3 +1,4 @@
+import { reminderTargetDates, selectDueReminders, type RawReminderRow } from '@/lib/reminderDispatch'
 import { NextResponse, type NextRequest } from 'next/server'
 import { getSupabaseServiceClient } from '@/lib/supabase/serviceClient'
 
@@ -25,33 +26,6 @@ interface CronErrResponse {
 // Internal types
 // ---------------------------------------------------------------------------
 
-interface PendingReminder {
-  reminder_id: string
-  user_id: string
-  event_id: string
-  reminder_type: 'day_before' | 'week_before'
-  idol_id: string | null
-  idol_name: string
-  event_title: string
-}
-
-// Supabase returns joined relations as arrays even for to-one joins with !inner
-type EventShape = {
-  idol_id: string | null
-  idol_name: string
-  title: string
-  date: string
-  is_published: boolean
-  trust_level: string
-}
-type RawReminderRow = {
-  id: string
-  user_id: string
-  event_id: string
-  type: string
-  events: EventShape | EventShape[]
-}
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -69,13 +43,6 @@ function buildBody(idolName: string, reminderType: 'day_before' | 'week_before')
     : `${idolName} 的活動一週後即將開始，可以開始安排計畫了。`
 }
 
-/** UTC date string YYYY-MM-DD, offset by `days` from now */
-function utcDateOffsetString(days: number): string {
-  const d = new Date()
-  d.setUTCDate(d.getUTCDate() + days)
-  return d.toISOString().slice(0, 10)
-}
-
 // ---------------------------------------------------------------------------
 // Route
 // ---------------------------------------------------------------------------
@@ -88,7 +55,7 @@ function utcDateOffsetString(days: number): string {
  *
  * Scans reminders with is_sent=false and reminder_type in (day_before, week_before).
  * Inserts event_reminder notifications for events whose date matches the window.
- * Timezone strategy: date-level only, based on UTC CURRENT_DATE. hour_before deferred to N6b.
+ * Timezone strategy: date-level only, based on the Asia/Taipei calendar date (taipeiToday). hour_before deferred to N6b.
  *
  * Auth:      Authorization: Bearer {CRON_SECRET}
  * Idempotent: ON CONFLICT (user_id, dedupe_key) DO NOTHING + is_sent flag
@@ -133,9 +100,8 @@ export async function GET(
   }
 
   // -- Step 1+2: Query pending reminders ------------------------------------
-  // Date window: day_before = tomorrow UTC, week_before = 7 days from now UTC
-  const tomorrowStr = utcDateOffsetString(1)
-  const weekLaterStr = utcDateOffsetString(7)
+  // Date window (Asia/Taipei calendar days): day_before = Taipei tomorrow, week_before = Taipei today + 7
+  const targets = reminderTargetDates(new Date())
 
   const { data: rawRows, error: queryError } = await supabase
     .from('reminders')
@@ -168,24 +134,7 @@ export async function GET(
   }
 
   // Filter in JS: published + trust_level in (official, media) + date window
-  const reminders: PendingReminder[] = ((rawRows ?? []) as unknown as RawReminderRow[])
-    .flatMap((r) => {
-      const e = Array.isArray(r.events) ? r.events[0] : r.events
-      if (!e) return []
-      if (!e.is_published) return []
-      if (!['official', 'media'].includes(e.trust_level)) return []
-      if (r.type === 'day_before' && e.date !== tomorrowStr) return []
-      if (r.type === 'week_before' && e.date !== weekLaterStr) return []
-      return [{
-        reminder_id: r.id,
-        user_id: r.user_id,
-        event_id: r.event_id,
-        reminder_type: r.type as 'day_before' | 'week_before',
-        idol_id: e.idol_id,
-        idol_name: e.idol_name,
-        event_title: e.title,
-      }]
-    })
+  const reminders = selectDueReminders((rawRows ?? []) as unknown as RawReminderRow[], targets)
 
   // -- Step 3: Nothing to dispatch ------------------------------------------
   if (reminders.length === 0) {

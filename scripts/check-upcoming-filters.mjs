@@ -6,7 +6,7 @@ registerHooks({ resolve(specifier, context, nextResolve) {
 const f = await import('../src/lib/upcomingFilters.ts')
 const u = await import('../src/lib/upcomingEvents.ts')
 const { EVENT_CATEGORY_ORDER: order, getEventCategory } = await import('../src/lib/eventCategory.ts')
-const now = new Date(2026, 10, 12, 10, 0, 0)
+const now = new Date('2026-11-12T02:00:00.000Z')
 function immutable(value, check) {
   for (const item of Object.values(value)) if (item && typeof item === 'object') Object.freeze(item)
   Object.freeze(value)

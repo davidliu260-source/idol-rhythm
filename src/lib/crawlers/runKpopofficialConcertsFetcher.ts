@@ -20,6 +20,7 @@
  * frontend.
  */
 
+import { taipeiToday } from '../taipeiDate'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   buildIdolMatchIndex,
@@ -193,8 +194,7 @@ export async function runKpopofficialConcertsFetcher(
   const index = buildIdolMatchIndex(idols)
 
   // ── Past-date filter ─────────────────────────────────────────────────────
-  const today = new Date()
-  const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  const todayIso = taipeiToday()
   const futureEntries = allEntries.filter(
     (e) => e.detectedDate !== null && e.detectedDate >= todayIso,
   )
