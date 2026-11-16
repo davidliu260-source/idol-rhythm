@@ -263,3 +263,9 @@ export async function applyDraftSourcePlan(
   }
   return { ok: true }
 }
+
+/** 名稱或網址是否含聚合站字樣（與 getReviewSourceInfo 使用同一組 AGGREGATOR_PATTERNS）。 */
+export function matchesAggregatorPattern(input: ReviewSourceInput): boolean {
+  const haystack = `${(input.sourceName ?? '').toLowerCase()} ${(input.sourceUrl ?? '').toLowerCase()}`
+  return includesAny(haystack, AGGREGATOR_PATTERNS)
+}

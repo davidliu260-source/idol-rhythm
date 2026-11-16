@@ -12,6 +12,7 @@
  *   - config.artistSlug: local slug fallback / raw metadata
  */
 
+import { toDetectedLocation } from './candidateLocation'
 import { computeSourceHash } from './sourceHash'
 import { computeContentHash } from './contentHash'
 import type { SourceTypeEnum } from './crawlerSource'
@@ -142,6 +143,9 @@ export interface YgCandidatePayload {
   raw_content: string
   detected_idol_id: string | null
   detected_event_type: EventTypeEnum | null
+  detected_city: string | null
+  detected_venue_name: string | null
+  detected_address: string | null
   detected_date: string | null
   source_url: string
   source_name: string
@@ -208,6 +212,7 @@ export function entryToCandidatePayload(
     detected_idol_id: source.idolId,
     detected_event_type,
     detected_date: entry.detectedDate,
+    ...toDetectedLocation({ freeText: entry.place }),
     source_url: entry.sourceUrl,
     source_name: source.sourceName,
     source_type: source.sourceType,

@@ -35,6 +35,7 @@
  *     raw_content for the admin to read.
  */
 
+import { toDetectedLocation } from './candidateLocation'
 import * as cheerio from 'cheerio'
 import { computeSourceHash } from './sourceHash'
 import { computeContentHash } from './contentHash'
@@ -142,6 +143,9 @@ export interface BlackpinkCandidatePayload {
   raw_content: string
   detected_idol_id: string | null
   detected_event_type: 'concert'
+  detected_city: string | null
+  detected_venue_name: string | null
+  detected_address: string | null
   detected_date: string | null
   source_url: string
   source_name: string
@@ -205,6 +209,7 @@ export function entryToCandidatePayload(
     detected_idol_id: source.idolId,
     detected_event_type: 'concert',
     detected_date: entry.detectedDate,
+    ...toDetectedLocation({ city: entry.city, venueName: entry.place }),
     source_url: entry.sourceUrl,
     source_name: source.sourceName,
     source_type: source.sourceType,
