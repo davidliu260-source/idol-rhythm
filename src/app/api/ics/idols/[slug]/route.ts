@@ -1,3 +1,4 @@
+import { addDaysToKey, taipeiToday } from '@/lib/taipeiDate'
 import { NextResponse } from 'next/server'
 import { buildIcs } from '@/lib/ics/buildIcs'
 import { getIdolBySlug, getPublishedEvents } from '@/lib/supabase/events'
@@ -8,9 +9,7 @@ export async function GET(request: Request, { params }: { params: { slug: string
   const idol = await getIdolBySlug(params.slug)
   if (!idol) return new NextResponse('Not Found', { status: 404 })
 
-  const cutoff = new Date()
-  cutoff.setUTCDate(cutoff.getUTCDate() - 30)
-  const cutoffDate = cutoff.toISOString().slice(0, 10)
+  const cutoffDate = addDaysToKey(taipeiToday(), -30)
   const events = (await getPublishedEvents()).filter(
     (event) =>
       event.idolId === params.slug &&

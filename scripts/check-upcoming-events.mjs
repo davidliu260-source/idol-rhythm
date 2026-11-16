@@ -8,7 +8,7 @@ registerHooks({ resolve(specifier, context, nextResolve) {
 } })
 const u = await import('../src/lib/upcomingEvents.ts')
 const { getHeroDateParts, getHeroVenueLabel } = await import('../src/lib/nextEventHero.ts')
-const now = new Date(2026, 10, 12, 10, 0, 0)
+const now = new Date('2026-11-12T02:00:00.000Z')
 const ev = (id, date = '2026-11-12', extra = {}) => ({ id, date, idolId: 'neutral', ...extra })
 function immutable(input, check) {
   input.forEach(Object.freeze)
@@ -31,9 +31,9 @@ for (const total of [1, 9, 10, 30, 35]) {
   console.log(`PASS ${total} 場：收合、剩餘、展開、輸入不變`)
 }
 immutable([ev('future', '2026-11-13'), ev('none'), ev('blank', undefined, { time: '  ' }), ev('b', undefined, { time: ' 12:00 ' }), ev('a', undefined, { time: '12:00' }), ev('early', undefined, { time: '09:00' }), ev('yesterday', '2026-11-11'), ev('ongoing', '2026-11-10', { endDate: '2026-11-20' }), ...['', 'abc', '2026-02-30'].map((date, i) => ev(`invalid${i}`, date))], input => {
-  assert.deepEqual(u.listUpcomingEvents(input, now).map(e => e.id), ['early', 'a', 'b', 'blank', 'none', 'future'])
+  assert.deepEqual(u.listUpcomingEvents(input, now).map(e => e.id), ['ongoing', 'early', 'a', 'b', 'blank', 'none', 'future'])
 })
-console.log('PASS 日期／時間／id 排序、今天列入、昨天／無效日期／進行中多日排除')
+console.log('PASS 日期／時間／id 排序、今天列入、進行中多日排最前、昨天／無效日期排除')
 immutable([ev('a', undefined, { idolId: 'one' }), ev('b'), ev('c', undefined, { idolId: 'one' })], input => {
   assert.deepEqual(u.filterFollowedEvents(input, Object.freeze(['one'])).map(e => e.id), ['a', 'c'])
   assert.deepEqual(u.filterFollowedEvents(input, []), [])

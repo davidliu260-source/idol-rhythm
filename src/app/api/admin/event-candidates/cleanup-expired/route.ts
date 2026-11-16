@@ -1,3 +1,4 @@
+import { taipeiToday } from '@/lib/taipeiDate'
 import { NextResponse, type NextRequest } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
@@ -33,7 +34,7 @@ export async function POST(
     return NextResponse.json({ ok: false, error: 'Supabase 環境變數未設定' }, { status: 500 })
   }
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = taipeiToday()
 
   const { data, error } = await supabase
     .from('event_candidates')

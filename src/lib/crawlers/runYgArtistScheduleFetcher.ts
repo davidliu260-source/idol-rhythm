@@ -1,3 +1,4 @@
+import { taipeiToday } from '../taipeiDate'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   entryToCandidatePayload,
@@ -159,9 +160,9 @@ export async function runYgArtistScheduleFetcher(
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
 
   try {
-    const now = new Date()
+    const [baseYear, baseMonth] = taipeiToday().split('-').map(Number)
     for (let i = 0; i < MONTHS_AHEAD; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() + i, 1)
+      const d = new Date(baseYear, baseMonth - 1 + i, 1)
       const { year, month } = monthKey(d)
       const url = `${apiBase}/api/artist/schedule/list/${artistId}/${year}/${month}`
       try {
@@ -190,8 +191,7 @@ export async function runYgArtistScheduleFetcher(
     })
   }
 
-  const today = new Date()
-  const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  const todayIso = taipeiToday()
   const allEntries = parseYgScheduleItems(allItems, pageUrl)
   const entries = allEntries.filter(
     (e) => e.detectedDate === null || e.detectedDate >= todayIso,

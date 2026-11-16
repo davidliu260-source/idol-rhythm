@@ -1,4 +1,6 @@
-import { addDaysToKey, getLocalDateKey, toDateKey } from './nextEventHero'
+import { isEventOnDay, isEventEnded } from './taipeiDate'
+export { isEventEnded } from './taipeiDate'
+import { addDaysToKey, getLocalDateKey } from './nextEventHero'
 import { EVENT_CATEGORY_ORDER, getEventCategory, type EventCategoryId } from './eventCategory'
 import type { CategoryFilter } from './upcomingFilters'
 
@@ -26,18 +28,13 @@ export function getWeekDays(now: Date = new Date()): WeekDay[] {
 
 export function getWeekDots(events: readonly Categorizable[], now: Date = new Date(), category: CategoryFilter = 'all'): WeekDayDots[] {
   return getWeekDays(now).map(({ key }) => {
-    const categories = new Set(events.filter(event => toDateKey(event.date) === key).map(getEventCategory))
+    const categories = new Set(events.filter(event => isEventOnDay(event, key)).map(getEventCategory))
     return { key, categories: category === 'all' ? EVENT_CATEGORY_ORDER.filter(id => categories.has(id)).slice(0, WEEK_MAX_DOTS) : categories.has(category) ? [category] : [] }
   })
 }
 
 export function hasWeekEvents(events: readonly Categorizable[], now: Date = new Date()): boolean {
   return getWeekDots(events, now, 'all').some(day => day.categories.length > 0)
-}
-
-export function isEventEnded(event: Datable, now: Date = new Date()): boolean | null {
-  const key = toDateKey(event.endDate ?? event.date)
-  return key === null ? null : key < getLocalDateKey(now)
 }
 
 export function parsePublishedAt(value: unknown): number | null {

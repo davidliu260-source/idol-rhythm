@@ -1,5 +1,6 @@
 'use client'
 
+import { taipeiToday } from '@/lib/taipeiDate'
 import { useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -46,8 +47,7 @@ const TAB_LABELS: Record<FilterTab, string> = {
 }
 
 function todayIsoDate(): string {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return taipeiToday()
 }
 
 function matchTab(event: AdminEvent, tab: FilterTab, todayIso: string): boolean {
@@ -409,7 +409,7 @@ function EventRow({
   isChecked: boolean
   onToggle: () => void
 }) {
-  const isPast = new Date(event.date) < now
+  const isPast = event.date.slice(0, 10) < taipeiToday(now)
   const trustConfig = SOURCE_CONFIG[event.trustLevel] ?? SOURCE_CONFIG['official']
 
   const statusColors: Record<string, string> = {

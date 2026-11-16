@@ -1,5 +1,6 @@
 'use client'
 
+import { isEventEnded } from '@/lib/taipeiDate'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import clsx from 'clsx'
@@ -71,13 +72,13 @@ export default function MeClient({
   const followingIdols = idols.filter((idol) => following.has(idol.id))
   const now = new Date()
   const upcomingFollowedEvents = events
-    .filter((event) => following.has(event.idolId) && new Date(event.date) >= now)
+    .filter((event) => following.has(event.idolId) && isEventEnded(event, now) === false)
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
   const reminderEvents = events
-    .filter((event) => reminders.has(event.id) && new Date(event.date) >= now)
+    .filter((event) => reminders.has(event.id) && isEventEnded(event, now) === false)
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
   const favoriteEvents = events
-    .filter((event) => favorites.has(event.id) && new Date(event.date) >= now)
+    .filter((event) => favorites.has(event.id) && isEventEnded(event, now) === false)
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 
   if (!user) {

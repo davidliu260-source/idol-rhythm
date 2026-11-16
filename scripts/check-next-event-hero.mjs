@@ -1,13 +1,18 @@
+// T32：今天為台北曆日
 // 檢查 T30b 首頁英雄卡選卡、副標、日期與白字對比：node scripts/check-next-event-hero.mjs
 import assert from 'node:assert/strict'
-import * as h from '../src/lib/nextEventHero.ts'
-import { EVENT_CATEGORY_ORDER, EVENT_CATEGORIES, HERO_SCRIM_ALPHA, mixHex, contrastRatio, getEventCategory } from '../src/lib/eventCategory.ts'
-const NOW = new Date(2026, 10, 12, 10, 0, 0)
+import { registerHooks } from 'node:module'
+registerHooks({ resolve(specifier, context, nextResolve) {
+  return nextResolve(specifier.startsWith('.') && !/\.[a-z]+$/i.test(specifier) ? `${specifier}.ts` : specifier, context)
+} })
+const h = await import('../src/lib/nextEventHero.ts')
+const { EVENT_CATEGORY_ORDER, EVENT_CATEGORIES, HERO_SCRIM_ALPHA, mixHex, contrastRatio, getEventCategory } = await import('../src/lib/eventCategory.ts')
+const NOW = new Date('2026-11-12T02:00:00.000Z')
 const ev = (id, date, extra = {}) => ({ id, date, ...extra })
 for (const value of ['2026-11-14','2026-11-12T19:00:00+08:00','2026-11-12 19:00']) assert.equal(h.toDateKey(value), value.slice(0,10))
 for (const value of ['',null,undefined,'abc','2026-13-01','2026-02-30','2026-1-5',' 2026-11-12']) assert.equal(h.toDateKey(value), null)
 assert.equal(h.getLocalDateKey(NOW),'2026-11-12')
-assert.equal(h.getLocalDateKey(new Date(2026,0,5,23,59)),'2026-01-05')
+assert.equal(h.getLocalDateKey(new Date('2026-01-05T15:59:00.000Z')),'2026-01-05')
 assert.equal(h.addDaysToKey('2026-11-30',1),'2026-12-01')
 assert.equal(h.addDaysToKey('2026-12-31',1),'2027-01-01')
 assert.equal(h.diffDayKeys('2026-11-12','2026-12-01'),19)
@@ -32,9 +37,15 @@ selection('S6 空陣列',[],null)
 const invalid = [ev('bad1',''),ev('bad2','abc'),ev('bad3','2026-02-30')]
 selection('S7 無效日期略過',[...invalid,ev('ok','2026-11-15')],'ok'); selection('S7 全無效',invalid,null)
 assert.equal(h.getDaysUntil(selection('S8 帶時間字串',[ev('iso','2026-11-12T19:00:00+08:00')],'iso'),NOW),0)
-selection('S9 深夜邊界',[ev('d','2026-11-12')],'d',new Date(2026,10,12,23,59,59))
-selection('S9 午夜邊界',[ev('d','2026-11-12')],null,new Date(2026,10,13,0,0,1))
-selection('S10 進行中多日不算',[ev('run','2026-11-10',{endDate:'2026-11-20'})],null)
+selection('S9 深夜邊界',[ev('d','2026-11-12')],'d',new Date('2026-11-12T15:59:59.000Z'))
+selection('S9 午夜邊界',[ev('d','2026-11-12')],null,new Date('2026-11-12T16:00:01.000Z'))
+const ongoing = selection('S10 進行中多日當英雄卡',[ev('run','2026-11-10',{endDate:'2026-11-20'})],'run')
+assert.equal(h.getHeroCountdownLabel(h.getDaysUntil(ongoing, NOW)), '進行中')
+selection('S12 今天開始優先於進行中',[ev('run','2026-11-10',{endDate:'2026-11-20'}),ev('t','2026-11-12')],'t')
+selection('S13 進行中優先於未來',[ev('f','2026-11-13'),ev('run','2026-11-10',{endDate:'2026-11-20'})],'run')
+selection('S14 進行中取結束日最早',[ev('late','2026-11-10',{endDate:'2026-11-20'}),ev('early','2026-11-11',{endDate:'2026-11-15'})],'early')
+selection('S15 多日已結束不入選',[ev('old','2026-11-01',{endDate:'2026-11-11'})],null)
+assert.equal(h.getHeroCountdownLabel(-1),'進行中')
 const isTicket = e => getEventCategory(e) === 'ticket'
 selection('S11 只有過去＝空狀態輸入',past,null)
 assert.deepEqual(h.getHomeSubtitleClauses({tomorrowTicketCount:h.countTomorrowTickets(past,isTicket,NOW),nextEventDays:null}),[])

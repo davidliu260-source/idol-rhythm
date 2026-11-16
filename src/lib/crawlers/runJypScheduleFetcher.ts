@@ -1,3 +1,4 @@
+import { taipeiToday } from '../taipeiDate'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   entryToCandidatePayload,
@@ -218,9 +219,9 @@ export async function runJypScheduleFetcher(
     }
 
     // Fetch schedules month by month.
-    const now = new Date()
+    const [baseYear, baseMonth] = taipeiToday().split('-').map(Number)
     for (let i = 0; i < MONTHS_AHEAD; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() + i, 1)
+      const d = new Date(baseYear, baseMonth - 1 + i, 1)
       const { startDate, endDate } = monthRange(d.getFullYear(), d.getMonth() + 1)
       const url =
         `${apiOrigin}/api/schedules?groupId=${encodeURIComponent(groupId)}` +
@@ -272,8 +273,7 @@ export async function runJypScheduleFetcher(
   // and the candidate pool is forward-looking by design — past rows would
   // just be noise for the admin reviewer. Already-stored candidates and
   // approved events are NOT touched; this filter only gates new INSERTs.
-  const today = new Date()
-  const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  const todayIso = taipeiToday()
   const allEntries = parseJypScheduleApiItems(allItems, pageUrl)
   const entries = allEntries.filter(
     (e) => e.detectedDate !== null && e.detectedDate >= todayIso,

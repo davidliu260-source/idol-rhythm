@@ -1,17 +1,17 @@
-import { getLocalDateKey, toDateKey } from './nextEventHero'
+import { toDateKey, isEventEnded, isEventOngoing } from './taipeiDate'
 
 export const INITIAL_VISIBLE = 9
 
-export function listUpcomingEvents<T extends { id: string; date: string; time?: string | null }>(events: readonly T[], now: Date = new Date()): T[] {
-  const today = getLocalDateKey(now)
+export function listUpcomingEvents<T extends { id: string; date: string; endDate?: string | null; time?: string | null }>(events: readonly T[], now: Date = new Date()): T[] {
   return events.filter(event => {
     const key = toDateKey(event.date)
-    return key !== null && key >= today
+    return key !== null && isEventEnded(event, now) === false
   }).sort((a, b) => {
+    const ongoingOrder = Number(isEventOngoing(b, now)) - Number(isEventOngoing(a, now))
     const dateOrder = toDateKey(a.date)!.localeCompare(toDateKey(b.date)!)
     const aTime = a.time?.trim() || ''
     const bTime = b.time?.trim() || ''
-    return dateOrder || Number(!aTime) - Number(!bTime) || aTime.localeCompare(bTime) || a.id.localeCompare(b.id)
+    return ongoingOrder || dateOrder || Number(!aTime) - Number(!bTime) || aTime.localeCompare(bTime) || a.id.localeCompare(b.id)
   })
 }
 

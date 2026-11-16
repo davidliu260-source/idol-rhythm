@@ -1,5 +1,6 @@
 'use client'
 
+import { taipeiToday } from '@/lib/taipeiDate'
 import { useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -148,7 +149,7 @@ export default function CandidatesClient({ candidates, isAdmin }: Props) {
   const allRecheckSelected =
     visibleRecheck.length > 0 && visibleRecheck.every((c) => selected.has(c.id))
 
-  const todayIso = new Date().toISOString().slice(0, 10)
+  const todayIso = taipeiToday()
   // Cleanup-expired button counts ALL pending+expired (not just filtered view).
   // The cleanup endpoint operates server-side on every matching row, so it
   // would be misleading to show only the in-view count here.

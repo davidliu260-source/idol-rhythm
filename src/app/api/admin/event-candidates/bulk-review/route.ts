@@ -1,3 +1,4 @@
+import { taipeiToday } from '@/lib/taipeiDate'
 import { NextResponse, type NextRequest } from 'next/server'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkRevie
           continue
         }
 
-        const today = new Date().toISOString().slice(0, 10)
+        const today = taipeiToday()
         const eventDate =
           (candidate.detected_start_date as string | null) ??
           (candidate.detected_date as string | null) ??

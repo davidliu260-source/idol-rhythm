@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic'
 
+import { taipeiToday } from '@/lib/taipeiDate'
 import Link from 'next/link'
 import {
   ArrowLeft, CalendarCheck, ShieldCheck,
@@ -83,7 +84,8 @@ export default async function AdminEventsPage() {
   const draftCount = events.filter((e) => !e.isPublished).length
   const publishedCount = events.filter((e) => e.isPublished).length
   const officialCount = events.filter((e) => e.trustLevel === 'official').length
-  const upcomingCount = events.filter((e) => new Date(e.date) >= now).length
+  const today = taipeiToday(now)
+  const upcomingCount = events.filter((e) => e.date.slice(0, 10) >= today).length
 
   return (
     <div className="flex flex-col gap-0 pt-12 pb-6">

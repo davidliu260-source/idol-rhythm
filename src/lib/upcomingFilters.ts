@@ -6,7 +6,7 @@ export interface UpcomingCategoryCounts {
   total: number
   byCategory: Record<EventCategoryId, number>
 }
-type Categorizable = { id: string; date: string; time?: string | null; type?: string | null; subType?: string | null }
+type Categorizable = { id: string; date: string; endDate?: string | null; time?: string | null; type?: string | null; subType?: string | null }
 
 export function countUpcomingByCategory(events: readonly Categorizable[], now: Date = new Date()): UpcomingCategoryCounts {
   const byCategory = Object.fromEntries(EVENT_CATEGORY_ORDER.map(id => [id, 0])) as Record<EventCategoryId, number>

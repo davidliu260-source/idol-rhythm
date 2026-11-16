@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic'
 
+import { formatTaipeiDateLabel, isEventOngoing } from '@/lib/taipeiDate'
 import { countUpcomingByCategory } from '@/lib/upcomingFilters'
 import { HomeCategoryFilterProvider, HomeCategoryFilterBar, HomeCategoryLegend } from '@/components/HomeCategoryFilter'
 import { Fragment } from 'react'
@@ -25,9 +26,10 @@ export default async function HomePage() {
   ])
   const now = new Date()
   const upcomingEvents = listUpcomingEvents(events, now)
+  const ongoingIds = upcomingEvents.filter(event => isEventOngoing(event, now)).map(event => event.id)
   const categoryCounts = countUpcomingByCategory(upcomingEvents, now)
   const showCategoryFilter = categoryCounts.total > 0
-  const dateStr = formatToday(now)
+  const dateStr = formatTaipeiDateLabel(now)
   const nextEvent = selectNextEvent(events, now)
   const subtitleClauses = getHomeSubtitleClauses({
     tomorrowTicketCount: countTomorrowTickets(events, (event) => getEventCategory(event) === 'ticket', now),
@@ -76,7 +78,7 @@ export default async function HomePage() {
         <HomeNextEventHero event={nextEvent} now={now} />
 
         {showWeek && <HomeWeekStrip days={weekDays} dotsByFilter={weekDotsByFilter} />}
-        <HomeUpcomingList events={upcomingEvents} />
+        <HomeUpcomingList events={upcomingEvents} ongoingIds={ongoingIds} />
         {showCategoryFilter && <HomeCategoryLegend counts={categoryCounts} />}
         <HomeFollowedIdols idols={idols} />
         {latestEvents.length > 0 && <HomeLatestPublished events={latestEvents} now={now} />}
@@ -91,9 +93,4 @@ export default async function HomePage() {
       </div>
     </div>
   )
-}
-
-function formatToday(date: Date): string {
-  const weekdays = ['日', '一', '二', '三', '四', '五', '六']
-  return `${date.getFullYear()} 年 ${date.getMonth() + 1} 月 ${date.getDate()} 日 週${weekdays[date.getDay()]}`
 }
