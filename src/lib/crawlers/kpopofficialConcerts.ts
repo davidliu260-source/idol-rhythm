@@ -46,6 +46,7 @@
  * date; admin can refine on approval.
  */
 
+import { toDetectedLocation } from './candidateLocation'
 import * as cheerio from 'cheerio'
 import { computeSourceHash } from './sourceHash'
 import { computeContentHash } from './contentHash'
@@ -192,6 +193,9 @@ export interface KpopOfficialCandidatePayload {
   raw_content: string
   detected_idol_id: string
   detected_event_type: null
+  detected_city: string | null
+  detected_venue_name: string | null
+  detected_address: string | null
   detected_date: string | null
   source_url: string
   source_name: string
@@ -262,6 +266,7 @@ export function entryToCandidatePayload(
     detected_idol_id: matchedIdolId,
     detected_event_type: null,
     detected_date: entry.detectedDate,
+    ...toDetectedLocation({ freeText: entry.location }),
     source_url: entry.sourceUrl,
     source_name: source.sourceName,
     source_type: source.sourceType,

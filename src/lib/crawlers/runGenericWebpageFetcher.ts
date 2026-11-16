@@ -21,6 +21,7 @@
  * candidates per run.
  */
 
+import { toDetectedLocation } from './candidateLocation'
 import { createHash } from 'node:crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
@@ -694,6 +695,9 @@ interface CandidatePayload {
   raw_content: string | null
   detected_idol_id: string | null
   detected_event_type: DbEventType
+  detected_city: string | null
+  detected_venue_name: string | null
+  detected_address: string | null
   detected_date: string | null
   source_url: string
   source_name: string
@@ -744,6 +748,7 @@ function buildCandidatePayload(args: {
     detected_idol_id: detectedIdolId,
     detected_event_type: mappedEventType,
     detected_date: parsedDate,
+    ...toDetectedLocation({ freeText: event.locationHint }),
     source_url: source.source_url,
     source_name: source.name,
     source_type: source.source_type,
