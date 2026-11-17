@@ -1,5 +1,6 @@
 'use client'
 
+import { getEventLocationLabel } from '@/lib/eventLocation'
 import { taipeiToday, toDateKey, isEventEnded } from '@/lib/taipeiDate'
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Clock3, Heart, ListFilter, MapPin, Search, Waves, X } from 'lucide-react'
@@ -247,7 +248,7 @@ function TrackDisclosure({
   const collapseTimerRef = useRef<number | null>(null)
   const isFavorited = favorites.has(event.id)
   const dateLabel = getEventDateLabel(event)
-  const placeLabel = event.venueName || event.location || event.city || event.country
+  const placeLabel = getEventLocationLabel(event)
 
   useEffect(() => {
     return () => {

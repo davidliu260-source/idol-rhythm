@@ -94,6 +94,7 @@ export async function publishEvent(id: string): Promise<void> {
  * After revalidation, redirects back to the admin event detail page.
  * updated_at is handled automatically by the trg_events_updated_at trigger.
  */
+/** 下架同時封鎖後續自動上架；不讀熔斷開關。 */
 export async function unpublishEvent(id: string): Promise<void> {
   await requireActiveAdmin()
 
@@ -104,6 +105,7 @@ export async function unpublishEvent(id: string): Promise<void> {
     .from('events')
     .update({
       is_published: false,
+      auto_publish_blocked: true,
       published_at: null,
     })
     .eq('id', id)

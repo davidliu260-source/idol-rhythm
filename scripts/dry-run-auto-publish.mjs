@@ -4,6 +4,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { basename, resolve } from 'node:path'
 import { registerHooks } from 'node:module'
 registerHooks({ resolve(s,c,n) { return n(s.startsWith('.') && !c.parentURL?.includes('/node_modules/') && !/\.[a-z]+$/i.test(s) ? s+'.ts' : s,c) } })
+const { inferEventType } = await import('../src/lib/autoPublish/inferEventType.ts')
 const { evaluateCandidate, evaluateCandidates, AUTO_PUBLISH_RULE_VERSION, PARK_REASONS, SKIP_REASONS } = await import('../src/lib/autoPublish/evaluateCandidate.ts')
 const { toDetectedLocation, hasAnyLocation, locationFromRawData, locationFromRawContent } = await import('../src/lib/crawlers/candidateLocation.ts')
 const { taipeiToday } = await import('../src/lib/taipeiDate.ts')
@@ -41,7 +42,7 @@ try {
   const { candidates,events,idols,event_sources }=data
   const ctx={now,idols,crawlerSources:data.crawler_sources,events,eventSources:event_sources}
   const eventById=new Map(events.map(e=>[e.id,e]))
-  const lines=[`# T34 PR-2 ${mode} 唯讀報告`,`規則版本：${AUTO_PUBLISH_RULE_VERSION}`,`queried_at：${cell(data.queried_at)}；評估 now：${now.toISOString()}；台北今天：${taipeiToday(now)}；匯出台北日期：${cell(data.taipei_today)}`,`輸入檔名：${cell(basename(opts['--input']))}`,'不寫庫；正式資料僅 Dave 本機使用，箱子／CI／check 只能用 /tmp 自造假資料。']
+  const lines=[`# T34 ${mode} 唯讀報告`,`規則版本：${AUTO_PUBLISH_RULE_VERSION}`,`類型推導：PR-3 inferEventType`,`queried_at：${cell(data.queried_at)}；評估 now：${now.toISOString()}；台北今天：${taipeiToday(now)}；匯出台北日期：${cell(data.taipei_today)}`,`輸入檔名：${cell(basename(opts['--input']))}`,'不寫庫；正式資料僅 Dave 本機使用，箱子／CI／check 只能用 /tmp 自造假資料。']
   const section=(title,content)=>lines.push('\n## '+title+'\n',content)
   if(mode==='candidates') {
     const decisions=evaluateCandidates(candidates,ctx)
@@ -58,9 +59,10 @@ try {
     section('將擱置','缺地點不是擱置原因\n\n'+table(['parkReason','筆數'],PARK_REASONS.map(r=>[r,count(park,({d})=>d.parkReason===r)]))+'\n\n'+table(['allReasons','次數'],PARK_REASONS.map(r=>[r,count(park,({d})=>d.allReasons.includes(r))])))
     section('將跳過',table(['skipReason','筆數'],SKIP_REASONS.map(r=>[r,count(skip,({d})=>d.skipReason===r)])))
     section('parserType × action',table(['parserType','publish_official','publish_aggregator','park','skip'],[...new Set(rows.map(({d})=>d.parserType??'(none)'))].sort(lexical).map(p=>[p,...['publish_official','publish_aggregator','park','skip'].map(a=>count(rows,({d})=>(d.parserType??'(none)')===p&&d.action===a))])))
-    section('eventType 為 null 的將上架筆數',`${count(pub,({d})=>d.eventType===null)}；預設值由 PR-3 決定。`)
+    const inferred=pub.filter(({d})=>d.target==='create_event').map(({c,d})=>inferEventType(c,d.parserType))
+    section('類型推導（將上架、create_event）',table(['rule','type','subType','筆數'],tally(inferred,r=>`${r.rule}\t${r.type??'(null)'}\t${r.subType??'(null)'}`).map(([k,n])=>[...k.split('\t'),n]))+'\n\n'+table(['無法建立原因','筆數'],['missing_type','invalid_type'].map(rule=>[rule,count(inferred,r=>r.rule===rule)]))+(inferred.some(r=>['missing_type','invalid_type'].includes(r.rule))?'\n\n⚠️ 這些候選不會被建立':''))
     const samples=[...pub.sort((a,b)=>lexical(a.c.id,b.c.id)).slice(0,10),...park.sort((a,b)=>lexical(a.c.id,b.c.id)).slice(0,10)]
-    section('抽樣：上架 10／擱置 10',table(['candidate id','偶像名','日期','標題（60 字）','來源名','parserType','決策','trust／原因','地點狀態','rawLocation'],samples.map(({c,d})=>[c.id,idols.find(i=>i.id===c.detected_idol_id)?.name,c.detected_start_date??c.detected_date,Array.from(c.raw_title??'').slice(0,60).join(''),c.source_name??data.crawler_sources.find(s=>s.id===d.crawlerSourceId)?.name,d.parserType,d.action,d.trustLevel??d.parkReason,d.locationStatus,JSON.stringify(d.rawLocation??null)])))
+    section('抽樣：上架 10／擱置 10',table(['candidate id','偶像名','日期','標題（60 字）','來源名','parserType','決策','trust／原因','地點狀態','rawLocation','type／subType（rule）'],samples.map(({c,d})=>[c.id,idols.find(i=>i.id===c.detected_idol_id)?.name,c.detected_start_date??c.detected_date,Array.from(c.raw_title??'').slice(0,60).join(''),c.source_name??data.crawler_sources.find(s=>s.id===d.crawlerSourceId)?.name,d.parserType,d.action,d.trustLevel??d.parkReason,d.locationStatus,JSON.stringify(d.rawLocation??null),d.target==='publish_existing_event'?'沿用既有活動類型':d.action.startsWith('publish')?(()=>{const r=inferEventType(c,d.parserType);return `${r.type??'(null)'}／${r.subType??'(null)'}（${r.rule}）`})():'—'])))
     if(pub.length+park.length+skip.length!==candidates.length) throw new Error('加總核對失敗')
     section('加總核對',`${pub.length} 上架 + ${park.length} 擱置 + ${skip.length} 跳過 = ${candidates.length} 匯出候選總數：PASS`)
   } else {

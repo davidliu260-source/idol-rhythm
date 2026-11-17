@@ -1,5 +1,6 @@
 'use client'
 
+import { getEventLocationLabel } from '@/lib/eventLocation'
 import { isEventEnded } from '@/lib/taipeiDate'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -445,7 +446,7 @@ function FavoriteShelfCard({
     ? EVENT_SUBTYPE_LABELS[event.subType]
     : EVENT_TYPE_LABELS[event.type]
   const sourceConfig = SOURCE_CONFIG[event.source.level]
-  const locationLabel = event.venueName || event.location || event.city || event.country
+  const locationLabel = getEventLocationLabel(event)
 
   return (
     <article
@@ -545,7 +546,7 @@ function StatusPill({
   tone,
 }: {
   label: string
-  tone: 'official' | 'media' | 'pending'
+  tone: 'official' | 'media' | 'aggregator' | 'pending'
 }) {
   return (
     <span
@@ -553,6 +554,7 @@ function StatusPill({
         'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold',
         tone === 'official' && 'border-emerald-300/18 bg-emerald-400/10 text-emerald-300',
         tone === 'media' && 'border-sky-300/18 bg-sky-400/10 text-sky-300',
+        tone === 'aggregator' && 'border-amber-300/18 bg-amber-400/10 text-amber-300',
         tone === 'pending' && 'border-white/12 bg-white/[0.06] text-white/56',
       )}
     >
@@ -561,6 +563,7 @@ function StatusPill({
           'h-2 w-2 rounded-full',
           tone === 'official' && 'bg-emerald-300',
           tone === 'media' && 'bg-sky-300',
+          tone === 'aggregator' && 'bg-amber-300',
           tone === 'pending' && 'bg-white/50',
         )}
       />

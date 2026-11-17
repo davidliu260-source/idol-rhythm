@@ -1,3 +1,4 @@
+import { touchedFromPayload, type TouchedCandidate } from './touchedCandidate'
 import { taipeiToday } from '../taipeiDate'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
@@ -34,6 +35,7 @@ export interface FetcherOptions {
 }
 
 export interface FetcherResult {
+  touched: TouchedCandidate[]
   source: 'jyp-schedule'
   sourceKey: string
   mode: 'insert' | 'dry-run'
@@ -112,6 +114,7 @@ export async function runJypScheduleFetcher(
   const base = (
     extra: Partial<FetcherResult>,
   ): FetcherResult => ({
+    touched: [],
     source: 'jyp-schedule',
     sourceKey,
     mode,
@@ -370,6 +373,7 @@ export async function runJypScheduleFetcher(
   //     058). Never touch review_status, approved_event_id, or the original
   //     raw_* fields — admin compares old (raw_*) vs new (latest_*) in the
   //     candidate detail page.
+  const touched: TouchedCandidate[] = []
   let inserted = 0
   let wouldInsert = 0
   let skipped = 0
@@ -385,7 +389,7 @@ export async function runJypScheduleFetcher(
         wouldInsert += 1
         continue
       }
-      const { error } = await supabase.from('event_candidates').insert(payload)
+      const { data: insertedRow, error } = await supabase.from('event_candidates').insert(payload).select('id').single()
       if (error) {
         if (error.code === '23505') {
           skipped += 1
@@ -396,6 +400,7 @@ export async function runJypScheduleFetcher(
         )
         continue
       }
+      if (insertedRow?.id) touched.push(touchedFromPayload(insertedRow.id, source.id, 'inserted', { ...payload }))
       inserted += 1
       continue
     }
@@ -418,11 +423,13 @@ export async function runJypScheduleFetcher(
           continue
         }
       }
+      if (!dryRun) touched.push(touchedFromPayload(existing.id, source.id, 'backfilled_hash', { ...payload }))
       skipped += 1
       continue
     }
 
     if (existing.content_hash === payload.content_hash) {
+      if (!dryRun) touched.push(touchedFromPayload(existing.id, source.id, 'unchanged', { ...payload }))
       skipped += 1
       continue
     }
@@ -463,6 +470,7 @@ export async function runJypScheduleFetcher(
       )
       continue
     }
+    touched.push(touchedFromPayload(existing.id, source.id, 'drift', { ...payload }))
     recheck += 1
   }
 
@@ -478,6 +486,7 @@ export async function runJypScheduleFetcher(
   void insertErrorCount // kept for future logging
 
   return {
+    touched,
     source: 'jyp-schedule',
     sourceKey,
     mode,

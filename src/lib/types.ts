@@ -60,12 +60,13 @@ export type EventStatus = 'confirmed' | 'tentative' | 'cancelled' | 'postponed'
 // ── Trust & Source ────────────────────────────────────────────────────────────
 
 /**
- * Three-tier trust system:
+ * Trust system:
  *  official — direct from artist / agency SNS or official website
  *  media    — confirmed by known media outlet or reputable fan account
+ *  aggregator — 非官方整理站，前台可見但只能標「非官方整理」
  *  pending  — unverified; MUST NOT be rendered in any public-facing page
  */
-export type TrustLevel = 'official' | 'media' | 'pending'
+export type TrustLevel = 'official' | 'media' | 'aggregator' | 'pending'
 
 export type SourceType =
   | 'official_sns'

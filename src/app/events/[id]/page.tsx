@@ -1,3 +1,4 @@
+import { getPublicTrustLabel } from '@/lib/trustLevels'
 export const dynamic = 'force-dynamic'
 
 import { notFound } from 'next/navigation'
@@ -62,8 +63,8 @@ export default async function EventDetailPage({
         <section className="rounded-[22px] border border-white/8 bg-white/[0.035] p-4">
           <h2 className="mb-3 text-sm font-semibold text-white">資訊來源</h2>
           <SourceLine
-            tone={event.source.level === 'official' ? 'green' : 'blue'}
-            title={event.source.level === 'official' ? '官方確認' : '媒體確認'}
+            tone={event.source.level === 'official' ? 'green' : event.source.level === 'media' ? 'blue' : 'neutral'}
+            title={getPublicTrustLabel(event.source.level) ?? ''}
             label={event.source.label}
             description={event.source.type ? getSourceTypeLabel(event.source.type) : '來源已通過前台顯示規則'}
           />
@@ -107,16 +108,16 @@ function SourceLine({
   label,
   description,
 }: {
-  tone: 'green' | 'blue'
+  tone: 'green' | 'blue' | 'neutral'
   title: string
   label: string
   description: string
 }) {
   return (
     <div className="flex gap-3">
-      <span className={tone === 'green' ? 'mt-1 h-2.5 w-2.5 rounded-full bg-emerald-300' : 'mt-1 h-2.5 w-2.5 rounded-full bg-sky-300'} />
+      <span className={tone === 'green' ? 'mt-1 h-2.5 w-2.5 rounded-full bg-emerald-300' : tone === 'blue' ? 'mt-1 h-2.5 w-2.5 rounded-full bg-sky-300' : 'mt-1 h-2.5 w-2.5 rounded-full bg-white/50'} />
       <div className="min-w-0">
-        <p className={tone === 'green' ? 'text-sm font-semibold text-emerald-300' : 'text-sm font-semibold text-sky-300'}>
+        <p className={tone === 'green' ? 'text-sm font-semibold text-emerald-300' : tone === 'blue' ? 'text-sm font-semibold text-sky-300' : 'text-sm font-semibold text-white/70'}>
           {title}
           <span className="font-normal text-white/44"> · {label}</span>
         </p>

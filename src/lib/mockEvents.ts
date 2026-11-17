@@ -1,3 +1,4 @@
+import { PUBLIC_TRUST_LEVELS } from './trustLevels'
 import { addDaysToKey, taipeiToday, isOnTaipeiToday, isWithinTaipeiDays, toDateKey, diffDayKeys } from './taipeiDate'
 import type {
   Event,
@@ -14,8 +15,8 @@ export type { Event, EventType, EventSubType, EventStatus, TrustLevel, EventSour
 
 // ── Visibility rule ───────────────────────────────────────────────────────────
 
-/** Only official and media events are rendered in the public frontend */
-export const VISIBLE_TRUST_LEVELS: TrustLevel[] = ['official', 'media']
+/** Public frontend visibility aligns with migration 062. */
+export const VISIBLE_TRUST_LEVELS: TrustLevel[] = [...PUBLIC_TRUST_LEVELS]
 
 // ── Display config ────────────────────────────────────────────────────────────
 
@@ -72,6 +73,7 @@ export const SOURCE_CONFIG: Record<
     dot: 'bg-blue-400',
     desc: '由知名媒體或粉絲帳號確認',
   },
+  aggregator: { label: '非官方整理', color: 'text-amber-300', dot: 'bg-amber-300', desc: '來自非官方整理站，尚未經官方或媒體確認' },
   pending: {
     label: '待確認',
     color: 'text-gray-400',

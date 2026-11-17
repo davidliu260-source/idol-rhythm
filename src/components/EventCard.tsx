@@ -1,5 +1,6 @@
 'use client'
 
+import { getEventLocationLabel } from '@/lib/eventLocation'
 import { useRouter } from 'next/navigation'
 import { MapPin, Clock, Heart, Bell, Share2, ExternalLink } from 'lucide-react'
 import { type Event, formatEventDate } from '@/lib/mockEvents'
@@ -176,10 +177,10 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
             {event.time}
           </span>
         )}
-        {event.location && (
+        {(
           <span className="flex items-center gap-0.5 text-xs text-muted">
             <MapPin className="h-3 w-3" />
-            {event.location}
+            {getEventLocationLabel(event)}
           </span>
         )}
       </div>

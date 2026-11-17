@@ -1,3 +1,4 @@
+import type { TouchedCandidate } from './touchedCandidate'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { runBlackpinkFetcher } from './runBlackpinkFetcher'
 import { runJypScheduleFetcher } from './runJypScheduleFetcher'
@@ -43,6 +44,7 @@ export interface ActiveSourceRow {
 }
 
 export interface ActiveSourcesRunResult {
+  touched: TouchedCandidate[]
   summary: CrawlerRunSummary
   results: SourceRunResult[]
 }
@@ -67,13 +69,14 @@ export async function runCrawlerSource(
   source: ActiveSourceRow,
   dryRun: boolean,
   trigger: CrawlerRunTrigger = 'vercel-cron',
-): Promise<SourceRunResult> {
+): Promise<SourceRunResult & { touched: TouchedCandidate[] }> {
   const mode: 'insert' | 'dry-run' = dryRun ? 'dry-run' : 'insert'
 
   switch (source.parser_type) {
     case 'blackpink_official_tour': {
       const r = await runBlackpinkFetcher(supabase, { dryRun })
       return {
+        touched: r.touched,
         source: r.source,
         sourceKey: source.source_key,
         sourceName: r.sourceName ?? source.name,
@@ -94,6 +97,7 @@ export async function runCrawlerSource(
         dryRun,
       })
       return {
+        touched: r.touched,
         source: r.source,
         sourceKey: r.sourceKey,
         sourceName: r.sourceName ?? source.name,
@@ -114,6 +118,7 @@ export async function runCrawlerSource(
         dryRun,
       })
       return {
+        touched: r.touched,
         source: r.source,
         sourceKey: r.sourceKey,
         sourceName: r.sourceName ?? source.name,
@@ -134,6 +139,7 @@ export async function runCrawlerSource(
         dryRun,
       })
       return {
+        touched: r.touched,
         source: r.source,
         sourceKey: r.sourceKey,
         sourceName: r.sourceName ?? source.name,
@@ -154,6 +160,7 @@ export async function runCrawlerSource(
         dryRun,
       })
       return {
+        touched: r.touched,
         source: r.source,
         sourceKey: r.sourceKey,
         sourceName: r.sourceName ?? source.name,
@@ -174,6 +181,7 @@ export async function runCrawlerSource(
         dryRun,
       })
       return {
+        touched: r.touched,
         source: r.source,
         sourceKey: r.sourceKey,
         sourceName: r.sourceName ?? source.name,
@@ -197,6 +205,7 @@ export async function runCrawlerSource(
       // 这是双重防线：cron guard + sync-all guard。专属 admin route
       // 完全绕开本 dispatch，因此 P1-B1 preview 仍可手动触发。
       return {
+        touched: [],
         source: 'generic-webpage',
         sourceKey: source.source_key,
         sourceName: source.name,
@@ -221,6 +230,7 @@ export async function runCrawlerSource(
       // 与配额策略（P2-A2）正式定案前意外消耗 YouTube quota。
       if (trigger === 'vercel-cron') {
         return {
+          touched: [],
           source: 'youtube-official-channel',
           sourceKey: source.source_key,
           sourceName: source.name,
@@ -242,6 +252,7 @@ export async function runCrawlerSource(
         dryRun,
       })
       return {
+        touched: r.touched,
         source: r.source,
         sourceKey: r.sourceKey,
         sourceName: r.sourceName ?? source.name,
@@ -258,6 +269,7 @@ export async function runCrawlerSource(
     }
     default:
       return {
+        touched: [],
         source: 'unknown',
         sourceKey: source.source_key,
         sourceName: source.name,
@@ -301,10 +313,13 @@ export async function runActiveCrawlerSources(
 
   const sources = (rows ?? []) as ActiveSourceRow[]
   const results: SourceRunResult[] = []
+  const touched: TouchedCandidate[] = []
 
   for (const source of sources) {
     try {
-      results.push(await runCrawlerSource(supabase, source, dryRun, trigger))
+      const { touched: sourceTouched, ...result } = await runCrawlerSource(supabase, source, dryRun, trigger)
+      touched.push(...sourceTouched)
+      results.push(result)
     } catch (e) {
       results.push({
         source: 'unknown',
@@ -327,6 +342,7 @@ export async function runActiveCrawlerSources(
 
   return {
     result: {
+      touched,
       summary: summariseCrawlerRuns(results),
       results,
     },

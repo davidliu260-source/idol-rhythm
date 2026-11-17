@@ -1,8 +1,9 @@
+import { getEventLocationLabel } from '@/lib/eventLocation'
 import Link from 'next/link'
 import { CalendarDays } from 'lucide-react'
 import type { Event } from '@/lib/types'
 import { EVENT_CATEGORIES, HERO_SCRIM_ALPHA, getCategoryTokens, getEventCategory, withAlpha } from '@/lib/eventCategory'
-import { HERO_SCRIM_END_ALPHA, heroScrimBackground, getDaysUntil, getHeroCountdownLabel, getHeroDateParts, getHeroVenueLabel, getTrustLabel, getHeroAriaLabel } from '@/lib/nextEventHero'
+import { HERO_SCRIM_END_ALPHA, heroScrimBackground, getDaysUntil, getHeroCountdownLabel, getHeroDateParts, getTrustLabel, getHeroAriaLabel } from '@/lib/nextEventHero'
 import CategoryGlyph from '@/components/category/CategoryGlyph'
 import CategoryIcon from '@/components/category/CategoryIcon'
 import CategoryMotif from '@/components/category/CategoryMotif'
@@ -30,7 +31,7 @@ export default function HomeNextEventHero({ event, now }: { event: Event | null;
   const stops = EVENT_CATEGORIES[category].heroStops
   const lastStopColor = stops[stops.length - 1].color
   const countdownLabel = getHeroCountdownLabel(days)
-  const venueLabel = getHeroVenueLabel(event)
+  const venueLabel = getEventLocationLabel(event)
   const trustLabel = getTrustLabel(event.source?.level)
   const ariaLabel = getHeroAriaLabel({ countdownLabel, categoryLabel, date, idolName: event.idolName, title: event.title, venueLabel, trustLabel })
   return (

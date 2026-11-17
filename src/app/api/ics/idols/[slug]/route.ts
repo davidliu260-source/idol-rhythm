@@ -1,3 +1,4 @@
+import { CALENDAR_NOTIFY_TRUST_LEVELS } from '@/lib/trustLevels'
 import { addDaysToKey, taipeiToday } from '@/lib/taipeiDate'
 import { NextResponse } from 'next/server'
 import { buildIcs } from '@/lib/ics/buildIcs'
@@ -13,6 +14,7 @@ export async function GET(request: Request, { params }: { params: { slug: string
   const events = (await getPublishedEvents()).filter(
     (event) =>
       event.idolId === params.slug &&
+      CALENDAR_NOTIFY_TRUST_LEVELS.some(level => level === event.source.level) &&
       (event.endDate ?? event.startDate ?? event.date) >= cutoffDate,
   )
   const origin = new URL(request.url).origin
