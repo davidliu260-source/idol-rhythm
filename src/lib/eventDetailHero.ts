@@ -56,8 +56,8 @@ export function getInfoDateRow(event: DetailHeroEventLike): { key: '日期' | '�
     : `${start.month} 月 ${start.day} 日　${WEEKDAY_LABELS[start.weekday]}`
   return { key: range ? '期間' : '日期', main, sub: formatTimeLabel(event.time) }
 }
-export function getTrustBadgeLabel(level?: string | null): '官方確認' | '媒體確認' | null {
-  return level === 'official' ? '官方確認' : level === 'media' ? '媒體確認' : null
+export function getTrustBadgeLabel(level?: string | null): '官方確認' | '媒體確認' | '非官方整理' | null {
+  return level === 'official' ? '官方確認' : level === 'media' ? '媒體確認' : level === 'aggregator' ? '非官方整理' : null
 }
 export function getVenueRow(event: DetailHeroEventLike): { main: string; sub: string | null } | null {
   const venue = event.venueName?.trim() || event.location?.trim()

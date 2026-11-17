@@ -1,5 +1,6 @@
 'use client'
 
+import { getEventLocationLabel } from '@/lib/eventLocation'
 import { type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { Bell, Clock3, Heart, MapPin, Minimize2, Radio } from 'lucide-react'
@@ -110,11 +111,11 @@ export default function ScheduleTrackCard({
                 {dateLabel}
                 {event.time ? ` · ${event.time}` : ''}
               </span>
-              {(event.venueName || event.location) && (
+              {(
                 <span className="inline-flex min-w-0 items-center gap-1.5">
                   <MapPin className="h-3.5 w-3.5 text-white/45" />
                   <span className="truncate">
-                    {event.venueName || event.location}
+                    {getEventLocationLabel(event)}
                     {event.country ? ` · ${event.country}` : ''}
                   </span>
                 </span>
@@ -159,6 +160,7 @@ function StatusPill({ level }: { level: Event['source']['level'] }) {
       label: '媒體確認',
       className: 'border-sky-400/25 bg-sky-400/12 text-sky-300',
     },
+    aggregator: { label: '非官方整理', className: 'border-amber-300/25 bg-amber-400/10 text-amber-300' },
     pending: {
       label: 'Community',
       className: 'border-white/10 bg-white/[0.07] text-white/70',

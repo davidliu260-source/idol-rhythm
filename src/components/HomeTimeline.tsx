@@ -1,5 +1,6 @@
 'use client'
 
+import { getEventLocationLabel } from '@/lib/eventLocation'
 import { isOnTaipeiToday, isWithinTaipeiDays, toDateKey, taipeiToday } from '@/lib/taipeiDate'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
@@ -340,7 +341,7 @@ function HomeTrackDisclosure({
   const collapseTimerRef = useRef<number | null>(null)
   const isFavorited = favorites.has(event.id)
   const dateLabel = getEventDateLabel(event)
-  const locationLabel = event.venueName || event.location || event.city || event.country
+  const locationLabel = getEventLocationLabel(event)
 
   useEffect(() => {
     return () => {

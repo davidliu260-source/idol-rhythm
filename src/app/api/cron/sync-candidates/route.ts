@@ -1,3 +1,5 @@
+import { runAutoPublish, emptyAutoPublishReport, type AutoPublishRunReport } from '@/lib/autoPublish/runAutoPublish'
+import { createSupabaseAutoPublishStore } from '@/lib/autoPublish/supabaseAutoPublishStore'
 import { NextResponse, type NextRequest } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getSupabaseServiceClient } from '@/lib/supabase/serviceClient'
@@ -13,6 +15,7 @@ interface CronOkResponse {
   ok: true
   trigger: 'vercel-cron'
   mode: 'insert' | 'dry-run'
+  autoPublish: AutoPublishRunReport
   summary: CrawlerRunSummary
   results: SourceRunResult[]
 }
@@ -22,6 +25,7 @@ interface CronErrResponse {
   trigger: 'vercel-cron'
   mode: 'insert' | 'dry-run'
   error: string
+  autoPublish?: AutoPublishRunReport
   summary?: CrawlerRunSummary
   results?: SourceRunResult[]
 }
@@ -52,9 +56,9 @@ type CronResponse = CronOkResponse | CronErrResponse
  *   - ?dryRun=1: per-source fetcher skips INSERT but still updates the
  *     source's run status (it's still a real availability check).
  *
- * Scope (unchanged):
- *   - Writes to event_candidates only.
- *   - Never writes to events. Never approves. Never publishes.
+ * Scope:
+ *   - 開關關＝只寫候選；開＝本輪 touched 的自動上架與補空地點。
+ *   - 不讀寫開關以外的設定；永不改開關。dryRun 不跑自動上架。
  *   - Never calls AI parse.
  */
 export async function GET(
@@ -122,6 +126,19 @@ export async function GET(
     )
   }
 
+  let autoPublish = emptyAutoPublishReport()
+  if (dryRun) {
+    autoPublish.reason = 'crawler_dry_run'
+  } else {
+    try {
+      autoPublish = await runAutoPublish(createSupabaseAutoPublishStore(supabase), { touched: result.touched, now: new Date() })
+    } catch (e) {
+      autoPublish.reason = 'exception'
+      autoPublish.errors.push({ candidateId: '', eventId: null, step: 'exception', message: e instanceof Error ? e.message : String(e) })
+    }
+  }
+  for (const error of autoPublish.errors) console.error('[auto-publish]', error)
+
   // Surface as 500 only if EVERY source failed; otherwise return 200 with
   // partial errors so Vercel Cron logs distinguish "down" vs "noisy day".
   const { summary, results } = result
@@ -136,6 +153,7 @@ export async function GET(
         error: '所有來源皆失敗',
         summary,
         results,
+        autoPublish,
       },
       { status: 502 },
     )
@@ -148,6 +166,7 @@ export async function GET(
       mode,
       summary,
       results,
+      autoPublish,
     },
     { status: 200 },
   )

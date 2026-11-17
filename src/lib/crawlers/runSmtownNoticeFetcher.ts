@@ -1,3 +1,4 @@
+import { touchedFromPayload, type TouchedCandidate } from './touchedCandidate'
 /**
  * SMTOWN notice fetcher orchestrator.
  *
@@ -82,6 +83,7 @@ export interface FetcherOptions {
 }
 
 export interface FetcherResult {
+  touched: TouchedCandidate[]
   source: 'smtown-notice'
   sourceKey: string
   mode: 'insert' | 'dry-run'
@@ -125,6 +127,7 @@ export async function runSmtownNoticeFetcher(
   const sourceKey = options.sourceKey
 
   const base = (extra: Partial<FetcherResult>): FetcherResult => ({
+    touched: [],
     source: 'smtown-notice',
     sourceKey,
     mode,
@@ -403,6 +406,7 @@ export async function runSmtownNoticeFetcher(
   }
 
   // ── INSERT / RECHECK loop ─────────────────────────────────────────────────
+  const touched: TouchedCandidate[] = []
   let inserted = 0
   let wouldInsert = 0
   let skipped = 0
@@ -420,7 +424,7 @@ export async function runSmtownNoticeFetcher(
         wouldInsert += 1
         continue
       }
-      const { error } = await supabase.from('event_candidates').insert(payload)
+      const { data: insertedRow, error } = await supabase.from('event_candidates').insert(payload).select('id').single()
       if (error) {
         if (error.code === '23505') {
           skipped += 1
@@ -431,6 +435,7 @@ export async function runSmtownNoticeFetcher(
         )
         continue
       }
+      if (insertedRow?.id) touched.push(touchedFromPayload(insertedRow.id, source.id, 'inserted', { ...payload }))
       inserted += 1
       continue
     }
@@ -449,11 +454,13 @@ export async function runSmtownNoticeFetcher(
           continue
         }
       }
+      if (!dryRun) touched.push(touchedFromPayload(existing.id, source.id, 'backfilled_hash', { ...payload }))
       skipped += 1
       continue
     }
 
     if (existing.content_hash === payload.content_hash) {
+      if (!dryRun) touched.push(touchedFromPayload(existing.id, source.id, 'unchanged', { ...payload }))
       skipped += 1
       continue
     }
@@ -482,6 +489,7 @@ export async function runSmtownNoticeFetcher(
       )
       continue
     }
+    touched.push(touchedFromPayload(existing.id, source.id, 'drift', { ...payload }))
     recheck += 1
   }
 
@@ -495,6 +503,7 @@ export async function runSmtownNoticeFetcher(
   })
 
   return {
+    touched,
     source: 'smtown-notice',
     sourceKey,
     mode,

@@ -133,7 +133,7 @@ export async function POST(
   // ── Build update payload + safety filter ────────────────────────────────────
   // unpublish: only operate on published rows.
 
-  let query = supabase.from('events').update({ is_published: false, published_at: null })
+  let query = supabase.from('events').update({ is_published: false, published_at: null, auto_publish_blocked: true })
 
   query = query.in('id', ids)
   query = query.eq('is_published', true)

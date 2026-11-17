@@ -1,3 +1,4 @@
+import { getEventLocationLabel, hasAnyEventLocation } from '@/lib/eventLocation'
 import type { ReactNode } from 'react'
 import type { Event } from '@/lib/types'
 import { CalendarDays, MapPin, Ticket, ExternalLink } from 'lucide-react'
@@ -7,7 +8,7 @@ import { getInfoDateRow, getVenueRow, getTicketRow } from '@/lib/eventDetailHero
 export default function EventDetailInfoRows({ event }: { event: Event }) {
   const tokens = getCategoryTokens(getEventCategory(event))
   const date = getInfoDateRow(event)
-  const venue = getVenueRow(event)
+  const venue = hasAnyEventLocation(event) ? getVenueRow(event) ?? { main: getEventLocationLabel(event), sub: null } : { main: getEventLocationLabel(event), sub: null }
   const ticket = getTicketRow(event.ticketUrl)
   const rowClass = 'flex items-center gap-4 border-b border-white/[0.07] py-[18px]'
   function content(icon: ReactNode, label: string, main: string, sub: string | null, unavailable = false) {

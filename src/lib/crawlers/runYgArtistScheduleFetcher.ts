@@ -1,3 +1,4 @@
+import { touchedFromPayload, type TouchedCandidate } from './touchedCandidate'
 import { taipeiToday } from '../taipeiDate'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
@@ -24,6 +25,7 @@ export interface FetcherOptions {
 }
 
 export interface FetcherResult {
+  touched: TouchedCandidate[]
   source: 'yg-artist-schedule'
   sourceKey: string
   mode: 'insert' | 'dry-run'
@@ -70,6 +72,7 @@ export async function runYgArtistScheduleFetcher(
   const sourceKey = options.sourceKey
 
   const base = (extra: Partial<FetcherResult>): FetcherResult => ({
+    touched: [],
     source: 'yg-artist-schedule',
     sourceKey,
     mode,
@@ -274,6 +277,7 @@ export async function runYgArtistScheduleFetcher(
     }
   }
 
+  const touched: TouchedCandidate[] = []
   let inserted = 0
   let wouldInsert = 0
   let skipped = 0
@@ -289,7 +293,7 @@ export async function runYgArtistScheduleFetcher(
         wouldInsert += 1
         continue
       }
-      const { error } = await supabase.from('event_candidates').insert(payload)
+      const { data: insertedRow, error } = await supabase.from('event_candidates').insert(payload).select('id').single()
       if (error) {
         if (error.code === '23505') {
           skipped += 1
@@ -300,6 +304,7 @@ export async function runYgArtistScheduleFetcher(
         )
         continue
       }
+      if (insertedRow?.id) touched.push(touchedFromPayload(insertedRow.id, source.id, 'inserted', { ...payload }))
       inserted += 1
       continue
     }
@@ -317,11 +322,13 @@ export async function runYgArtistScheduleFetcher(
           continue
         }
       }
+      if (!dryRun) touched.push(touchedFromPayload(existing.id, source.id, 'backfilled_hash', { ...payload }))
       skipped += 1
       continue
     }
 
     if (existing.content_hash === payload.content_hash) {
+      if (!dryRun) touched.push(touchedFromPayload(existing.id, source.id, 'unchanged', { ...payload }))
       skipped += 1
       continue
     }
@@ -350,6 +357,7 @@ export async function runYgArtistScheduleFetcher(
       )
       continue
     }
+    touched.push(touchedFromPayload(existing.id, source.id, 'drift', { ...payload }))
     recheck += 1
   }
 
@@ -362,6 +370,7 @@ export async function runYgArtistScheduleFetcher(
   })
 
   return {
+    touched,
     source: 'yg-artist-schedule',
     sourceKey,
     mode,

@@ -47,10 +47,12 @@
 
 ## 資料可見性規則（每次都要遵守）
 
-前台正式頁面**只能顯示** `trust_level = official` 或 `media` 的資料。
+前台正式頁面**只能顯示** `is_published = true` 且 `trust_level IN ('official', 'media', 'aggregator')` 的資料（與 migration 062 公開 RLS 一致）。
 
-- `pending` 資料只能進 `event_candidates` 候選池，**不得渲染到任何使用者可見頁面**
-- 所有 Supabase query 必須 filter `is_published = true` + `trust_level IN ('official', 'media')`
+- `aggregator`＝非官方整理站（目前只有 KPopOfficial）。前台凡顯示來源／信任徽章之處必須標 **「非官方整理」**，**不可**顯示「官方確認」「媒體確認」或任何官方／媒體徽章；不可把 aggregator 寫成或升級成 `official` / `media`。
+- `pending` 資料只能進 `event_candidates` 候選池，**不得渲染到任何使用者可見頁面**；`parked` 候選同樣不得上前台。
+- 所有前台 Supabase query 必須 filter `is_published = true` + `trust_level IN ('official', 'media', 'aggregator')`（共用 `src/lib/trustLevels.ts` 的 `PUBLIC_TRUST_LEVELS`）。
+- ICS 訂閱、提醒、新活動通知目前**只含** `official` / `media`（`CALENDAR_NOTIFY_TRUST_LEVELS`）；要納入 aggregator 須 Owner 另行決定。
 - UI 必須在首頁、行程頁、詳情頁顯示 Demo data 標示（`⚠️ Demo 展示資料`）
 
 ---

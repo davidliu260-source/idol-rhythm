@@ -1,7 +1,8 @@
+import { getEventLocationLabel } from '@/lib/eventLocation'
 import Link from 'next/link'
 import type { Event } from '@/lib/types'
 import { CATEGORY_NEUTRALS, EVENT_CATEGORIES, getCategoryTokens, getEventCategory } from '@/lib/eventCategory'
-import { getHeroDateParts, getHeroVenueLabel } from '@/lib/nextEventHero'
+import { getHeroDateParts } from '@/lib/nextEventHero'
 import { formatListMeta } from '@/lib/upcomingEvents'
 import CategoryIcon from './category/CategoryIcon'
 import CategoryGlyph from './category/CategoryGlyph'
@@ -24,7 +25,7 @@ export default function UpcomingEventCard({ event, ongoing }: { event: Event; on
         <div className="inline-flex items-center gap-[5px] text-xs font-extrabold tracking-[0.04em]" style={{ color: tokens.accent }}><CategoryIcon category={category} size={14} />{EVENT_CATEGORIES[category].label}{ongoing && <span className="ml-[3px] rounded-[6px] bg-white px-[6px] py-px text-[10px] font-black leading-[1.4] tracking-[0.04em] text-[#18102c]">進行中</span>}</div>
         <div className="mt-[2px] truncate text-[21px] font-black leading-[1.15] tracking-[-0.01em]">{event.idolName}</div>
         <div className="mt-[2px] truncate text-sm font-bold text-[#d9d6e8]">{event.title}</div>
-        <div className="mt-px whitespace-nowrap text-[12.5px]" style={{ color: CATEGORY_NEUTRALS.muted }}>{formatListMeta(date.timeLabel, getHeroVenueLabel(event))}</div>
+        <div className="mt-px whitespace-nowrap text-[12.5px]" style={{ color: CATEGORY_NEUTRALS.muted }}>{formatListMeta(date.timeLabel, getEventLocationLabel(event))}</div>
       </div>
       <CategoryGlyph category={category} size={66} className="relative z-[1] mr-[2px] flex-none rotate-[7deg]" style={{ color: tokens.glyphColor, filter: 'drop-shadow(0 6px 10px rgba(0,0,0,.3))' }} />
     </Link>

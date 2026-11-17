@@ -48,7 +48,7 @@ export function getHeroDateParts(event: HeroDateInput): HeroDateParts | null {
   const [y] = key.split('-').map(Number)
   return { month, day, weekday: ['日', '一', '二', '三', '四', '五', '六'][new Date(Date.UTC(y, month - 1, day)).getUTCDay()], timeLabel: event.time?.trim() || '時間未定', rangeEndLabel: end && end > key && endParts ? `至 ${endParts[1]}/${endParts[2]}` : null }
 }
-export function getTrustLabel(level: string | null | undefined): string | null { return level === 'official' ? '官方確認' : level === 'media' ? '媒體確認' : null }
+export function getTrustLabel(level: string | null | undefined): string | null { return level === 'official' ? '官方確認' : level === 'media' ? '媒體確認' : level === 'aggregator' ? '非官方整理' : null }
 export function getHeroVenueLabel(event: { venueName?: string | null; location?: string | null }): string | null { return event.venueName?.trim() || event.location?.trim() || null }
 export function getHeroAriaLabel(input: { countdownLabel: string; categoryLabel: string; date: HeroDateParts; idolName: string; title: string; venueLabel: string | null; trustLabel: string | null }): string {
   const { countdownLabel, categoryLabel, date, idolName, title, venueLabel, trustLabel } = input

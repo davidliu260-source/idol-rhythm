@@ -1,3 +1,4 @@
+import { touchedFromPayload, type TouchedCandidate } from './touchedCandidate'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   type BlackpinkSourceContext,
@@ -32,6 +33,7 @@ export interface FetcherOptions {
 }
 
 export interface FetcherResult {
+  touched: TouchedCandidate[]
   source: 'blackpink-official-tour'
   mode: 'insert' | 'dry-run'
   fetched: number
@@ -84,6 +86,7 @@ export async function runBlackpinkFetcher(
   if (!source) {
     // Cannot update status without an id; return a hard error.
     return {
+      touched: [],
       source: 'blackpink-official-tour',
       mode,
       fetched: 0,
@@ -105,6 +108,7 @@ export async function runBlackpinkFetcher(
       last_error: msg,
     })
     return {
+      touched: [],
       source: 'blackpink-official-tour',
       mode,
       fetched: 0,
@@ -126,6 +130,7 @@ export async function runBlackpinkFetcher(
       last_error: msg,
     })
     return {
+      touched: [],
       source: 'blackpink-official-tour',
       mode,
       fetched: 0,
@@ -164,6 +169,7 @@ export async function runBlackpinkFetcher(
           last_error: msg,
         })
         return {
+          touched: [],
           source: 'blackpink-official-tour',
           mode,
           fetched: 0,
@@ -188,6 +194,7 @@ export async function runBlackpinkFetcher(
       last_error: msg,
     })
     return {
+      touched: [],
       source: 'blackpink-official-tour',
       mode,
       fetched: 0,
@@ -213,6 +220,7 @@ export async function runBlackpinkFetcher(
       last_error: msg,
     })
     return {
+      touched: [],
       source: 'blackpink-official-tour',
       mode,
       fetched: 0,
@@ -234,6 +242,7 @@ export async function runBlackpinkFetcher(
       last_error: msg,
     })
     return {
+      touched: [],
       source: 'blackpink-official-tour',
       mode,
       fetched: 0,
@@ -318,6 +327,7 @@ export async function runBlackpinkFetcher(
         last_error: msg,
       })
       return {
+        touched: [],
         source: 'blackpink-official-tour',
         mode,
         fetched: limited.length,
@@ -347,6 +357,7 @@ export async function runBlackpinkFetcher(
   //   - existing, content_hash differs → flag needs_recheck=true + append
   //     timestamped note; never touch review_status / approved_event_id /
   //     raw fields (J7d-A scope per work order #32).
+  const touched: TouchedCandidate[] = []
   let inserted = 0
   let wouldInsert = 0
   let skipped = 0
@@ -362,7 +373,7 @@ export async function runBlackpinkFetcher(
         wouldInsert += 1
         continue
       }
-      const { error } = await supabase.from('event_candidates').insert(payload)
+      const { data: insertedRow, error } = await supabase.from('event_candidates').insert(payload).select('id').single()
       if (error) {
         if (error.code === '23505') {
           skipped += 1
@@ -373,6 +384,7 @@ export async function runBlackpinkFetcher(
         )
         continue
       }
+      if (insertedRow?.id) touched.push(touchedFromPayload(insertedRow.id, source.id, 'inserted', { ...payload }))
       inserted += 1
       continue
     }
@@ -390,11 +402,13 @@ export async function runBlackpinkFetcher(
           continue
         }
       }
+      if (!dryRun) touched.push(touchedFromPayload(existing.id, source.id, 'backfilled_hash', { ...payload }))
       skipped += 1
       continue
     }
 
     if (existing.content_hash === payload.content_hash) {
+      if (!dryRun) touched.push(touchedFromPayload(existing.id, source.id, 'unchanged', { ...payload }))
       skipped += 1
       continue
     }
@@ -423,6 +437,7 @@ export async function runBlackpinkFetcher(
       )
       continue
     }
+    touched.push(touchedFromPayload(existing.id, source.id, 'drift', { ...payload }))
     recheck += 1
   }
 
@@ -436,6 +451,7 @@ export async function runBlackpinkFetcher(
   })
 
   return {
+    touched,
     source: 'blackpink-official-tour',
     mode,
     fetched: limited.length,

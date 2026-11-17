@@ -1,3 +1,4 @@
+import { PUBLIC_TRUST_LEVELS } from '../trustLevels'
 import type { Event, EventType, EventSubType, EventStatus, EventSource, TrustLevel, SourceType, Idol, GenderType, IdolCategory, GroupOrSolo } from '../types'
 import { getSupabaseClient } from './client'
 
@@ -171,7 +172,7 @@ export async function getPublishedEvents(): Promise<Event[]> {
     .from('events')
     .select('*, idols!inner(slug, avatar_url), event_sources(id, event_id, level, label, type, url)')
     .eq('is_published', true)
-    .in('trust_level', ['official', 'media'])
+    .in('trust_level', [...PUBLIC_TRUST_LEVELS])
     .neq('status', 'cancelled')
     .order('date', { ascending: true })
 
@@ -234,7 +235,7 @@ export async function getEventById(id: string): Promise<Event | null> {
     .select('*, idols!inner(slug, avatar_url), event_sources(id, event_id, level, label, type, url)')
     .eq('id', id)
     .eq('is_published', true)
-    .in('trust_level', ['official', 'media'])
+    .in('trust_level', [...PUBLIC_TRUST_LEVELS])
     .neq('status', 'cancelled')
     .single()
 

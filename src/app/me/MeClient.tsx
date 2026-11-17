@@ -1,5 +1,6 @@
 'use client'
 
+import { getEventLocationLabel } from '@/lib/eventLocation'
 import { isEventEnded } from '@/lib/taipeiDate'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
@@ -450,7 +451,7 @@ function CompactEventLine({
       : tone === 'violet'
         ? 'text-violet-200'
         : 'text-white/72'
-  const location = event.venueName || event.location || event.city || event.country
+  const location = getEventLocationLabel(event)
 
   return (
     <Link
