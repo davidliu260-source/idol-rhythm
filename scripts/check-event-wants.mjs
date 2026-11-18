@@ -115,7 +115,7 @@ const assertCount = (source, snippet, times) => assert.equal(source.split(snippe
 
 check('S1 migration 護欄', () => {
   const filename = '064_event_wants.sql'
-  assert.equal(readdirSync(ROOT + 'supabase/migrations').sort().at(-1), filename)
+  assert(readdirSync(ROOT + 'supabase/migrations').includes(filename), filename)
   const lines = read('supabase/migrations/' + filename).split('\n')
   const comments = lines.filter(line => line.trimStart().startsWith('--')).join('\n')
   const sql = lines.filter(line => !line.trimStart().startsWith('--')).join('\n')
@@ -170,16 +170,11 @@ check('S2 前端護欄', () => {
   for (const path of cards) assertCount(read(path), '<EventWantCount eventId={event.id}', 1)
 })
 
-check('G1 白名單', () => {
-  const allowed = new Set([
-    'supabase/migrations/064_event_wants.sql', pure, rpc, ui,
-    'scripts/check-event-wants.mjs', ...cards, detail, 'WORKING.md',
-  ])
-  const git = args => execFileSync('git', [...args, '-z'], {
-    cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'],
-  }).split('\0').filter(Boolean)
-  const touched = new Set([...git(['diff', '--name-only', 'fb6e02a']), ...git(['ls-files', '--others', '--exclude-standard'])])
-  for (const path of touched) assert(allowed.has(path), `白名單外的檔案：${path}`)
+check('G1 F1 檔案在合併後未被改動', () => {
+  execFileSync('git', [
+    'diff', '--quiet', 'd80967c', '--',
+    'supabase/migrations/064_event_wants.sql', pure, rpc, ui, ...cards, detail,
+  ], { cwd: ROOT, stdio: ['ignore', 'ignore', 'inherit'] })
 })
 
 console.log('OK F1 event wants 檢查全部通過')
