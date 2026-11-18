@@ -264,6 +264,7 @@
 | 059 | Fix solo artist subpath URLs：UPDATE 2 rows in crawler_sources — generic-jay-park-jaypark → `https://www.jaypark.com/notice`（Next.js SSG with inline __NEXT_DATA__ containing real tour/event posts），generic-dean-youwillknovv → `https://www.youwillknovv.com/live`（imweb 平台，含 3 個未來日期）；jsonb_set 同步更新 config.note；不改 schema / GRANT / RLS / parser | 🔲 待執行（PR #182 已 merge；2026-11-10 確認正式資料庫兩筆 source_url 仍是首頁網址，**尚未執行**）|
 | 060 | event_candidates 加 `verification_status` / `verification_evidence` / `verification_provider_meta` / `verified_at`（B-1b，聚合源自動求證）| ✅ 已執行（2026-11-09 Owner 在 SQL Editor 確認 4 個欄位存在）|
 | 061 | GRANT service_role：`SELECT` events / reminders / user_follows + `UPDATE (is_sent)` reminders（M061，修通知排程）| 🔲 PR #200 待 merge；merge 後由 Owner 在 SQL Editor 手動執行 |
+| 064 | F1「我想去」匿名計數：新表 `event_wants`（user_id FK cascade／device_hash＝sha256，不存明文）＋ `event_want_actions`（限速短期紀錄）；RLS 開、無 policy、REVOKE ALL；SECURITY DEFINER RPC `set_event_want`（每分鐘 10／每小時 60／單活動未登入 10 分鐘 60）與 `get_event_wants`（只回彙總數）只 GRANT EXECUTE 給 anon/authenticated；不改 events／既有 RLS | 🔲 PR 中、未套用（貼上單 `M064_貼上單_F1.md`，Dave 在 SQL Editor 手動執行）|
 
 ---
 
