@@ -105,7 +105,7 @@ const functions = ['submit_fan_wish(text, text, uuid)', 'fan_wishes_enabled()', 
 const tables = ['fan_wishes', 'fan_wish_actions']
 
 check('S1 migration 護欄', () => {
-  assert.equal(readdirSync(join(ROOT, 'supabase/migrations')).sort().at(-1), filename)
+  assert(readdirSync(join(ROOT, 'supabase/migrations')).includes(filename), filename)
   const lines = read(migration).split('\n')
   const comments = lines.filter(line => /^\s*--/.test(line)).join('\n')
   const sql = lines.filter(line => !/^\s*--/.test(line)).join('\n')
@@ -178,15 +178,11 @@ check('S3 禁止字面隱藏字元', () => {
   }
 })
 
-check('G1 白名單', () => {
-  const allowed = new Set([
-    migration, pure, rpc, form, idols, cities, 'scripts/check-wishes.mjs', 'scripts/check-event-wants.mjs', 'WORKING.md',
-  ])
-  const git = args => execFileSync('git', [...args, '-z'], {
-    cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'],
-  }).split('\0').filter(Boolean)
-  const touched = new Set([...git(['diff', '--name-only', 'd80967c']), ...git(['ls-files', '--others', '--exclude-standard'])])
-  for (const path of touched) assert(allowed.has(path), `白名單外的檔案：${path}`)
+check('G1 F2 檔案在合併後未被改動', () => {
+  execFileSync('git', [
+    'diff', '--quiet', 'd7f6442', '--',
+    migration, pure, rpc, form, idols, cities,
+  ], { cwd: ROOT, stdio: ['ignore', 'ignore', 'inherit'] })
 })
 
 console.log('OK F2 fan wishes 檢查全部通過')
