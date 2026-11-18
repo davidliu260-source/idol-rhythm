@@ -39,7 +39,7 @@ import { computeSourceHash } from './sourceHash'
 import { computeContentHash } from './contentHash'
 import type { SourceTypeEnum } from './crawlerSource'
 
-export const SMTOWN_NOTICE_PARSER_VERSION = 1
+export const SMTOWN_NOTICE_PARSER_VERSION = 2
 export const SMTOWN_NOTICE_PARSER_TYPE = 'smtown_notice'
 
 // ── Raw entry shape produced by the HTML parser ──────────────────────────────
@@ -95,7 +95,9 @@ export function parseSmtownNoticeHtml(
 
     // Body is the next sibling `div.noticeBox` (per probe).
     const $box = $top.next('.noticeBox')
-    const bodyText = $box.length ? $box.text().replace(/\s+/g, ' ').trim() : ''
+    $box.find('br').replaceWith('\n')
+    const bodyWithLines = $box.text()
+    const bodyText = bodyWithLines.replace(/\s+/g, ' ').trim()
 
     // Build a stable noticeId. Numeric → use as-is; non-numeric (pinned)
     // → derive from title slug so multiple pinned items don't collide.
@@ -113,7 +115,7 @@ export function parseSmtownNoticeHtml(
       noticeId,
       title,
       rawDateText: dayRaw || null,
-      detectedDate: dayRaw ? parseSmtownDate(dayRaw) : null,
+      detectedDate: parseSmtownEventDate(title, bodyWithLines),
       bodyText,
     })
   })
@@ -159,6 +161,28 @@ export function parseSmtownDate(raw: string): string | null {
   }
 
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+}
+
+/**
+ * Accept explicit performance date labels and date-prefixed event titles.
+ * Ticketing, application, and publication dates in the body are ignored.
+ */
+function parseSmtownEventDate(title: string, body: string): string | null {
+  const dates = new Set<string>()
+  const datePattern = '(20\\d{2})[.\\/-]\\s*(\\d{1,2})[.\\/-]\\s*(\\d{1,2})(?!\\d)'
+  const titleDate = new RegExp(`^\\s*[[(]?${datePattern}(?=\\s|[.\\]）)])`).exec(title)
+  if (titleDate && isEventNotice(title)) {
+    const date = parseSmtownDate(titleDate.slice(1).join('/'))
+    if (date) dates.add(date)
+  }
+
+  const label = '공연\\s*(?:일시|일정|일자|날짜)|행사\\s*(?:일시|일정|일자|날짜)|(?:concert|show|event) (?:date|time)|活動(?:日期|時間)|演出(?:日期|時間)'
+  const labeled = new RegExp(`(?:^|[\\n•▪])\\s*(?:[-*]\\s*)?(?:${label})\\s*[:：|｜]\\s*${datePattern}`, 'gi')
+  for (const match of Array.from(`${title}\n${body}`.matchAll(labeled))) {
+    const date = parseSmtownDate(match.slice(1).join('/'))
+    if (date) dates.add(date)
+  }
+  return dates.size === 1 ? Array.from(dates)[0] : null
 }
 
 // ── Conservative event keyword filter ────────────────────────────────────────
@@ -345,6 +369,7 @@ export interface SmtownCandidatePayload {
     notice_id: string
     title: string
     original_date_text: string | null
+    posted_date: string | null
     page_url: string
     idol_slug: string
   }
@@ -416,6 +441,7 @@ export function entryToCandidatePayload(
       notice_id: entry.noticeId,
       title: entry.title,
       original_date_text: entry.rawDateText,
+      posted_date: entry.rawDateText ? parseSmtownDate(entry.rawDateText) : null,
       page_url: source.pageUrl,
       idol_slug: source.idolSlug,
     },

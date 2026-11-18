@@ -1,3 +1,4 @@
+import { runVenueCalendarFetcher } from './runVenueCalendarFetcher'
 import type { TouchedCandidate } from './touchedCandidate'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { runBlackpinkFetcher } from './runBlackpinkFetcher'
@@ -195,6 +196,10 @@ export async function runCrawlerSource(
         errors: r.errors,
         status: r.status,
       }
+    }
+    case 'venue_calendar': {
+      const result = await runVenueCalendarFetcher(supabase, { sourceKey: source.source_key, dryRun })
+      return { ...result, parserType: source.parser_type, sourceName: result.sourceName ?? source.name }
     }
     case 'generic_webpage': {
       // P1-B1 边界守门：generic_webpage 仅允许专属 admin route 手动触发
