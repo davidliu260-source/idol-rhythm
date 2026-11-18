@@ -1,3 +1,4 @@
+import { EventWantCount } from '@/components/EventWant'
 import { getEventLocationLabel } from '@/lib/eventLocation'
 import Link from 'next/link'
 import type { Event } from '@/lib/types'
@@ -26,6 +27,7 @@ export default function UpcomingEventCard({ event, ongoing }: { event: Event; on
         <div className="mt-[2px] truncate text-[21px] font-black leading-[1.15] tracking-[-0.01em]">{event.idolName}</div>
         <div className="mt-[2px] truncate text-sm font-bold text-[#d9d6e8]">{event.title}</div>
         <div className="mt-px whitespace-nowrap text-[12.5px]" style={{ color: CATEGORY_NEUTRALS.muted }}>{formatListMeta(date.timeLabel, getEventLocationLabel(event))}</div>
+        <EventWantCount eventId={event.id} className="mt-px block text-[12px]" />
       </div>
       <CategoryGlyph category={category} size={66} className="relative z-[1] mr-[2px] flex-none rotate-[7deg]" style={{ color: tokens.glyphColor, filter: 'drop-shadow(0 6px 10px rgba(0,0,0,.3))' }} />
     </Link>

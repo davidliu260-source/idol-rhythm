@@ -1,3 +1,4 @@
+import { EventWantButton } from '@/components/EventWant'
 import { getPublicTrustLabel } from '@/lib/trustLevels'
 export const dynamic = 'force-dynamic'
 
@@ -36,6 +37,7 @@ export default async function EventDetailPage({
         )}
 
         <EventDetailInfoRows event={event} />
+        {!isDemoEvent && <EventWantButton eventId={event.id} />}
 
         {summaryText && (
           <section className="rounded-[22px] border border-white/8 bg-white/[0.035] p-4">

@@ -1,5 +1,6 @@
 'use client'
 
+import { EventWantCount } from '@/components/EventWant'
 import { getEventLocationLabel } from '@/lib/eventLocation'
 import { useRouter } from 'next/navigation'
 import { MapPin, Clock, Heart, Bell, Share2, ExternalLink } from 'lucide-react'
@@ -183,6 +184,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
             {getEventLocationLabel(event)}
           </span>
         )}
+        <EventWantCount eventId={event.id} className="text-xs text-muted" />
       </div>
 
       {/* Source */}
