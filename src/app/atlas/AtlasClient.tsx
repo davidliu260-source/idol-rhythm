@@ -17,10 +17,13 @@ import {
   MapPin,
   Search,
   Sparkles,
+  Stamp,
   X,
 } from 'lucide-react'
 import IdolAvatar from '@/components/IdolAvatar'
 import { useAppState } from '@/lib/appState'
+import { STAMP_COPY, countStamps, formatStampCount, isStampEligible } from '@/lib/eventStamps'
+import { useEventStamps, type EventStampsController } from '@/lib/useEventStamps'
 import { getEventDateLabel } from '@/lib/eventDisplay'
 import {
   EVENT_SUBTYPE_LABELS,
@@ -45,6 +48,7 @@ function matchSearch(event: Event, query: string): boolean {
 
 export default function AtlasClient({ events }: { events: Event[] }) {
   const { favorites, user, isUserLoading } = useAppState()
+  const stamps = useEventStamps(user, isUserLoading)
   const [query, setQuery] = useState('')
   const [openPastMonths, setOpenPastMonths] = useState<string[]>([])
   const now = useMemo(() => new Date(), [])
@@ -53,6 +57,7 @@ export default function AtlasClient({ events }: { events: Event[] }) {
     () => events.filter((event) => favorites.has(event.id)),
     [events, favorites],
   )
+  const stampCount = user && stamps.mode === 'cloud' && stamps.status === 'ready' ? countStamps(stamps.ids, favorited) : null
   const visible = useMemo(
     () => favorited.filter((event) => matchSearch(event, query)),
     [favorited, query],
@@ -90,7 +95,7 @@ export default function AtlasClient({ events }: { events: Event[] }) {
 
   if (isUserLoading) {
     return (
-      <AtlasShell count={null} upcomingCount={null} pastCount={null}>
+      <AtlasShell count={null} upcomingCount={null} pastCount={null} stampCount={null}>
         <LoadingState />
       </AtlasShell>
     )
@@ -98,7 +103,7 @@ export default function AtlasClient({ events }: { events: Event[] }) {
 
   if (!user) {
     return (
-      <AtlasShell count={null} upcomingCount={null} pastCount={null}>
+      <AtlasShell count={null} upcomingCount={null} pastCount={null} stampCount={null}>
         <LoginPrompt />
       </AtlasShell>
     )
@@ -109,6 +114,7 @@ export default function AtlasClient({ events }: { events: Event[] }) {
       count={favorited.length}
       upcomingCount={upcomingCount}
       pastCount={pastCount}
+      stampCount={stampCount}
     >
       {favorites.isLoading && (
         <div className="flex items-center justify-center gap-2 rounded-full border border-white/8 bg-white/[0.045] px-3 py-2 text-xs text-white/58">
@@ -139,6 +145,7 @@ export default function AtlasClient({ events }: { events: Event[] }) {
                       label={group.label}
                       count={group.events.length}
                       events={group.events}
+                      stamps={stamps}
                     />
                   )}
                 </ShelfSection>
@@ -160,6 +167,7 @@ export default function AtlasClient({ events }: { events: Event[] }) {
                         label={group.label}
                         count={group.events.length}
                         events={group.events}
+                        stamps={stamps}
                         isOpen={isOpen}
                         onToggle={() =>
                           setOpenPastMonths((current) =>
@@ -185,11 +193,13 @@ function AtlasShell({
   count,
   upcomingCount,
   pastCount,
+  stampCount,
   children,
 }: {
   count: number | null
   upcomingCount: number | null
   pastCount: number | null
+  stampCount: number | null
   children: React.ReactNode
 }) {
   return (
@@ -234,17 +244,31 @@ function AtlasShell({
           </div>
         </section>
 
-        <section className="rounded-[26px] border border-white/8 bg-white/[0.035] p-4">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-base font-bold text-text-base">去過蓋章</h2>
-            <span className="rounded-full border border-warn/30 bg-warn/10 px-3 py-1 text-xs font-semibold text-warn">
-              尚未開放
-            </span>
-          </div>
-          <p className="mt-2 text-sm leading-6 text-muted">
-            之後可以替去過的演唱會、快閃、生咖蓋章
-          </p>
-        </section>
+        {stampCount === null ? (
+          <section className="rounded-[26px] border border-white/8 bg-white/[0.035] p-4">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-base font-bold text-text-base">去過蓋章</h2>
+              <span className="rounded-full border border-warn/30 bg-warn/10 px-3 py-1 text-xs font-semibold text-warn">
+                尚未開放
+              </span>
+            </div>
+            <p className="mt-2 text-sm leading-6 text-muted">
+              之後可以替去過的演唱會、快閃、生咖蓋章
+            </p>
+          </section>
+        ) : (
+          <section className="rounded-[26px] border border-white/8 bg-white/[0.035] p-4">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-base font-bold text-text-base">{STAMP_COPY.title}</h2>
+              <span className="rounded-full border border-[#ff6cb7]/28 bg-[#ff4ca1]/16 px-3 py-1 text-xs font-semibold text-[#ff9cd0]">
+                {formatStampCount(stampCount)}
+              </span>
+            </div>
+            <p className="mt-2 text-sm leading-6 text-muted">
+              {stampCount === 0 ? STAMP_COPY.hintEmpty : STAMP_COPY.hint}
+            </p>
+          </section>
+        )}
 
         {children}
       </div>
@@ -353,10 +377,12 @@ function MonthGroupBlock({
   label,
   count,
   events,
+  stamps,
 }: {
   label: string
   count: number
   events: Event[]
+  stamps: EventStampsController
 }) {
   return (
     <div className="rounded-[22px] border border-white/8 bg-black/10 p-3">
@@ -374,7 +400,7 @@ function MonthGroupBlock({
 
       <div className="space-y-3">
         {events.map((event) => (
-          <FavoriteShelfCard key={event.id} event={event} />
+          <FavoriteShelfCard key={event.id} event={event} stamps={stamps} />
         ))}
       </div>
     </div>
@@ -385,12 +411,14 @@ function PastMonthBlock({
   label,
   count,
   events,
+  stamps,
   isOpen,
   onToggle,
 }: {
   label: string
   count: number
   events: Event[]
+  stamps: EventStampsController
   isOpen: boolean
   onToggle: () => void
 }) {
@@ -425,7 +453,7 @@ function PastMonthBlock({
       {isOpen && (
         <div className="mt-3 space-y-3">
           {events.map((event) => (
-            <FavoriteShelfCard key={event.id} event={event} />
+            <FavoriteShelfCard key={event.id} event={event} stamps={stamps} />
           ))}
         </div>
       )}
@@ -435,8 +463,10 @@ function PastMonthBlock({
 
 function FavoriteShelfCard({
   event,
+  stamps,
 }: {
   event: Event
+  stamps: EventStampsController
 }) {
   const router = useRouter()
   const { favorites } = useAppState()
@@ -447,6 +477,8 @@ function FavoriteShelfCard({
     : EVENT_TYPE_LABELS[event.type]
   const sourceConfig = SOURCE_CONFIG[event.source.level]
   const locationLabel = getEventLocationLabel(event)
+  const showStamp = stamps.mode === 'cloud' && stamps.status === 'ready' && isStampEligible(event)
+  const isStamped = stamps.has(event.id)
 
   return (
     <article
@@ -522,6 +554,28 @@ function FavoriteShelfCard({
           </div>
 
           <div className="mt-3 flex items-center justify-end gap-3 border-t border-white/8 pt-3">
+            {showStamp && (
+              <button
+                type="button"
+                aria-pressed={isStamped}
+                aria-label={isStamped ? STAMP_COPY.ariaUnstamp : STAMP_COPY.ariaStamp}
+                disabled={stamps.isPending(event.id)}
+                onClick={(clickEvent) => {
+                  clickEvent.stopPropagation()
+                  stamps.toggle(event.id)
+                }}
+                onKeyDown={(keyEvent) => keyEvent.stopPropagation()}
+                className={clsx(
+                  'mr-auto inline-flex min-h-[44px] items-center gap-1.5 rounded-full border px-4 text-xs font-semibold transition-colors disabled:opacity-60',
+                  isStamped
+                    ? 'border-[#ff6cb7]/28 bg-[#ff4ca1]/16 text-[#ff9cd0]'
+                    : 'border-white/10 bg-white/[0.04] text-white/72 hover:text-white',
+                )}
+              >
+                <Stamp className="h-4 w-4" />
+                {isStamped ? STAMP_COPY.stamped : STAMP_COPY.stamp}
+              </button>
+            )}
             <div className="inline-flex items-center gap-1 text-xs font-semibold text-white/52 transition-colors group-hover:text-white/78">
               查看詳情
               <ArrowUpRight className="h-3.5 w-3.5" />
