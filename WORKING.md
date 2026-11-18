@@ -265,6 +265,7 @@
 | 060 | event_candidates 加 `verification_status` / `verification_evidence` / `verification_provider_meta` / `verified_at`（B-1b，聚合源自動求證）| ✅ 已執行（2026-11-09 Owner 在 SQL Editor 確認 4 個欄位存在）|
 | 061 | GRANT service_role：`SELECT` events / reminders / user_follows + `UPDATE (is_sent)` reminders（M061，修通知排程）| 🔲 PR #200 待 merge；merge 後由 Owner 在 SQL Editor 手動執行 |
 | 064 | F1「我想去」匿名計數：新表 `event_wants`（user_id FK cascade／device_hash＝sha256，不存明文）＋ `event_want_actions`（限速短期紀錄）；RLS 開、無 policy、REVOKE ALL；SECURITY DEFINER RPC `set_event_want`（每分鐘 10／每小時 60／單活動未登入 10 分鐘 60）與 `get_event_wants`（只回彙總數）只 GRANT EXECUTE 給 anon/authenticated；不改 events／既有 RLS | 🔲 PR 中、未套用（貼上單 `M064_貼上單_F1.md`，Dave 在 SQL Editor 手動執行）|
+| 065 | F2 許願表單：新表 `fan_wishes`（kind ∈ add_group/add_city、只存正規化名稱 1–40 字；user_id FK cascade／device_hash＝sha256，不存明文；unique 去重）＋ `fan_wish_actions`（限速短期紀錄，不存名稱）；RLS 開、無 policy、REVOKE ALL；SECURITY DEFINER RPC `submit_fan_wish`（每分鐘 5／每天 20／全站未登入 10 分鐘 100）＋探測 `fan_wishes_enabled` 只 GRANT EXECUTE 給 anon/authenticated；`fan_wish_normalize_name` 不授權；前台無讀取路徑、v1 不公開彙總；不依賴 064、不改既有表／RLS | 🔲 PR 中、未套用（貼上單 `M065_貼上單_F2.md`，Dave 在 SQL Editor 手動執行）|
 
 ---
 

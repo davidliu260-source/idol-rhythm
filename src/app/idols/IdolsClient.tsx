@@ -11,6 +11,7 @@ import {
   Star,
   Users,
 } from 'lucide-react'
+import FanWishForm from '@/components/FanWishForm'
 import IdolAvatar from '@/components/IdolAvatar'
 import { useAppState } from '@/lib/appState'
 import type { Idol } from '@/lib/mockIdols'
@@ -171,6 +172,7 @@ export default function IdolsClient({ idols }: { idols: Idol[] }) {
             )}
           </>
         )}
+        <FanWishForm defaultKind="add_group" />
       </div>
     </div>
   )

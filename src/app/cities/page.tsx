@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { CalendarDays, MapPin } from 'lucide-react'
+import FanWishForm from '@/components/FanWishForm'
 
 export default function CitiesPage() {
   return (
@@ -25,6 +26,7 @@ export default function CitiesPage() {
           先看行事曆
         </Link>
       </section>
+      <FanWishForm defaultKind="add_city" className="mt-4" />
     </div>
   )
 }
