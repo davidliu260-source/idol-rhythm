@@ -1,5 +1,6 @@
 import { updateRunStatus } from './crawlerSource'
 import { runVenueCalendarFetcher } from './runVenueCalendarFetcher'
+import { runYgNoticeFetcher } from './runYgNoticeFetcher'
 import type { TouchedCandidate } from './touchedCandidate'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { runBlackpinkFetcher } from './runBlackpinkFetcher'
@@ -197,6 +198,10 @@ export async function runCrawlerSource(
         errors: r.errors,
         status: r.status,
       }
+    }
+    case 'yg_notice': {
+      const result = await runYgNoticeFetcher(supabase, { sourceKey: source.source_key, dryRun })
+      return { ...result, parserType: source.parser_type, sourceName: result.sourceName ?? source.name }
     }
     case 'venue_calendar': {
       const result = await runVenueCalendarFetcher(supabase, {

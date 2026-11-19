@@ -71,6 +71,11 @@ function planForSource(
         endpoint: '/api/admin/crawlers/kpopofficial-concerts/run',
         body: { sourceKey },
       }
+    case 'yg_notice':
+      return {
+        endpoint: '/api/admin/crawlers/yg-notice/run',
+        body: { sourceKey, dryRun: false },
+      }
     case 'venue_calendar':
       return {
         endpoint: '/api/admin/crawlers/venue-calendar/run',
