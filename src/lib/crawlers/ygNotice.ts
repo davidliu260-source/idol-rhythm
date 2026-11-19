@@ -117,7 +117,16 @@ function performanceDates(text: string) {
 const bullet = /^[\s·•*-]+/
 const dateLabel = /^(?:공연\s*일시|Performance Dates?)\s*[:：]\s*/i
 const otherDateLabel = /^(?:공연\s*(?:날짜|일정)|행사\s*(?:일시|날짜)|(?:Concert|Event|Show) Dates?)\s*[:：]\s*/i
+const cityLabel = /^(?:공연\s*도시|도시|City)\s*[:：]\s*/i
+const venueLabel = /^(?:공연장|공연\s*장소|Venue)\s*[:：]\s*/i
+const addressLabel = /^(?:주소|Address)\s*[:：]\s*/i
+const ticketLabel = /^(?:티켓\s*예매|Tickets?|Ticket Reservation)\s*[:：]/i
 const saleLabel = /^(?:\[?\s*(?:BIGBANG V\.I\.P MEMBERSHIP\s+)?(?:선\s*예매(?:\s*(?:일정\s*안내|오픈\s*일시|기간))?|일반\s*예매(?:\s*오픈\s*일시)?|(?:Membership )?Presale(?: Date and Time)?|General (?:Ticket Reservation Date and Time|Sale))\s*\]?)(?:\s*[:：]\s*|$)/i
+const dateFieldBoundaries = [dateLabel, otherDateLabel, cityLabel, venueLabel, addressLabel, ticketLabel,
+  saleLabel, /^\[[^\]]+\]/]
+const emptyDateValue = new RegExp('^[\\s\\p{P}\\p{Dash}]*$', 'u')
+
+const cleanLine = (line: string) => clean(line).replace(bullet, '')
 
 function parseSales(lines: string[]) {
   const saleLines = lines.flatMap((line, index) => {
@@ -159,28 +168,48 @@ export function parseYgNoticeDetail(html: string, entry: NoticeEntry) {
     if (!link.text().includes(href)) link.text(`${link.text()} ${href}`)
   })
   body.find('br').replaceWith('\n')
+  const headingElements = body.find('h1, h2, h3, h4, h5, h6')
+  const sectionHeadings = new Set(headingElements.map((_, heading) => cleanLine($(heading).text())).get())
+  headingElements.append('\n')
   body.find('p, li, div').append('\n')
-  const lines = body.text().split('\n').map((line) => clean(line).replace(bullet, '')).filter(Boolean)
+  const lines = body.text().split('\n').map(cleanLine).filter(Boolean)
   const headings = lines.flatMap((line, index) => {
     const primary = dateLabel.exec(line)
     const label = primary ?? otherDateLabel.exec(line)
     if (!label) return []
     const value = line.slice(label[0].length)
-    return [{ index, value, dates: performanceDates(value), primary: !!primary, korean: !/^[A-Z]/i.test(line) }]
+    const values = [value]
+    if (emptyDateValue.test(value)) {
+      values.length = 0
+      for (const next of lines.slice(index + 1)) {
+        if (sectionHeadings.has(next) || dateFieldBoundaries.some((pattern) => pattern.test(next))) break
+        values.push(next)
+      }
+    }
+    const shows = values.flatMap((text) => {
+      const dates = performanceDates(text)
+      const times = clocks(text)
+      return dates.map((date, day) => ({
+        date,
+        time: (times.length === dates.length ? times[day] : times.length === 1 ? times[0] : null)?.slice(0, 5) ?? null,
+      }))
+    })
+    return [{ index, shows, primary: !!primary, korean: !/^[A-Z]/i.test(line) }]
   })
-  const first = headings.find(({ dates, primary }) => primary && dates.length) ??
-    headings.find(({ dates }) => dates.length)
+  const first = headings.find(({ shows, primary }) => primary && shows.length) ??
+    headings.find(({ shows }) => shows.length)
   // Use one language for the schedule and keep each date field paired with its own venue.
   const performances = headings.flatMap((heading, index) => {
-    if (!first || heading.primary !== first.primary || heading.korean !== first.korean || !heading.dates.length) return []
+    if (!first || heading.primary !== first.primary || heading.korean !== first.korean || !heading.shows.length) return []
     const fields = lines.slice(heading.index + 1, headings[index + 1]?.index)
     const field = (pattern: RegExp) => fields.find((line) => pattern.test(line))?.replace(pattern, '') || null
+    const shows = heading.shows.filter(({ date }, day) => heading.shows.findIndex((show) => show.date === date) === day)
     return [{
-      dates: Array.from(new Set(heading.dates)),
-      city: field(/^(?:도시|City)\s*[:：]\s*/i),
-      venue: field(/^(?:공연장|공연\s*장소|Venue)\s*[:：]\s*/i),
-      address: field(/^(?:주소|Address)\s*[:：]\s*/i),
-      showTimes: clocks(heading.value).map((time) => time.slice(0, 5)),
+      dates: shows.map(({ date }) => date),
+      city: field(cityLabel),
+      venue: field(venueLabel),
+      address: field(addressLabel),
+      showTimes: shows.map(({ time }) => time),
       ticketLinks: parseTicketLinks(fields),
     }]
   })
@@ -195,7 +224,7 @@ export function parseYgNoticeDetail(html: string, entry: NoticeEntry) {
 }
 
 function parseTicketLinks(lines: string[]) {
-  const ticketIndex = lines.findIndex((line) => /^(?:티켓\s*예매|Tickets?|Ticket Reservation)\s*[:：]/i.test(line))
+  const ticketIndex = lines.findIndex((line) => ticketLabel.test(line))
   const ticketLines = ticketIndex < 0 ? [] : lines.slice(ticketIndex, ticketIndex + 1)
   for (let index = ticketIndex + 1; ticketIndex >= 0 && index < lines.length; index++) {
     if (!/^(?:\d{1,2}\s*월|https?:\/\/)/i.test(lines[index])) break
@@ -237,8 +266,7 @@ export function ygNoticeCandidates(
         parser_type: source.parser_type, parser_version: 1, notice_id: entry.id, page_url: pageUrl,
         posted_date: detail.postedDate, category: detail.category,
         date_start: orderedDates[0], date_end: orderedDates[orderedDates.length - 1],
-        show_time: (showTimes.length === orderedDates.length ? showTimes[index]
-          : showTimes.length === 1 ? showTimes[0] : null) ?? null,
+        show_time: showTimes[index] ?? null,
         ticket_url: ticketUrl, city, venue, address, ...detail.sales,
       },
       detected_idol_id: idolId,

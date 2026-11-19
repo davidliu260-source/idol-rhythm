@@ -148,6 +148,44 @@ if (process.argv.includes('--dry-run')) {
     assert.deepEqual(result.errors, [])
   })
 
+  test('5893 pairs each multiline Hong Kong date with its show time and skips all three as past', async () => {
+    const rows = candidates('5893')
+    assert.deepEqual(rows.map((row) => [row.detected_date, row.raw_data.show_time]), [
+      ['2026-11-13', '19:00'],
+      ['2026-11-14', '18:00'],
+      ['2026-11-15', '18:00'],
+    ])
+    assert.ok(rows.every((row) => row.detected_city === 'Hong Kong' && row.detected_venue_name === 'Kai Tak Stadium'))
+    const list = fixture('p1').replace(/<li>\s*<a href="\/ko\/news\/notice\/(?!5893\b)\d+"[\s\S]*?<\/li>/g, '')
+    const result = await crawlYgNotices(source, idols, today, 1, async (url) =>
+      url.endsWith('page=1') ? list : fixture('5893'))
+    assert.equal(result.skipped_no_date, 0)
+    assert.equal(result.skipped_past, 3)
+    assert.deepEqual(result.candidates, [])
+    assert.deepEqual(result.errors, [])
+  })
+
+  test('5896 accepts 공연 도시 with a nonbreaking space and uses the labeled extra-show date', () => {
+    const parsed = detail('5896', '<section class="view_body"><div class="ql-editor">' +
+      '<p>기존 공연 2026년 11월 15일</p><p>공연 일시: 2026년 11월 17일 | 7PM</p>' +
+      '<p>- 공연장: Kai Tak Stadium</p><p>- 공연 도시:&nbsp;Hong Kong</p></div></section>')
+    assert.equal(parsed.performances[0].city, 'Hong Kong')
+    assert.deepEqual(parsed.performances[0].dates, ['2026-11-17'])
+  })
+
+  test('multiline date fields stop at the next field or section and keep missing show times in place', () => {
+    for (const boundary of [
+      '<p>공연 장소: Kai Tak Stadium</p>', '<p>공연 도시: Hong Kong</p>', '<p>Address: Hong Kong</p>',
+      '<p>Tickets: https://tickets.example/show</p>', '<p>[티켓 안내]</p>', '<h3>Ticket sales</h3>',
+    ]) {
+      const parsed = detail('5893', '<section class="view_body"><div class="ql-editor">' +
+        '<p>공연 일시: —</p><p>- 2026년 11월 13일</p><p>- 2026년 11월 14일 | 6PM</p>' +
+        boundary + '<p>2026년 11월 15일 | 7PM</p></div></section>')
+      assert.deepEqual(parsed.performances[0].dates, ['2026-11-13', '2026-11-14'])
+      assert.deepEqual(parsed.performances[0].showTimes, [null, '18:00'])
+    }
+  })
+
   test('omitted dryRun previews with no writes and checks candidates and draft events', async (t) => {
     t.mock.timers.enable({ apis: ['Date'], now: new Date('2026-11-19T04:00:00Z') })
     const list = fixture('p1')
