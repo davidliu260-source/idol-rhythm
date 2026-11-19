@@ -93,18 +93,19 @@ export async function updateRunStatus(
       ? patch.last_error.slice(0, LAST_ERROR_MAX_LEN)
       : patch.last_error
 
-  const { error } = await supabase
-    .from('crawler_sources')
-    .update({
-      last_run_at: now,
-      last_status: patch.last_status,
-      last_error: trimmed,
-      updated_at: now,
-    })
-    .eq('id', crawlerSourceId)
+  try {
+    const { error } = await supabase
+      .from('crawler_sources')
+      .update({
+        last_run_at: now,
+        last_status: patch.last_status,
+        last_error: trimmed,
+        updated_at: now,
+      })
+      .eq('id', crawlerSourceId)
 
-  if (error) {
-    // eslint-disable-next-line no-console
+    if (error) throw error
+  } catch (error) {
     console.warn('crawler_sources: status update failed', error)
   }
 }

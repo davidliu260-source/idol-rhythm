@@ -10,6 +10,7 @@ import {
 } from '@/lib/crawlers/runActiveCrawlerSources'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 300
 
 interface CronOkResponse {
   ok: true
@@ -40,9 +41,8 @@ type CronResponse = CronOkResponse | CronErrResponse
  *
  * J6e fan-out: instead of running a single hard-coded fetcher, this route
  * now lists every `crawler_sources.is_active = true` row and dispatches to
- * the right fetcher by `parser_type`. Each fetcher already writes back its
- * own `last_run_at / last_status / last_error`, so this loop only needs to
- * collect their results.
+ * the right fetcher by `parser_type`. Fetchers and dispatch record
+ * `last_run_at / last_status / last_error` for each source.
  *
  * Sources are executed sequentially (not in parallel) — the dataset is tiny
  * (<10 sources for the foreseeable future), serial keeps logs readable and

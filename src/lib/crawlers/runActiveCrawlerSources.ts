@@ -1,3 +1,4 @@
+import { updateRunStatus } from './crawlerSource'
 import { runVenueCalendarFetcher } from './runVenueCalendarFetcher'
 import type { TouchedCandidate } from './touchedCandidate'
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -198,17 +199,21 @@ export async function runCrawlerSource(
       }
     }
     case 'venue_calendar': {
-      const result = await runVenueCalendarFetcher(supabase, { sourceKey: source.source_key, dryRun })
+      const result = await runVenueCalendarFetcher(supabase, {
+        sourceKey: source.source_key, dryRun, sourceId: source.id,
+      })
       return { ...result, parserType: source.parser_type, sourceName: result.sourceName ?? source.name }
     }
     case 'generic_webpage': {
       // P1-B1 边界守门：generic_webpage 仅允许专属 admin route 手动触发
       // (POST /api/admin/crawlers/generic-webpage/run)。dispatch 路径
-      // (vercel-cron / admin sync-all fan-out) 一律 skip — 不写 DB，
+      // (vercel-cron / admin sync-all fan-out) 一律 skip，只写来源状态，
       // 不调用 Claude，不消耗 token。
       //
       // 这是双重防线：cron guard + sync-all guard。专属 admin route
       // 完全绕开本 dispatch，因此 P1-B1 preview 仍可手动触发。
+      const message = 'generic_webpage is dispatched only via /api/admin/crawlers/generic-webpage/run; cron and sync-all fan-out are intentionally disabled in P1-B1'
+      await updateRunStatus(supabase, source.id, { last_status: 'skipped', last_error: message })
       return {
         touched: [],
         source: 'generic-webpage',
@@ -221,9 +226,7 @@ export async function runCrawlerSource(
         wouldInsert: 0,
         skipped: 0,
         recheck: 0,
-        errors: [
-          'generic_webpage is dispatched only via /api/admin/crawlers/generic-webpage/run; cron and sync-all fan-out are intentionally disabled in P1-B1',
-        ],
+        errors: [message],
         status: 200,
       }
     }
@@ -234,6 +237,8 @@ export async function runCrawlerSource(
       // /api/cron/sync-candidates fan-out 时应略过，避免在 cron 排程
       // 与配额策略（P2-A2）正式定案前意外消耗 YouTube quota。
       if (trigger === 'vercel-cron') {
+        const message = 'youtube_official_channel is manual-only in P2-A1; cron is intentionally disabled until P2-A2'
+        await updateRunStatus(supabase, source.id, { last_status: 'skipped', last_error: message })
         return {
           touched: [],
           source: 'youtube-official-channel',
@@ -246,9 +251,7 @@ export async function runCrawlerSource(
           wouldInsert: 0,
           skipped: 0,
           recheck: 0,
-          errors: [
-            'youtube_official_channel is manual-only in P2-A1; cron is intentionally disabled until P2-A2',
-          ],
+          errors: [message],
           status: 200,
         }
       }
@@ -272,7 +275,9 @@ export async function runCrawlerSource(
         status: r.status,
       }
     }
-    default:
+    default: {
+      const message = `未知 parser_type：${source.parser_type}（dispatch table 未註冊）`
+      await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: message })
       return {
         touched: [],
         source: 'unknown',
@@ -285,11 +290,10 @@ export async function runCrawlerSource(
         wouldInsert: 0,
         skipped: 0,
         recheck: 0,
-        errors: [
-          `未知 parser_type：${source.parser_type}（dispatch table 未註冊）`,
-        ],
+        errors: [message],
         status: 200,
       }
+    }
   }
 }
 
@@ -326,6 +330,8 @@ export async function runActiveCrawlerSources(
       touched.push(...sourceTouched)
       results.push(result)
     } catch (e) {
+      const message = `fetcher 拋出例外：${e instanceof Error ? e.message : String(e)}`
+      await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: message })
       results.push({
         source: 'unknown',
         sourceKey: source.source_key,
@@ -337,9 +343,7 @@ export async function runActiveCrawlerSources(
         wouldInsert: 0,
         skipped: 0,
         recheck: 0,
-        errors: [
-          `fetcher 拋出例外：${e instanceof Error ? e.message : String(e)}`,
-        ],
+        errors: [message],
         status: 500,
       })
     }

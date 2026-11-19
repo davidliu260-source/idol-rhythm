@@ -19,6 +19,7 @@ const {
   selectVenueEntries, venueCandidateFromDetail,
 } = await import('../src/lib/crawlers/venueCalendar.ts')
 const { runVenueCalendarFetcher } = await import('../src/lib/crawlers/runVenueCalendarFetcher.ts')
+const { runActiveCrawlerSources, runCrawlerSource } = await import('../src/lib/crawlers/runActiveCrawlerSources.ts')
 const smtown = await import('../src/lib/crawlers/smtownNotice.ts')
 const fixture = (name) => readFileSync(new URL(`./fixtures/kaoarena/${name}.html`, import.meta.url), 'utf8')
 
@@ -38,6 +39,18 @@ const source = {
   config: { venueKey: 'kaoarena' }, is_active: true,
 }
 const detail = fixture('CalendarDetail-281')
+
+function statusUpdate(table, patch, writes) {
+  assert.equal(table, 'crawler_sources')
+  return {
+    eq: async (column, id) => {
+      assert.equal(column, 'id')
+      assert.ok(Number.isFinite(Date.parse(patch.last_run_at)))
+      writes.push({ id, status: patch.last_status, error: patch.last_error })
+      return { error: null }
+    },
+  }
+}
 
 if (process.argv.includes('--dry-run')) {
   const wouldInsertList = eligible.map(({ entry, idol }) => {
@@ -99,7 +112,7 @@ if (process.argv.includes('--dry-run')) {
     assert.equal(isKaoarenaLocation('高雄國家體育場'), false)
   })
 
-  test('fetcher dry-run only reads and skips an existing event by its address', async (t) => {
+  test('fetcher dry-run records status and skips candidates with an existing event', async (t) => {
     t.mock.timers.enable({ apis: ['Date'], now: new Date('2026-11-18T12:00:00+08:00') })
     const urls = []
     t.mock.method(globalThis, 'fetch', async (url) => {
@@ -109,17 +122,20 @@ if (process.argv.includes('--dry-run')) {
       assert.equal(url, eligible[0].entry.sourceUrl)
       return new Response(detail)
     })
+    const writes = []
+    let existingCandidate = null
     let events = [{ venue_name: null, address: '博愛二路 757 號' }]
     const rows = {
       crawler_sources: () => source,
       idols: () => idols,
-      event_candidates: () => null,
+      event_candidates: () => existingCandidate,
       events: () => events,
     }
     const supabase = {
       from(table) {
         const query = {
           select: () => query, eq: () => query, order: () => query, limit: () => query,
+          update: (patch) => statusUpdate(table, patch, writes),
           maybeSingle: async () => ({ data: rows[table]() }),
           then: (resolve) => resolve({ data: rows[table]() }),
         }
@@ -138,6 +154,78 @@ if (process.argv.includes('--dry-run')) {
     assert.deepEqual(wouldInsert.errors, [])
     assert.equal(wouldInsert.wouldInsert, 1)
     assert.equal(wouldInsert.wouldInsertList[0].date, '2027-01-23')
+    existingCandidate = { id: 'candidate', content_hash: 'old-hash' }
+    const drift = await runVenueCalendarFetcher(supabase, options)
+    assert.deepEqual(drift.errors, [])
+    assert.equal(drift.recheck, 1)
+    assert.deepEqual(drift.touched, [])
+    assert.deepEqual(writes, [
+      { id: source.id, status: 'success', error: null },
+      { id: source.id, status: 'success', error: null },
+      { id: source.id, status: 'success', error: null },
+    ])
+  })
+
+  test('venue dispatch records errors for bad config, failed lookup and unexpected exceptions', async (t) => {
+    const scenarios = [
+      { lookup: { data: { ...source, config: 'kaoarena' } }, status: 400, message: /來源設定不符合/ },
+      { lookup: { error: { message: 'lookup failed' } }, status: 500, message: /lookup failed/ },
+      { lookup: { data: source }, status: 500, message: /idols query threw/, throwOnIdols: true },
+    ]
+    const fetchMock = t.mock.method(globalThis, 'fetch', async () => {
+      throw new Error('unexpected fetch')
+    })
+    for (const scenario of scenarios) {
+      const writes = []
+      const supabase = {
+        from(table) {
+          if (table === 'idols' && scenario.throwOnIdols) throw new Error('idols query threw')
+          assert.equal(table, 'crawler_sources')
+          const query = {
+            select: () => query, eq: () => query,
+            maybeSingle: async () => scenario.lookup,
+            update: (patch) => statusUpdate(table, patch, writes),
+          }
+          return query
+        },
+      }
+      const result = await runCrawlerSource(supabase, source, false)
+      assert.equal(result.status, scenario.status)
+      assert.match(result.errors[0], scenario.message)
+      assert.deepEqual(writes, [{ id: source.id, status: 'error', error: result.errors[0] }])
+    }
+    assert.equal(fetchMock.mock.callCount(), 0)
+  })
+
+  test('dispatch records skips and errors and continues after a fetcher throws', async () => {
+    const rows = [
+      ['a', 'youtube_official_channel'],
+      ['b', 'jyp_schedule'],
+      ['c', 'generic_webpage'],
+      ['d', 'unknown_parser'],
+    ].map(([id, parser_type]) => ({ id, source_key: id, name: id, parser_type }))
+    const writes = []
+    const supabase = {
+      from(table) {
+        assert.equal(table, 'crawler_sources')
+        const query = {
+          select: () => query, eq: () => query,
+          order: async () => ({ data: rows }),
+          maybeSingle: async () => { throw new Error('JYP fetcher lookup threw') },
+          update: (patch) => statusUpdate(table, patch, writes),
+        }
+        return query
+      },
+    }
+    const { result, error } = await runActiveCrawlerSources(supabase, { dryRun: true, trigger: 'vercel-cron' })
+    assert.equal(error, null)
+    assert.deepEqual(result.results.map(({ sourceKey, status }) => [sourceKey, status]), [
+      ['a', 200], ['b', 500], ['c', 200], ['d', 200],
+    ])
+    assert.match(result.results[1].errors[0], /JYP fetcher lookup threw/)
+    assert.deepEqual(writes, ['skipped', 'error', 'skipped', 'error'].map((status, index) => ({
+      id: rows[index].id, status, error: result.results[index].errors[0],
+    })))
   })
 
   test('SMTOWN ignores posting and ticket dates and accepts explicit performance dates', () => {
