@@ -1,7 +1,7 @@
 'use client'
 
 import { getEventLocationLabel } from '@/lib/eventLocation'
-import { taipeiToday, toDateKey, isEventEnded } from '@/lib/taipeiDate'
+import { isEventOnDay, taipeiToday, toDateKey } from '@/lib/taipeiDate'
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Clock3, Heart, ListFilter, MapPin, Search, Waves, X } from 'lucide-react'
 import clsx from 'clsx'
@@ -11,6 +11,7 @@ import { formatEventDate, EVENT_SUBTYPE_LABELS } from '@/lib/mockEvents'
 import type { EventSubType } from '@/lib/types'
 import { getEventDateLabel } from '@/lib/eventDisplay'
 import { useAppState } from '@/lib/appState'
+import { listCurrentEvents } from '@/lib/upcomingEvents'
 import ScheduleTrackCard from './ScheduleTrackCard'
 
 interface Props {
@@ -52,7 +53,8 @@ const SUBTYPE_SEARCH_KEYWORDS: Partial<Record<string, string>> = {
   brand_event: '品牌活動 品牌 brand event brand_event',
 }
 
-export default function ScheduleClient({ events }: Props) {
+export default function ScheduleClient({ events: publishedEvents }: Props) {
+  const events = useMemo(() => listCurrentEvents(publishedEvents), [publishedEvents])
   const [searchQuery, setSearchQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState<ScheduleCategory>('all')
   const [view, setView] = useState<ViewMode>('timeline')
@@ -154,7 +156,7 @@ function TimelineView({
   activeCategory: ScheduleCategory
 }) {
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set())
-  const monthGroups = useMemo(() => buildFutureMonthGroups(events), [events])
+  const monthGroups = useMemo(() => buildMonthGroups(events), [events])
   const monthKeys = monthGroups.map((group) => group.key).join('|')
 
   useEffect(() => {
@@ -375,21 +377,12 @@ function CalendarView({
   const [cursor, setCursor] = useState<Date>(() => new Date(today.getFullYear(), today.getMonth(), 1))
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
 
-  // Bucket events by yyyy-mm-dd local key
-  const eventsByDay = useMemo(() => {
-    const map = new Map<string, Event[]>()
-    for (const e of events) {
-      const key = toDateKey(e.date)
-      if (key === null) continue
-      const arr = map.get(key)
-      if (arr) arr.push(e)
-      else map.set(key, [e])
-    }
-    return map
-  }, [events])
-
   // Build 6×7 grid cells for the current cursor month
   const cells = useMemo(() => buildMonthCells(cursor), [cursor])
+  const eventsByDay = useMemo(() => new Map(cells.map(({ date }) => {
+    const key = dayKey(date)
+    return [key, events.filter(event => isEventOnDay(event, key))]
+  })), [cells, events])
 
   const monthLabel = `${cursor.getFullYear()} 年 ${cursor.getMonth() + 1} 月`
 
@@ -400,8 +393,9 @@ function CalendarView({
     setSelectedDate(today)
   }
 
-  const selectedEvents = selectedDate
-    ? (eventsByDay.get(dayKey(selectedDate)) ?? [])
+  const selectedKey = selectedDate ? dayKey(selectedDate) : null
+  const selectedEvents = selectedKey
+    ? eventsByDay.get(selectedKey) ?? events.filter(event => isEventOnDay(event, selectedKey))
     : []
 
   return (
@@ -712,15 +706,15 @@ function matchesScheduleCategory(event: Event, category: ScheduleCategory): bool
   }
 }
 
-function buildFutureMonthGroups(events: Event[]): MonthEventGroup[] {
-  const now = new Date()
+function buildMonthGroups(events: Event[]): MonthEventGroup[] {
   const groups = new Map<string, MonthEventGroup>()
 
   for (const event of events) {
-    const date = new Date(event.date)
-    if (isEventEnded(event, now) === true) continue
-    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-    const label = `${date.getFullYear()} 年 ${date.getMonth() + 1} 月`
+    const date = toDateKey(event.date)
+    if (date === null) continue
+    const key = date.slice(0, 7)
+    const [year, month] = key.split('-')
+    const label = `${year} 年 ${Number(month)} 月`
     const group = groups.get(key)
     if (group) group.events.push(event)
     else groups.set(key, { key, label, events: [event] })

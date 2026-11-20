@@ -2,11 +2,12 @@ import { toDateKey, isEventEnded, isEventOngoing } from './taipeiDate'
 
 export const INITIAL_VISIBLE = 9
 
+export function listCurrentEvents<T extends { date: string; endDate?: string | null }>(events: readonly T[], now: Date = new Date()): T[] {
+  return events.filter(event => toDateKey(event.date) !== null && isEventEnded(event, now) === false)
+}
+
 export function listUpcomingEvents<T extends { id: string; date: string; endDate?: string | null; time?: string | null }>(events: readonly T[], now: Date = new Date()): T[] {
-  return events.filter(event => {
-    const key = toDateKey(event.date)
-    return key !== null && isEventEnded(event, now) === false
-  }).sort((a, b) => {
+  return listCurrentEvents(events, now).sort((a, b) => {
     const ongoingOrder = Number(isEventOngoing(b, now)) - Number(isEventOngoing(a, now))
     const dateOrder = toDateKey(a.date)!.localeCompare(toDateKey(b.date)!)
     const aTime = a.time?.trim() || ''

@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic'
 
-import { isEventEnded } from '@/lib/taipeiDate'
+import { listCurrentEvents } from '@/lib/upcomingEvents'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -32,13 +32,8 @@ export default async function IdolDetailPage({
   const allEvents = await getPublishedEvents()
   const idolEvents = allEvents.filter((event) => event.idolId === idol.id)
 
-  const now = new Date()
-  const upcoming = idolEvents
-    .filter((event) => isEventEnded(event, now) === false)
+  const upcoming = listCurrentEvents(idolEvents)
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-  const past = idolEvents
-    .filter((event) => isEventEnded(event, now) === true)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
   const typeLabel =
     idol.type === 'group' ? '團體 Group' : idol.type === 'solo' ? '個人 Solo' : ''
@@ -102,9 +97,8 @@ export default async function IdolDetailPage({
           </div>
         </section>
 
-        <section className="grid grid-cols-3 gap-2">
+        <section className="grid grid-cols-2 gap-2">
           <StatTile label="即將到來" value={`${upcoming.length}`} accent="pink" />
-          <StatTile label="已結束" value={`${past.length}`} accent="violet" />
           <StatTile
             label="成員"
             value={idol.memberCount ? `${idol.memberCount}` : '—'}
@@ -187,27 +181,6 @@ export default async function IdolDetailPage({
             </div>
           )}
         </section>
-
-        {past.length > 0 && (
-          <section className="rounded-[26px] border border-white/8 bg-white/[0.035] p-5">
-            <SectionHeader
-              icon={<Calendar className="h-4 w-4 text-white/68" />}
-              title="已結束"
-              count={past.length}
-              dimmed
-            />
-            <div className="space-y-2 opacity-70">
-              {past.slice(0, 10).map((event) => (
-                <EventCard key={event.id} event={event} compact />
-              ))}
-            </div>
-            {past.length > 10 && (
-              <p className="mt-3 text-center text-[11px] text-white/38">
-                目前先顯示最近 10 筆已結束行程
-              </p>
-            )}
-          </section>
-        )}
       </div>
     </div>
   )
@@ -228,14 +201,13 @@ function StatTile({
 }: {
   label: string
   value: string
-  accent: 'pink' | 'violet' | 'slate'
+  accent: 'pink' | 'slate'
 }) {
   return (
     <div
       className={clsx(
         'rounded-[18px] border px-3 py-3',
         accent === 'pink' && 'border-[#ff6cb7]/20 bg-[#ff4ca1]/10',
-        accent === 'violet' && 'border-violet-300/16 bg-violet-400/10',
         accent === 'slate' && 'border-white/8 bg-white/[0.035]',
       )}
     >
@@ -251,21 +223,19 @@ function SectionHeader({
   icon,
   title,
   count,
-  dimmed = false,
 }: {
   icon: React.ReactNode
   title: string
   count?: number
-  dimmed?: boolean
 }) {
   return (
     <div className="mb-3 flex items-center gap-2">
       {icon}
-      <h2 className={clsx('text-sm font-bold', dimmed ? 'text-white/72' : 'text-white')}>
+      <h2 className="text-sm font-bold text-white">
         {title}
       </h2>
       {count !== undefined && (
-        <span className={clsx('text-xs font-medium', dimmed ? 'text-white/38' : 'text-[#ff8bc8]')}>
+        <span className="text-xs font-medium text-[#ff8bc8]">
           {count}
         </span>
       )}

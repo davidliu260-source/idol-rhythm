@@ -5,26 +5,27 @@ import { countUpcomingByCategory } from '@/lib/upcomingFilters'
 import { HomeCategoryFilterProvider, HomeCategoryFilterBar, HomeCategoryLegend } from '@/components/HomeCategoryFilter'
 import { Fragment } from 'react'
 import { getPublishedEvents, getActiveIdols } from '@/lib/supabase/events'
-import { CATEGORY_NEUTRALS, EVENT_CATEGORY_ORDER, getEventCategory } from '@/lib/eventCategory'
+import { EVENT_CATEGORY_ORDER, getEventCategory } from '@/lib/eventCategory'
 import { countTomorrowTickets, getDaysUntil, getHomeSubtitleClauses, selectNextEvent } from '@/lib/nextEventHero'
 import HomeNotificationBell from '@/components/HomeNotificationBell'
 import HomePersonalized from '@/components/HomePersonalized'
 import HomeFollowedIdols from '@/components/HomeFollowedIdols'
 import HomeUpcomingList from '@/components/HomeUpcomingList'
-import { listUpcomingEvents } from '@/lib/upcomingEvents'
+import { listCurrentEvents, listUpcomingEvents } from '@/lib/upcomingEvents'
 import HomeNextEventHero from '@/components/HomeNextEventHero'
 
 import HomeWeekStrip from '@/components/HomeWeekStrip'
 import HomeLatestPublished from '@/components/HomeLatestPublished'
-import { countEndedEvents, getWeekDays, getWeekDots, hasWeekEvents, listLatestPublished } from '@/lib/homeWeekAndFeed'
+import { getWeekDays, getWeekDots, hasWeekEvents, listLatestPublished } from '@/lib/homeWeekAndFeed'
 import type { CategoryFilter } from '@/lib/upcomingFilters'
 
 export default async function HomePage() {
-  const [events, idols] = await Promise.all([
+  const [publishedEvents, idols] = await Promise.all([
     getPublishedEvents(),
     getActiveIdols(),
   ])
   const now = new Date()
+  const events = listCurrentEvents(publishedEvents, now)
   const upcomingEvents = listUpcomingEvents(events, now)
   const ongoingIds = upcomingEvents.filter(event => isEventOngoing(event, now)).map(event => event.id)
   const categoryCounts = countUpcomingByCategory(upcomingEvents, now)
@@ -41,7 +42,6 @@ export default async function HomePage() {
     (['all', ...EVENT_CATEGORY_ORDER] as CategoryFilter[]).map(id => [id, getWeekDots(events, now, id)]),
   ) as Record<CategoryFilter, ReturnType<typeof getWeekDots>>
   const latestEvents = listLatestPublished(events, now)
-  const endedCount = countEndedEvents(events, now)
   return (
     <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_12%_0%,rgba(255,90,174,0.16),transparent_24%),linear-gradient(180deg,#17111d_0%,#09070d_100%)] pb-28 text-white">
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(180deg,rgba(255,255,255,0.018)_1px,transparent_1px)] bg-[size:34px_34px] opacity-24" />
@@ -82,13 +82,7 @@ export default async function HomePage() {
         {showCategoryFilter && <HomeCategoryLegend counts={categoryCounts} />}
         <HomeFollowedIdols idols={idols} />
         {latestEvents.length > 0 && <HomeLatestPublished events={latestEvents} now={now} />}
-        <HomePersonalized events={events} />
-        {endedCount > 0 && (
-          <div className="flex items-center justify-between border-t py-5 text-[15px]" style={{ borderColor: CATEGORY_NEUTRALS.line, color: CATEGORY_NEUTRALS.muted }}>
-            <span>已結束</span>
-            <span><b className="font-bold" style={{ color: CATEGORY_NEUTRALS.text }}>{endedCount}</b> 場</span>
-          </div>
-        )}
+        <HomePersonalized events={publishedEvents} />
         </HomeCategoryFilterProvider>
       </div>
     </div>

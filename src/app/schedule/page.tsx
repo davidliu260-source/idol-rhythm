@@ -2,11 +2,12 @@ export const dynamic = 'force-dynamic'
 
 import { Calendar } from 'lucide-react'
 import { getPublishedEvents } from '@/lib/supabase/events'
+import { listCurrentEvents } from '@/lib/upcomingEvents'
 import ScheduleClient from './ScheduleClient'
 import { PAGE_HERO_SHELL } from './scheduleTheme'
 
 export default async function SchedulePage() {
-  const events = await getPublishedEvents()
+  const events = listCurrentEvents(await getPublishedEvents())
 
   return (
     <div className="relative flex flex-col gap-0 overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(255,92,178,0.12),transparent_24%),linear-gradient(180deg,#140f18_0%,#0a0910_100%)] pt-8 pb-6">
