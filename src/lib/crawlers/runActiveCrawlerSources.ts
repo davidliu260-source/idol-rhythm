@@ -1,4 +1,4 @@
-import { updateRunStatus } from './crawlerSource'
+import { STATUS_WRITE_ERROR_PREFIX, updateRunStatus, type RunStatus } from './crawlerSource'
 import { runVenueCalendarFetcher } from './runVenueCalendarFetcher'
 import { runYgNoticeFetcher } from './runYgNoticeFetcher'
 import type { TouchedCandidate } from './touchedCandidate'
@@ -32,6 +32,7 @@ export interface CrawlerRunSummary {
   totalSources: number
   successCount: number
   errorCount: number
+  statusWriteErrorCount: number
   totalFetched: number
   totalInserted: number
   totalWouldInsert: number
@@ -59,6 +60,9 @@ export function summariseCrawlerRuns(
     totalSources: results.length,
     successCount: results.filter((r) => r.errors.length === 0).length,
     errorCount: results.filter((r) => r.errors.length > 0).length,
+    statusWriteErrorCount: results.filter((r) =>
+      r.errors.some((error) => error.startsWith(STATUS_WRITE_ERROR_PREFIX)),
+    ).length,
     totalFetched: results.reduce((s, r) => s + r.fetched, 0),
     totalInserted: results.reduce((s, r) => s + r.inserted, 0),
     totalWouldInsert: results.reduce((s, r) => s + r.wouldInsert, 0),
@@ -200,7 +204,9 @@ export async function runCrawlerSource(
       }
     }
     case 'yg_notice': {
-      const result = await runYgNoticeFetcher(supabase, { sourceKey: source.source_key, dryRun })
+      const result = await runYgNoticeFetcher(supabase, {
+        sourceKey: source.source_key, dryRun, sourceId: source.id,
+      })
       return { ...result, parserType: source.parser_type, sourceName: result.sourceName ?? source.name }
     }
     case 'venue_calendar': {
@@ -218,7 +224,7 @@ export async function runCrawlerSource(
       // 这是双重防线：cron guard + sync-all guard。专属 admin route
       // 完全绕开本 dispatch，因此 P1-B1 preview 仍可手动触发。
       const message = 'generic_webpage is dispatched only via /api/admin/crawlers/generic-webpage/run; cron and sync-all fan-out are intentionally disabled in P1-B1'
-      await updateRunStatus(supabase, source.id, { last_status: 'skipped', last_error: message })
+      const statusError = await updateRunStatus(supabase, source.id, { last_status: 'skipped', last_error: message })
       return {
         touched: [],
         source: 'generic-webpage',
@@ -231,7 +237,7 @@ export async function runCrawlerSource(
         wouldInsert: 0,
         skipped: 0,
         recheck: 0,
-        errors: [message],
+        errors: statusError ? [message, statusError] : [message],
         status: 200,
       }
     }
@@ -243,7 +249,7 @@ export async function runCrawlerSource(
       // 与配额策略（P2-A2）正式定案前意外消耗 YouTube quota。
       if (trigger === 'vercel-cron') {
         const message = 'youtube_official_channel is manual-only in P2-A1; cron is intentionally disabled until P2-A2'
-        await updateRunStatus(supabase, source.id, { last_status: 'skipped', last_error: message })
+        const statusError = await updateRunStatus(supabase, source.id, { last_status: 'skipped', last_error: message })
         return {
           touched: [],
           source: 'youtube-official-channel',
@@ -256,7 +262,7 @@ export async function runCrawlerSource(
           wouldInsert: 0,
           skipped: 0,
           recheck: 0,
-          errors: [message],
+          errors: statusError ? [message, statusError] : [message],
           status: 200,
         }
       }
@@ -282,7 +288,7 @@ export async function runCrawlerSource(
     }
     default: {
       const message = `未知 parser_type：${source.parser_type}（dispatch table 未註冊）`
-      await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: message })
+      const statusError = await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: message })
       return {
         touched: [],
         source: 'unknown',
@@ -295,7 +301,7 @@ export async function runCrawlerSource(
         wouldInsert: 0,
         skipped: 0,
         recheck: 0,
-        errors: [message],
+        errors: statusError ? [message, statusError] : [message],
         status: 200,
       }
     }
@@ -304,8 +310,10 @@ export async function runCrawlerSource(
 
 export async function runActiveCrawlerSources(
   supabase: SupabaseClient,
-  options: { dryRun?: boolean; trigger?: CrawlerRunTrigger } = {},
+  options: { dryRun?: boolean; trigger?: CrawlerRunTrigger; startedAt?: number } = {},
 ): Promise<{ result: ActiveSourcesRunResult | null; error: string | null }> {
+  // 300 秒與 sync-candidates route 的 maxDuration 一致，保留 25 秒寫狀態與收尾。
+  const stopStartingAt = (options.startedAt ?? Date.now()) + (300 - 25) * 1000
   const dryRun = options.dryRun === true
   // Default to 'vercel-cron' so any future caller that forgets to set
   // trigger errs on the side of cron-disabled behavior for manual-only
@@ -329,28 +337,41 @@ export async function runActiveCrawlerSources(
   const results: SourceRunResult[] = []
   const touched: TouchedCandidate[] = []
 
+  async function recordUndispatched(
+    source: ActiveSourceRow, runStatus: RunStatus, message: string, errors: string[],
+  ) {
+    const statusError = await updateRunStatus(supabase, source.id, {
+      last_status: runStatus, last_error: message,
+    })
+    if (statusError) errors.push(statusError)
+    results.push({
+      source: runStatus === 'skipped' ? source.parser_type : 'unknown',
+      sourceKey: source.source_key,
+      sourceName: source.name,
+      parserType: source.parser_type,
+      mode: dryRun ? 'dry-run' : 'insert',
+      fetched: 0,
+      inserted: 0,
+      wouldInsert: 0,
+      skipped: runStatus === 'skipped' ? 1 : 0,
+      recheck: 0,
+      errors,
+      status: errors.length ? 500 : 200,
+    })
+  }
+
   for (const source of sources) {
+    if (Date.now() >= stopStartingAt) {
+      await recordUndispatched(source, 'skipped', '本輪剩餘時間不足，下輪再跑', [])
+      continue
+    }
     try {
       const { touched: sourceTouched, ...result } = await runCrawlerSource(supabase, source, dryRun, trigger)
       touched.push(...sourceTouched)
       results.push(result)
     } catch (e) {
       const message = `fetcher 拋出例外：${e instanceof Error ? e.message : String(e)}`
-      await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: message })
-      results.push({
-        source: 'unknown',
-        sourceKey: source.source_key,
-        sourceName: source.name,
-        parserType: source.parser_type,
-        mode: dryRun ? 'dry-run' : 'insert',
-        fetched: 0,
-        inserted: 0,
-        wouldInsert: 0,
-        skipped: 0,
-        recheck: 0,
-        errors: [message],
-        status: 500,
-      })
+      await recordUndispatched(source, 'error', message, [message])
     }
   }
 

@@ -46,9 +46,10 @@ export async function runVenueCalendarFetcher(
   let statusSourceId = sourceId
   async function finish(status: RunStatus) {
     if (statusSourceId) {
-      await updateRunStatus(supabase, statusSourceId, {
+      const statusError = await updateRunStatus(supabase, statusSourceId, {
         last_status: status, last_error: result.errors.join('\n') || null,
       })
+      if (statusError) result.errors.push(statusError)
     }
     result.skipped += result.skipped_past + result.skipped_unmatched +
       result.skipped_category + result.skipped_existing_event

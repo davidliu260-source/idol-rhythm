@@ -128,7 +128,7 @@ export function ygNoticePreviewItem(candidate: Candidate) {
 
 export async function runYgNoticeFetcher(
   supabase: SupabaseClient,
-  { sourceKey, dryRun: requestedDryRun }: { sourceKey: string; dryRun?: boolean },
+  { sourceKey, dryRun: requestedDryRun, sourceId }: { sourceKey: string; dryRun?: boolean; sourceId?: string },
 ) {
   const dryRun = requestedDryRun !== false
   const result = {
@@ -140,121 +140,133 @@ export async function runYgNoticeFetcher(
     inserted: 0, skipped: 0, recheck: 0, errors: [] as string[],
     touched: [] as TouchedCandidate[], status: 200,
   }
-  const { source, error } = await getCrawlerSourceByKey(supabase, sourceKey)
-  if (!source) {
-    result.errors.push(error ?? '找不到 crawler_sources')
-    result.status = 500
-    return result
-  }
-  result.sourceName = source.name
+  let statusSourceId = sourceId
   async function finish(status: RunStatus) {
-    if (!dryRun && source) {
-      await updateRunStatus(supabase, source.id, {
+    if (statusSourceId) {
+      const statusError = await updateRunStatus(supabase, statusSourceId, {
         last_status: status, last_error: result.errors.join('\n') || null,
       })
+      if (statusError) result.errors.push(statusError)
     }
     result.skipped += result.skipped_past + result.skipped_unmatched +
       result.skipped_category + result.skipped_no_date + result.skipped_existing_event
     return result
   }
 
-  const { maxPages, memberSlugs } = source.config
-  if (source.parser_type !== 'yg_notice' || source.source_type !== 'official_website' ||
-      ![YG_NOTICE_URL, YG_NOTICE_URL.replace('://', '://www.')].includes(source.source_url) ||
-      source.config.locale !== 'ko' || typeof maxPages !== 'number' ||
-      !Number.isInteger(maxPages) || maxPages < 5 || maxPages > 10 ||
-      !Array.isArray(memberSlugs) || !memberSlugs.every((slug) => typeof slug === 'string' && /^[a-z0-9-]+$/.test(slug))) {
-    result.status = 400
-    result.errors.push('來源設定不符合 YG 官方公告')
-    return result
-  }
-  if (!source.is_active) {
-    result.errors.push(`來源已停用：${source.name}`)
-    return finish('skipped')
-  }
+  try {
+    const { source, error, configType } = await getCrawlerSourceByKey(supabase, sourceKey)
+    if (!source) {
+      result.errors.push(error ?? '找不到 crawler_sources')
+      result.status = 500
+      return finish('error')
+    }
+    statusSourceId = source.id
+    result.sourceName = source.name
+    const { config } = source
+    const { locale, maxPages, memberSlugs } = config
+    if (source.parser_type !== 'yg_notice' || source.source_type !== 'official_website' ||
+        ![YG_NOTICE_URL, YG_NOTICE_URL.replace('://', '://www.')].includes(source.source_url) ||
+        locale !== 'ko' || typeof maxPages !== 'number' ||
+        !Number.isInteger(maxPages) || maxPages < 5 || maxPages > 10 ||
+        !Array.isArray(memberSlugs) || !memberSlugs.every((slug) => typeof slug === 'string' && /^[a-z0-9-]+$/.test(slug))) {
+      result.status = 400
+      result.errors.push(
+        `來源設定不符合 YG 官方公告（parser_type=${source.parser_type}, source_url=${source.source_url}, source_type=${source.source_type}, config 型別=${configType}, locale=${JSON.stringify(locale)}, maxPages=${JSON.stringify(maxPages)}, memberSlugs=${JSON.stringify(memberSlugs)}）`,
+      )
+      return finish('error')
+    }
+    if (!source.is_active) {
+      result.errors.push(`來源已停用：${source.name}`)
+      return finish('skipped')
+    }
 
-  const { data: idols, error: idolError } = await supabase.from('idols')
-    .select('id, slug, name, alt_names').in('slug', [...YG_NOTICE_ROSTER, ...memberSlugs]).order('id')
-  if (idolError || !idols?.some((idol) => idol.slug === 'bigbang' && idol.id === source.idol_id)) {
-    result.status = 500
-    result.errors.push(idolError ? `讀取 idols 失敗：${idolError.message}` : '來源 idol_id 未連結 BIGBANG')
-    return finish('error')
-  }
-  const { candidates, listFailed, matchedGDragon, ...counts } = await crawlYgNotices(
-    source, idols, taipeiToday(), maxPages,
-  )
-  Object.assign(result, counts)
-  if (listFailed && !result.pages) {
-    result.status = 502
-    return finish('error')
-  }
+    const { data: idols, error: idolError } = await supabase.from('idols')
+      .select('id, slug, name, alt_names').in('slug', [...YG_NOTICE_ROSTER, ...memberSlugs]).order('id')
+    if (idolError || !idols?.some((idol) => idol.slug === 'bigbang' && idol.id === source.idol_id)) {
+      result.status = 500
+      result.errors.push(idolError ? `讀取 idols 失敗：${idolError.message}` : '來源 idol_id 未連結 BIGBANG')
+      return finish('error')
+    }
+    const { candidates, listFailed, matchedGDragon, ...counts } = await crawlYgNotices(
+      source, idols, taipeiToday(), maxPages,
+    )
+    Object.assign(result, counts)
+    if (listFailed && !result.pages) {
+      result.status = 502
+      return finish('error')
+    }
 
-  for (const payload of candidates) {
-    try {
-      const [byHash, byUrl] = await Promise.all([
-        supabase.from('event_candidates').select('id, content_hash, reviewer_note')
-          .eq('source_hash', payload.source_hash).limit(1).maybeSingle(),
-        supabase.from('event_candidates').select('id, content_hash, reviewer_note')
-          .eq('source_url', payload.source_url).order('created_at').order('id').limit(1).maybeSingle(),
-      ])
-      if (byHash.error || byUrl.error) throw new Error((byHash.error ?? byUrl.error)!.message)
-      const existing = byHash.data ?? byUrl.data
-      if (!existing) {
-        const { data: events, error } = await supabase.from('events')
-          .select('city, venue_name, address, location_name_zh, location')
-          .eq('idol_id', payload.detected_idol_id).eq('date', payload.detected_date)
-        if (error) throw new Error(error.message)
-        if (events?.some((event) => isSameYgEventLocation(payload, event))) {
-          result.skipped_existing_event++
+    for (const payload of candidates) {
+      try {
+        const [byHash, byUrl] = await Promise.all([
+          supabase.from('event_candidates').select('id, content_hash, reviewer_note')
+            .eq('source_hash', payload.source_hash).limit(1).maybeSingle(),
+          supabase.from('event_candidates').select('id, content_hash, reviewer_note')
+            .eq('source_url', payload.source_url).order('created_at').order('id').limit(1).maybeSingle(),
+        ])
+        if (byHash.error || byUrl.error) throw new Error((byHash.error ?? byUrl.error)!.message)
+        const existing = byHash.data ?? byUrl.data
+        if (!existing) {
+          const { data: events, error } = await supabase.from('events')
+            .select('city, venue_name, address, location_name_zh, location')
+            .eq('idol_id', payload.detected_idol_id).eq('date', payload.detected_date)
+          if (error) throw new Error(error.message)
+          if (events?.some((event) => isSameYgEventLocation(payload, event))) {
+            result.skipped_existing_event++
+            continue
+          }
+
+          if (!dryRun) {
+            const { data, error: insertError } = await supabase.from('event_candidates')
+              .insert(payload).select('id').single()
+            if (insertError?.code === '23505') {
+              result.skipped++
+              continue
+            }
+            if (insertError) throw new Error(insertError.message)
+            result.inserted++
+            result.touched.push(touchedFromPayload(data.id, source.id, 'inserted', payload))
+          }
+          result.wouldInsert++
+          result.wouldInsertList.push(ygNoticePreviewItem(payload))
           continue
         }
 
+        if (existing.content_hash === payload.content_hash) {
+          result.skipped++
+          if (!dryRun) result.touched.push(touchedFromPayload(existing.id, source.id, 'unchanged', payload))
+          continue
+        }
+        const backfill = existing.content_hash === null
         if (!dryRun) {
-          const { data, error: insertError } = await supabase.from('event_candidates')
-            .insert(payload).select('id').single()
-          if (insertError?.code === '23505') {
+          const note = `[${new Date().toISOString()}] content changed after capture`
+          const query = supabase.from('event_candidates').update({
+            content_hash: payload.content_hash,
+            ...(backfill ? {} : {
+              needs_recheck: true,
+              reviewer_note: [existing.reviewer_note, note].filter(Boolean).join('\n'),
+            }),
+          }).eq('id', existing.id)
+          // Guard against another run updating this capture while we were reading it.
+          const { data, error } = await (backfill ? query.is('content_hash', null)
+            : query.eq('content_hash', existing.content_hash)).select('id').maybeSingle()
+          if (error) throw new Error(error.message)
+          if (!data) {
             result.skipped++
             continue
           }
-          if (insertError) throw new Error(insertError.message)
-          result.inserted++
-          result.touched.push(touchedFromPayload(data.id, source.id, 'inserted', payload))
+          result.touched.push(touchedFromPayload(existing.id, source.id, backfill ? 'backfilled_hash' : 'drift', payload))
         }
-        result.wouldInsert++
-        result.wouldInsertList.push(ygNoticePreviewItem(payload))
-        continue
+        if (backfill) result.skipped++
+        else result.recheck++
+      } catch (error) {
+        result.errors.push(`${payload.source_url}：${String(error)}`)
       }
-
-      if (existing.content_hash === payload.content_hash) {
-        result.skipped++
-        if (!dryRun) result.touched.push(touchedFromPayload(existing.id, source.id, 'unchanged', payload))
-        continue
-      }
-      const backfill = existing.content_hash === null
-      if (!dryRun) {
-        const note = `[${new Date().toISOString()}] content changed after capture`
-        const query = supabase.from('event_candidates').update({
-          content_hash: payload.content_hash,
-          ...(backfill ? {} : {
-            needs_recheck: true,
-            reviewer_note: [existing.reviewer_note, note].filter(Boolean).join('\n'),
-          }),
-        }).eq('id', existing.id)
-        // Guard against another run updating this capture while we were reading it.
-        const { data, error } = await (backfill ? query.is('content_hash', null)
-          : query.eq('content_hash', existing.content_hash)).select('id').maybeSingle()
-        if (error) throw new Error(error.message)
-        if (!data) {
-          result.skipped++
-          continue
-        }
-        result.touched.push(touchedFromPayload(existing.id, source.id, backfill ? 'backfilled_hash' : 'drift', payload))
-      }
-      if (backfill) result.skipped++
-      else result.recheck++
-    } catch (error) {
-      result.errors.push(`${payload.source_url}：${String(error)}`)
     }
+    return finish(result.errors.length ? 'partial_error' : 'success')
+  } catch (error) {
+    result.status = 500
+    result.errors.push(error instanceof Error ? error.message : String(error))
+    return finish('error')
   }
-  return finish(result.errors.length ? 'partial_error' : 'success')
 }

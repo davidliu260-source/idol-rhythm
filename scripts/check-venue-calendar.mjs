@@ -47,7 +47,7 @@ function statusUpdate(table, patch, writes) {
       assert.equal(column, 'id')
       assert.ok(Number.isFinite(Date.parse(patch.last_run_at)))
       writes.push({ id, status: patch.last_status, error: patch.last_error })
-      return { error: null }
+      return { count: 1, error: null }
     },
   }
 }
