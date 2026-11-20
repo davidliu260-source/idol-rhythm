@@ -10,7 +10,7 @@ import {
 } from '@/lib/crawlers/runActiveCrawlerSources'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 300
+export const maxDuration = 300 // 與 runActiveCrawlerSources 的時間守門一致
 
 interface CronOkResponse {
   ok: true
@@ -64,6 +64,7 @@ type CronResponse = CronOkResponse | CronErrResponse
 export async function GET(
   request: NextRequest,
 ): Promise<NextResponse<CronResponse>> {
+  const startedAt = Date.now()
   const dryRun = request.nextUrl.searchParams.get('dryRun') === '1'
   const mode: 'insert' | 'dry-run' = dryRun ? 'dry-run' : 'insert'
 
@@ -112,6 +113,7 @@ export async function GET(
 
   const { result, error } = await runActiveCrawlerSources(supabase, {
     dryRun,
+    startedAt,
     trigger: 'vercel-cron',
   })
   if (!result) {

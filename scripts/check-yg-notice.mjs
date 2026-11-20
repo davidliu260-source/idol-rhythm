@@ -186,17 +186,27 @@ if (process.argv.includes('--dry-run')) {
     }
   })
 
-  test('omitted dryRun previews with no writes and checks candidates and draft events', async (t) => {
+  test('omitted dryRun writes only source status and checks candidates and draft events', async (t) => {
     t.mock.timers.enable({ apis: ['Date'], now: new Date('2026-11-19T04:00:00Z') })
     const list = fixture('p1')
       .replace(/<li>\s*<a href="\/ko\/news\/notice\/(?!5890\b)\d+"[\s\S]*?<\/li>/g, '')
       .replace(/<a class="next page-numbers"[^>]*><\/a>/, '')
     t.mock.method(globalThis, 'fetch', async (url) => new Response(url.endsWith('page=1') ? list : fixture('5890')))
     const queried = []
+    const writes = []
     const supabase = {
       from(table) {
         let field
         const query = {
+          update(patch, options) {
+            assert.equal(table, 'crawler_sources')
+            assert.deepEqual(options, { count: 'exact' })
+            return { eq: async (column, id) => {
+              assert.equal(column, 'id')
+              writes.push([id, patch.last_status, patch.last_error])
+              return { count: 1, error: null }
+            } }
+          },
           select() { return query },
           eq(column) { field = column; return query },
           in() { return query },
@@ -218,6 +228,7 @@ if (process.argv.includes('--dry-run')) {
       },
     }
     const result = await runYgNoticeFetcher(supabase, { sourceKey: YG_NOTICE_SOURCE_KEY })
+    assert.deepEqual(writes, [[source.id, 'success', null]])
     assert.equal(result.mode, 'dry-run')
     assert.equal(result.skipped_existing_event, 2)
     assert.equal(result.wouldInsert, 0)

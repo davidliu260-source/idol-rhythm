@@ -11,6 +11,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export const LAST_ERROR_MAX_LEN = 2000
+export const STATUS_WRITE_ERROR_PREFIX = 'crawler_sources 狀態寫入失敗'
 
 export type SourceTypeEnum =
   | 'official_sns'
@@ -46,7 +47,10 @@ export interface CrawlerSourceRow {
 export async function getCrawlerSourceByKey(
   supabase: SupabaseClient,
   key: string,
-): Promise<{ source: CrawlerSourceRow | null; error: string | null }> {
+): Promise<
+  | { source: CrawlerSourceRow; error: null; configType: string }
+  | { source: null; error: string; configType?: never }
+> {
   const { data, error } = await supabase
     .from('crawler_sources')
     .select(
@@ -71,12 +75,12 @@ export async function getCrawlerSourceByKey(
   return {
     source: { ...row, config: row.config ?? {} },
     error: null,
+    configType: row.config == null ? 'null' : Array.isArray(row.config) ? 'array' : typeof row.config,
   }
 }
 
 /**
- * Updates crawler_sources status columns. Failures here are non-fatal —
- * the fetcher result is already determined; we only log to console.
+ * Updates crawler_sources status columns and returns a diagnostic on failure.
  *
  * The migration 020 column-level GRANT confines this to
  * (last_run_at, last_status, last_error, updated_at) so RLS / GRANT
@@ -86,7 +90,7 @@ export async function updateRunStatus(
   supabase: SupabaseClient,
   crawlerSourceId: string,
   patch: { last_status: RunStatus; last_error: string | null },
-): Promise<void> {
+): Promise<string | null> {
   const now = new Date().toISOString()
   const trimmed =
     patch.last_error && patch.last_error.length > LAST_ERROR_MAX_LEN
@@ -94,18 +98,25 @@ export async function updateRunStatus(
       : patch.last_error
 
   try {
-    const { error } = await supabase
+    const { count, error } = await supabase
       .from('crawler_sources')
       .update({
         last_run_at: now,
         last_status: patch.last_status,
         last_error: trimmed,
         updated_at: now,
-      })
+      }, { count: 'exact' })
       .eq('id', crawlerSourceId)
 
     if (error) throw error
+    if (count !== 1) throw new Error(`預期更新 1 列，實際更新 ${count ?? '未知'} 列`)
+    return null
   } catch (error) {
-    console.warn('crawler_sources: status update failed', error)
+    const detail = error && typeof error === 'object' && 'message' in error
+      ? String(error.message)
+      : String(error)
+    const message = `${STATUS_WRITE_ERROR_PREFIX}（crawlerSourceId=${crawlerSourceId}）：${detail}`
+    console.error(message, error)
+    return message
   }
 }
