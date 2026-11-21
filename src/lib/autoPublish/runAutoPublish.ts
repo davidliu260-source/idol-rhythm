@@ -4,6 +4,7 @@ import { inferEventType } from './inferEventType'
 import type { InferRule } from './inferEventType'
 import { resolveCandidateLocation, planLocationFill, buildAutofillMetaEntry, appendAutofillMeta } from './locationFill'
 import type { FillColumn, LocationGuards, AutofillMetaEntry } from './locationFill'
+import { normalizeCrawledEvent } from '../crawlers/taiwanEventCleanup'
 import type { TouchedCandidate } from '../crawlers/touchedCandidate'
 
 export interface CandidateRow extends CandidateInput {
@@ -50,7 +51,7 @@ export interface AutoPublishRunReport {
   ran: boolean; switch: 'on' | 'off' | 'read_error'
   reason?: 'switch_off' | 'switch_read_error' | 'context_error' | 'crawler_dry_run' | 'exception'
   ruleVersion: 't34-v1'; touched: number; evaluated: number
-  created: Array<{ candidateId: string; eventId: string; trustLevel: PublishTrustLevel; locationPending: boolean; typeRule: InferRule }>
+  created: Array<{ candidateId: string; eventId: string; trustLevel: PublishTrustLevel; locationPending: boolean; typeRule: InferRule; cleanupRules?: string[] }>
   publishedExisting: Array<{ candidateId: string; eventId: string; trustLevel: PublishTrustLevel; filledFields: FillColumn[] }>
   locationFilled: Array<{ candidateId: string; eventId: string; fields: Partial<Record<FillColumn, string>> }>
   parked: Partial<Record<ParkReason, number>>; skipped: Record<string, number>
@@ -140,9 +141,19 @@ export async function runAutoPublish(store: AutoPublishStore, input: { touched: 
         if (!inferred.type) { error('event_type', inferred.rule); continue }
         const resolved = location()
         const fields = resolved ? planLocationFill({}, resolved.location)?.fields ?? {} : {}
+        const normalized = normalizeCrawledEvent({
+          rawTitle: c.raw_title!,
+          sourceName: c.source_name ?? ctx.crawlerSources.find(s => s.id === d.crawlerSourceId)?.name,
+          venueName: fields.venue_name ?? c.detected_venue_name,
+          locationText: c.location_name_zh,
+          city: fields.city,
+          type: inferred.type,
+          subType: inferred.subType,
+        })
+        if (!fields.city && normalized.city) fields.city = normalized.city
         const hasLocation = Object.keys(fields).length > 0
         const row: DraftEventInsert = {
-          idol_id: c.detected_idol_id!, idol_name: idolNames.get(c.detected_idol_id!) ?? '', title: c.raw_title!, type: inferred.type, sub_type: inferred.subType,
+          idol_id: c.detected_idol_id!, idol_name: idolNames.get(c.detected_idol_id!) ?? '', title: normalized.title, type: normalized.type ?? inferred.type, sub_type: normalized.subType,
           status: 'confirmed', trust_level: d.trustLevel,
           date: (c.detected_start_date ?? c.detected_date)!, start_date: (c.detected_start_date ?? c.detected_date)!, end_date: c.detected_end_date ?? null, date_label: c.detected_date_label ?? null,
           time: null, country: '', country_flag: '', location: null, description: null,
@@ -162,7 +173,7 @@ export async function runAutoPublish(store: AutoPublishStore, input: { touched: 
         step = 'publish'
         if (!requireResult(await safe(() => store.publishEvent(eventId!, publishBase(d.trustLevel), {}))).updated) { error(step, 'event state changed'); continue }
         handledEventIds.add(eventId)
-        report.created.push({ candidateId: c.id, eventId, trustLevel: d.trustLevel, locationPending: !hasLocation && !c.location_name_zh?.trim(), typeRule: inferred.rule })
+        report.created.push({ candidateId: c.id, eventId, trustLevel: d.trustLevel, locationPending: !hasLocation && !c.location_name_zh?.trim(), typeRule: inferred.rule, cleanupRules: normalized.rules })
       } else {
         eventId = d.existingEventId
         if (!eventId) { error('get_event', 'missing existing event id'); continue }
