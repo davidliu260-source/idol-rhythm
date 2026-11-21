@@ -169,10 +169,11 @@ export default async function IdolDetailPage({
           />
           {upcoming.length === 0 ? (
             <EmptyState
-              title="目前沒有公開行程"
-              body="這位偶像目前沒有已公開確認的未來活動。"
+              title="還沒有公開行程"
+              body={`${idol.name} 目前沒有公開的未來活動。按上方「追蹤」後，有新活動會出現在首頁「我追蹤的」，登入的話，官方或媒體確認的新活動也會發站內通知；按「訂閱到行事曆」，官方或媒體確認的新活動會自動加進手機行事曆。`}
               href="/schedule"
-              label="看看其他行程"
+              label="看全部行事曆"
+              secondary={{ href: '/idols', label: '逛逛其他偶像' }}
             />
           ) : (
             <div className="space-y-2">
@@ -273,23 +274,33 @@ function EmptyState({
   body,
   href,
   label,
+  secondary,
 }: {
   title: string
   body: string
   href: string
   label: string
+  secondary: { href: string; label: string }
 }) {
   return (
     <div className="rounded-[22px] border border-white/8 bg-black/10 px-4 py-6 text-center">
       <p className="text-base font-semibold text-white">{title}</p>
       <p className="mt-2 text-sm leading-6 text-white/52">{body}</p>
-      <Link
-        href={href}
-        className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-[#ff8bc8]"
-      >
-        {label}
-        <ChevronRight className="h-4 w-4" />
-      </Link>
+      <div className="mt-3 flex flex-wrap justify-center gap-2">
+        <Link
+          href={href}
+          className="inline-flex min-h-[44px] items-center gap-1 rounded-xl bg-white/10 px-4 text-sm font-semibold text-[#ff8bc8] hover:bg-white/15"
+        >
+          {label}
+          <ChevronRight aria-hidden="true" className="h-4 w-4" />
+        </Link>
+        <Link
+          href={secondary.href}
+          className="inline-flex min-h-[44px] items-center rounded-xl border border-white/15 px-4 text-sm font-semibold text-white/80 hover:bg-white/10"
+        >
+          {secondary.label}
+        </Link>
+      </div>
     </div>
   )
 }
