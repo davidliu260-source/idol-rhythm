@@ -1,5 +1,6 @@
 'use server'
 
+import { cleanCrawledTitle, inferTaiwanCity } from '@/lib/crawlers/taiwanEventCleanup'
 import { taipeiToday } from '@/lib/taipeiDate'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
@@ -275,12 +276,19 @@ export async function approveCandidate(id: string): Promise<void> {
     (candidate.detected_date as string | null) ??
     today
 
+  const title = cleanCrawledTitle(candidate.raw_title, { sourceName: candidate.source_name })
+  const city = candidate.detected_city?.trim() ? candidate.detected_city : inferTaiwanCity({
+    title,
+    venueName: candidate.detected_venue_name,
+    locationText: candidate.location_name_zh,
+  }) ?? candidate.detected_city ?? null
+
   const { data: eventData, error: eventError } = await supabase
     .from('events')
     .insert({
       idol_id: idol.id,
       idol_name: idol.name,
-      title: candidate.raw_title,
+      title,
       type: candidate.detected_event_type ?? 'official',
       sub_type: (candidate.detected_event_sub_type as string | null) ?? null,
       status: 'confirmed',
@@ -300,7 +308,7 @@ export async function approveCandidate(id: string): Promise<void> {
       start_date: eventDate,
       end_date: (candidate.detected_end_date as string | null) ?? null,
       date_label: (candidate.detected_date_label as string | null) ?? null,
-      city: (candidate.detected_city as string | null) ?? null,
+      city,
       venue_name: (candidate.detected_venue_name as string | null) ?? null,
       address: (candidate.detected_address as string | null) ?? null,
       map_url: (candidate.detected_map_url as string | null) ?? null,
