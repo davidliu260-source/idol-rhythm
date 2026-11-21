@@ -23,6 +23,7 @@ import {
 import IdolAvatar from '@/components/IdolAvatar'
 import { PAGE_HERO_SHELL } from '@/app/schedule/scheduleTheme'
 import { useAppState } from '@/lib/appState'
+import { reminderTypesLabel } from '@/lib/reminderTypes'
 import { getBrowserSupabaseClient } from '@/lib/supabase/browserClient'
 import { getUnreadNotificationCount } from '@/lib/supabase/notifications'
 import { getEventDateLabel } from '@/lib/eventDisplay'
@@ -242,7 +243,12 @@ export default function MeClient({
             {reminderEvents.length > 0 ? (
               <div className="mt-3 space-y-2">
                 {reminderEvents.slice(0, 2).map((event) => (
-                  <CompactEventLine key={event.id} event={event} tone="violet" />
+                  <CompactEventLine
+                    key={event.id}
+                    event={event}
+                    tone="violet"
+                    reminderLabel={reminderTypesLabel(reminders.getTypes(event.id))}
+                  />
                 ))}
               </div>
             ) : (
@@ -441,9 +447,11 @@ function SectionHeader({
 function CompactEventLine({
   event,
   tone,
+  reminderLabel,
 }: {
   event: Event
   tone: 'pink' | 'violet' | 'slate'
+  reminderLabel?: string | null
 }) {
   const accent =
     tone === 'pink'
@@ -468,6 +476,7 @@ function CompactEventLine({
             {getEventDateLabel(event)}
             {location ? ` · ${location}` : ''}
           </p>
+          {reminderLabel && <p className="mt-1 text-xs text-violet-200">提醒：{reminderLabel}</p>}
         </div>
         <ChevronRight className="mt-1 h-4 w-4 flex-shrink-0 text-white/28" />
       </div>

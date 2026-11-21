@@ -7,6 +7,7 @@ import { Bell, ChevronRight, Heart, LibraryBig, LogIn, Sparkles, Star } from 'lu
 import { type Event } from '@/lib/mockEvents'
 import { getIdolById } from '@/lib/mockIdols'
 import { useAppState } from '@/lib/appState'
+import { reminderTypesLabel } from '@/lib/reminderTypes'
 import IdolAvatar from './IdolAvatar'
 
 // Display caps (per work order)
@@ -144,7 +145,12 @@ export default function HomePersonalized({
         {upcomingReminders.length > 0 ? (
           <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1 -mx-1 px-1">
             {upcomingReminders.map((event) => (
-              <CountdownCard key={event.id} event={event} now={now} />
+              <CountdownCard
+                key={event.id}
+                event={event}
+                now={now}
+                reminderLabel={reminderTypesLabel(reminders.getTypes(event.id))}
+              />
             ))}
           </div>
         ) : (
@@ -254,7 +260,15 @@ function EmptyHint({
   )
 }
 
-function CountdownCard({ event, now }: { event: Event; now: Date }) {
+function CountdownCard({
+  event,
+  now,
+  reminderLabel,
+}: {
+  event: Event
+  now: Date
+  reminderLabel?: string | null
+}) {
   // getIdolById expects slug. rowToEvent (lib/supabase/events.ts) sets
   // event.idolId = slug, and mock events use 'bts' / 'blackpink' etc. So
   // both data sources match. Unknown slugs fall back to a generic gradient.
@@ -279,6 +293,7 @@ function CountdownCard({ event, now }: { event: Event; now: Date }) {
           {event.title}
         </p>
         <p className="text-sm font-black leading-none text-white">{label}</p>
+        {reminderLabel && <p className="text-xs text-violet-200">提醒：{reminderLabel}</p>}
       </div>
     </Link>
   )

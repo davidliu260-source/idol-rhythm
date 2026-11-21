@@ -4,12 +4,21 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   useCallback,
   type ReactNode,
 } from 'react'
 import { MOCK_IDOLS } from './mockIdols'
 import { MOCK_EVENTS } from './mockEvents'
+import {
+  isReminderType,
+  LOCAL_REMINDER_TYPES_KEY,
+  normalizeReminderTypes,
+  parseLocalReminderTypes,
+  planReminderTypeChange,
+  type ReminderType,
+} from './reminderTypes'
 import { getBrowserSupabaseClient } from './supabase/browserClient'
 
 const LEGACY_DEFAULT_FOLLOWING = MOCK_IDOLS.filter((i) => i.following)
@@ -24,8 +33,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 // ─────────────────────────────────────────────────────────────────────────────
 // localStorage-backed Set helper
-// Used for `following` and `reminders` (Milestone 1 keeps these as local-only).
-// Also used as the anon fallback for `favorites`.
+// Used for the anonymous fallbacks for `following` and `favorites`.
 // ─────────────────────────────────────────────────────────────────────────────
 
 function useStoredSet(key: string, defaultIds: string[]) {
@@ -286,136 +294,242 @@ function useFavorites(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Reminders controller (mirrors FavoritesController, backed by reminders table)
-//
-//   mode = 'cloud' when logged in  → reads/writes Supabase reminders
-//   mode = 'local' when anonymous  → reads/writes localStorage
-//
-// Reminders rows have a `type` column ('day_before' / 'week_before' / 'hour_before')
-// with UNIQUE(user_id, event_id, type). The current UI is a simple on/off toggle
-// per event, so we always insert with the DB default ('day_before') and dedupe
-// event_ids on read. A future milestone can expose reminder-type selection.
+// Reminders controller
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface RemindersController {
   ids: string[]
   has: (id: string) => boolean
   toggle: (id: string) => Promise<void> | void
+  getTypes: (id: string) => ReminderType[]
+  setTypes: (id: string, types: ReminderType[]) => Promise<void> | void
   mode: 'cloud' | 'local'
   isLoading: boolean
+}
+
+interface ReminderSnapshot {
+  ids: string[]
+  types: Record<string, ReminderType[]>
+}
+
+const LOCAL_REMINDERS_KEY = 'idol-rhythm:reminders'
+const EMPTY_REMINDERS: ReminderSnapshot = { ids: [], types: {} }
+
+async function fetchReminders(
+  supabase: NonNullable<ReturnType<typeof getBrowserSupabaseClient>>,
+  userId: string,
+): Promise<ReminderSnapshot> {
+  const { data, error } = await supabase
+    .from('reminders')
+    .select('event_id, type')
+    .eq('user_id', userId)
+
+  if (error) throw error
+
+  const byId = new Map<string, ReminderType[]>()
+  for (const { event_id, type } of data ?? []) {
+    const types = byId.get(event_id) ?? []
+    if (isReminderType(type)) types.push(type)
+    byId.set(event_id, types)
+  }
+  return {
+    ids: [...byId.keys()],
+    types: Object.fromEntries([...byId].map(([id, types]) => [id, normalizeReminderTypes(types)])),
+  }
+}
+
+function withReminderTypes(snapshot: ReminderSnapshot, id: string, types: ReminderType[]): ReminderSnapshot {
+  if (types.length > 0) {
+    return {
+      ids: snapshot.ids.includes(id) ? snapshot.ids : [...snapshot.ids, id],
+      types: { ...snapshot.types, [id]: types },
+    }
+  }
+  const nextTypes = { ...snapshot.types }
+  delete nextTypes[id]
+  return { ids: snapshot.ids.filter((eventId) => eventId !== id), types: nextTypes }
 }
 
 function useReminders(
   user: AuthUser | null,
   isUserLoading: boolean,
 ): RemindersController {
-  const local = useStoredSet('idol-rhythm:reminders', [])
-  const [cloudIds, setCloudIds] = useState<string[]>([])
-  const [isCloudLoading, setIsCloudLoading] = useState(false)
+  const userId = user?.id
+  const localRef = useRef(EMPTY_REMINDERS)
+  const [local, setLocal] = useState(EMPTY_REMINDERS)
+  const [localHydrated, setLocalHydrated] = useState(false)
+  const [cloud, setCloud] = useState<{ userId: string; snapshot: ReminderSnapshot } | null>(null)
+  const cloudRef = useRef<{
+    userId: string
+    snapshot: ReminderSnapshot
+    pending: Promise<void>
+    loadFailed: boolean
+  } | null>(null)
 
-  // Fetch the user's reminders whenever the auth user changes.
   useEffect(() => {
-    if (!user) {
-      setCloudIds([])
-      setIsCloudLoading(false)
+    let ids: string[] = []
+    try {
+      const parsed: unknown = JSON.parse(localStorage.getItem(LOCAL_REMINDERS_KEY) ?? '[]')
+      if (Array.isArray(parsed)) ids = parsed.filter((id): id is string => typeof id === 'string')
+    } catch {}
+
+    let types: Record<string, ReminderType[]> = {}
+    try {
+      types = parseLocalReminderTypes(localStorage.getItem(LOCAL_REMINDER_TYPES_KEY))
+    } catch {}
+
+    localRef.current = { ids, types }
+    setLocal(localRef.current)
+    setLocalHydrated(true)
+  }, [])
+
+  useEffect(() => {
+    if (!userId) {
+      setCloud(null)
       return
     }
 
     const supabase = getBrowserSupabaseClient()
-    if (!supabase) return
+    const session = { userId, snapshot: EMPTY_REMINDERS, pending: Promise.resolve(), loadFailed: false }
+    cloudRef.current = session
 
-    let cancelled = false
-    setIsCloudLoading(true)
-
-    supabase
-      .from('reminders')
-      .select('event_id')
-      .eq('user_id', user.id)
-      .then(({ data, error }) => {
-        if (cancelled) return
-        if (error) {
+    if (supabase) {
+      session.pending = fetchReminders(supabase, userId)
+        .then((snapshot) => { session.snapshot = snapshot })
+        .catch((error) => {
+          session.loadFailed = true
           console.error('Failed to load reminders:', error)
-          setCloudIds([])
-        } else if (data) {
-          // Dedupe in case the same event has multiple reminder_type rows.
-          const unique = Array.from(
-            new Set(data.map((row) => row.event_id as string)),
-          )
-          setCloudIds(unique)
-        }
-        setIsCloudLoading(false)
-      })
+        })
+    }
+    void session.pending.then(() => {
+      if (cloudRef.current === session) setCloud({ userId, snapshot: session.snapshot })
+    })
 
     return () => {
-      cancelled = true
+      cloudRef.current = null
     }
-  }, [user])
+  }, [userId])
 
-  const cloudHas = useCallback(
-    (id: string) => cloudIds.includes(id),
-    [cloudIds],
-  )
+  const isLoading = isUserLoading || (userId ? cloud?.userId !== userId : !localHydrated)
+  const snapshot = userId ? (cloud && cloud.userId === userId ? cloud.snapshot : EMPTY_REMINDERS) : local
 
-  const cloudToggle = useCallback(
-    async (id: string) => {
-      if (!user) return
-      const supabase = getBrowserSupabaseClient()
-      if (!supabase) return
+  // An omitted choice means toggle against the latest state.
+  function changeTypes(id: string, requested?: ReminderType[]): Promise<void> | void {
+    if (isLoading) return
 
-      const isSet = cloudIds.includes(id)
-
-      // Optimistic update
-      setCloudIds((prev) =>
-        isSet ? prev.filter((x) => x !== id) : [...prev, id],
-      )
-
-      if (isSet) {
-        // Delete ALL reminder rows for this event (any type). Matches the
-        // current toggle UI semantics: "turn off reminder for this event".
-        const { error } = await supabase
-          .from('reminders')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('event_id', id)
-
-        if (error) {
-          setCloudIds((prev) => (prev.includes(id) ? prev : [...prev, id]))
-          console.error('Failed to delete reminder:', error)
+    if (!userId) {
+      const current = localRef.current
+      const types: ReminderType[] = requested ?? (current.ids.includes(id) ? [] : ['day_before'])
+      const next = withReminderTypes(current, id, types)
+      try {
+        localStorage.setItem(LOCAL_REMINDER_TYPES_KEY, JSON.stringify(next.types))
+        try {
+          localStorage.setItem(LOCAL_REMINDERS_KEY, JSON.stringify(next.ids))
+        } catch {
+          localStorage.setItem(LOCAL_REMINDER_TYPES_KEY, JSON.stringify(current.types))
         }
-      } else {
-        // INSERT with DB default type = 'day_before'. The UNIQUE constraint
-        // (user_id, event_id, type) prevents duplicates on rapid double-click.
-        const { error } = await supabase
-          .from('reminders')
-          .insert({ user_id: user.id, event_id: id })
+      } catch {}
+      localRef.current = next
+      setLocal(next)
+      return
+    }
 
-        if (error) {
-          setCloudIds((prev) => prev.filter((x) => x !== id))
-          console.error('Failed to insert reminder:', error)
+    const session = cloudRef.current
+    const supabase = getBrowserSupabaseClient()
+    if (session?.userId !== userId || !supabase) return
+
+    // Serialize writes and recovery reads so a diff always uses the latest snapshot.
+    session.pending = session.pending.then(async () => {
+      if (cloudRef.current !== session) return
+      if (session.loadFailed) {
+        try {
+          session.snapshot = await fetchReminders(supabase, userId)
+          session.loadFailed = false
+        } catch (error) {
+          console.error('Failed to reload reminders before changing types:', error)
+          return
+        }
+        if (cloudRef.current !== session) return
+        // A quick toggle was based on stale UI state; show the real state and
+        // let the user tap again instead of flipping it the wrong way.
+        if (requested === undefined) {
+          setCloud({ userId, snapshot: session.snapshot })
+          return
         }
       }
-    },
-    [user, cloudIds],
-  )
+      const previous = session.snapshot
+      const isToggle = requested === undefined
+      const next: ReminderType[] = requested ?? (previous.ids.includes(id) ? [] : ['day_before'])
+      const { toInsert, toDelete } = planReminderTypeChange(previous.types[id], next)
 
-  const mode: 'cloud' | 'local' = user ? 'cloud' : 'local'
+      session.snapshot = withReminderTypes(previous, id, next)
+      setCloud({ userId, snapshot: session.snapshot })
 
-  if (mode === 'local') {
-    return {
-      ids: local.ids,
-      has: local.has,
-      toggle: local.toggle,
-      mode,
-      isLoading: isUserLoading,
-    }
+      try {
+        if (next.length === 0) {
+          const { error } = await supabase
+            .from('reminders')
+            .delete()
+            .eq('user_id', userId)
+            .eq('event_id', id)
+          if (error) throw error
+          return
+        }
+
+        if (isToggle) {
+          const { error } = await supabase
+            .from('reminders')
+            .insert({ user_id: userId, event_id: id, type: 'day_before' })
+          if (error && error.code !== '23505') throw error
+          return
+        }
+
+        // Insert individually so a duplicate cannot roll back another new type.
+        for (const type of toInsert) {
+          const { error } = await supabase.from('reminders').insert({ user_id: userId, event_id: id, type })
+          if (error && error.code !== '23505') throw error
+        }
+
+        if (toDelete.length > 0) {
+          const { error } = await supabase
+            .from('reminders')
+            .delete()
+            .eq('user_id', userId)
+            .eq('event_id', id)
+            .in('type', toDelete)
+          if (error) throw error
+        }
+      } catch (error) {
+        console.error('Failed to change reminders:', error)
+        if (cloudRef.current !== session) return
+        try {
+          session.snapshot = await fetchReminders(supabase, userId)
+        } catch (reloadError) {
+          console.error('Failed to reload reminders:', reloadError)
+          session.snapshot = previous
+          // Server state is unknown (e.g. insert succeeded, delete failed):
+          // force a fresh read before the next write computes its diff.
+          session.loadFailed = true
+        }
+        if (cloudRef.current === session) setCloud({ userId, snapshot: session.snapshot })
+      }
+    })
+    return session.pending
   }
 
   return {
-    ids: cloudIds,
-    has: cloudHas,
-    toggle: cloudToggle,
-    mode,
-    isLoading: isUserLoading || isCloudLoading,
+    ids: snapshot.ids,
+    has: (id) => snapshot.ids.includes(id),
+    toggle: (id) => changeTypes(id),
+    getTypes: (id) => {
+      if (!snapshot.ids.includes(id)) return []
+      return Object.prototype.hasOwnProperty.call(snapshot.types, id)
+        ? snapshot.types[id]
+        : userId ? [] : ['day_before']
+    },
+    setTypes: (id, types) => changeTypes(id, normalizeReminderTypes(types)),
+    mode: userId ? 'cloud' : 'local',
+    isLoading,
   }
 }
 
