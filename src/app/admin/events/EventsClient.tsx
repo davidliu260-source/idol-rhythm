@@ -25,6 +25,7 @@ interface AdminEvent {
   isPublished: boolean
   publishedAt: string | null
   sourceCount: number
+  translationFailures: number
 }
 
 // ── Tab filter definitions ───────────────────────────────────────────────────
@@ -471,6 +472,9 @@ function EventRow({
           <span className={`text-[10px] font-medium ${statusColors[event.status] ?? 'text-muted'}`}>
             {event.status}
           </span>
+          {event.translationFailures > 0 && (
+            <span className="text-[10px] text-amber-400">翻譯失敗 {event.translationFailures} 次</span>
+          )}
           <span className={`ml-auto text-[10px] rounded px-1.5 py-0.5 border ${publishedBadgeCls}`}>
             {publishedLabel}
           </span>

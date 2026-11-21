@@ -190,13 +190,10 @@ const TRANSLATION_STATUS_LABELS: Record<string, string> = {
 }
 
 function getEventChineseDisabledReason(event: AdminEventDetail): string | null {
-  if (event.isPublished) {
-    return '已發布活動不支援直接產生繁中欄位'
-  }
   if (event.translationStatus === 'manual' || event.translationStatus === 'reviewed') {
     return '中文欄位已是人工編輯或已審閱狀態，不自動覆蓋'
   }
-  if (event.displayTitleZh || event.displaySummaryZh || event.locationNameZh) {
+  if (event.displayTitleZh?.trim() || event.displaySummaryZh?.trim() || event.locationNameZh?.trim()) {
     return '已有中文顯示欄位，第一版不支援覆蓋既有內容'
   }
   return null
@@ -448,16 +445,16 @@ export default async function AdminEventDetailPage({
           event.displaySummaryZh ||
           event.locationNameZh ||
           event.translationStatus !== 'none' ||
-          (isAdmin && !event.isPublished)) && (
+          isAdmin) && (
           <div className="rounded-xl bg-card border border-card-border px-4 py-4 flex flex-col gap-3">
             <p className="text-xs font-semibold text-muted uppercase tracking-wide">中文顯示</p>
-            {isAdmin && !event.isPublished && (
+            {isAdmin && (
               <>
                 <GenerateChineseButton
                   eventId={event.id}
                   disabledReason={chineseDisabledReason}
                 />
-                {event.translationStatus === 'machine' && (
+                {!event.isPublished && event.translationStatus === 'machine' && (
                   <MarkReviewedButton
                     eventId={event.id}
                     disabledReason={reviewedDisabledReason}
