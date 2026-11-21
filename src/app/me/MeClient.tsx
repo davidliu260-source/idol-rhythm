@@ -29,6 +29,7 @@ import { getUnreadNotificationCount } from '@/lib/supabase/notifications'
 import { getEventDateLabel } from '@/lib/eventDisplay'
 import type { Idol } from '@/lib/mockIdols'
 import type { Event } from '@/lib/mockEvents'
+import CalendarFeedCard from './CalendarFeedCard'
 
 const MAX_FOLLOWING = 6
 const MAX_FAVORITES = 4
@@ -129,6 +130,7 @@ export default function MeClient({
             登入 / 註冊
           </Link>
         </section>
+        <CalendarFeedCard />
       </ConsoleShell>
     )
   }
@@ -259,6 +261,8 @@ export default function MeClient({
           </div>
         </div>
       </section>
+
+      <CalendarFeedCard key={user.id} />
 
       <section className="rounded-[26px] border border-white/8 bg-white/[0.035] p-5">
         <SectionHeader

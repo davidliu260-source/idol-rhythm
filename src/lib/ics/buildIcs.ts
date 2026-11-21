@@ -34,7 +34,18 @@ function addDays(date: string, days: number): string {
   return parsed.toISOString().slice(0, 10).replace(/-/g, '')
 }
 
-export function buildIcs(idolName: string, events: Event[], origin: string): string {
+const calendarAlarms = [
+  { setting: 'day_before', trigger: '-P1D', label: '明天' },
+  { setting: 'week_before', trigger: '-P7D', label: '一週後' },
+] as const
+
+export function buildIcs(
+  idolName: string,
+  events: Event[],
+  origin: string,
+  options?: { calendarName?: string; alarms?: readonly ('day_before' | 'week_before')[] },
+): string {
+  const alarms = calendarAlarms.filter(({ setting }) => options?.alarms?.includes(setting))
   const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
   const lines = [
     'BEGIN:VCALENDAR',
@@ -42,7 +53,7 @@ export function buildIcs(idolName: string, events: Event[], origin: string): str
     'PRODID:-//Idol Rhythm//ZH-TW',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
-    `X-WR-CALNAME:${escapeText(`${idolName} 行程｜星動時刻`)}`,
+    `X-WR-CALNAME:${escapeText(options?.calendarName ?? `${idolName} 行程｜星動時刻`)}`,
   ]
 
   for (const event of events) {
@@ -73,8 +84,17 @@ export function buildIcs(idolName: string, events: Event[], origin: string): str
       `DESCRIPTION:${escapeText(description)}`,
       `URL:${origin}/events/${event.id}`,
       `STATUS:${event.status === 'confirmed' ? 'CONFIRMED' : 'TENTATIVE'}`,
-      'END:VEVENT',
     )
+    for (const { trigger, label } of alarms) {
+      lines.push(
+        'BEGIN:VALARM',
+        'ACTION:DISPLAY',
+        `TRIGGER:${trigger}`,
+        `DESCRIPTION:${escapeText(`${label}：${event.title}`)}`,
+        'END:VALARM',
+      )
+    }
+    lines.push('END:VEVENT')
   }
 
   lines.push('END:VCALENDAR')

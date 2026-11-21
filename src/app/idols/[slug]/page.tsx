@@ -94,6 +94,9 @@ export default async function IdolDetailPage({
             <div className="mt-5">
               <FollowIdolButton idolSlug={idol.id} idolName={idol.name} />
               <SubscribeCalendarButton slug={slug} />
+              <Link href="/me" className="inline-flex min-h-11 items-center text-xs text-white/70 hover:text-white">
+                想一次訂閱所有追蹤的偶像？到「追蹤」頁
+              </Link>
             </div>
           </div>
         </section>
