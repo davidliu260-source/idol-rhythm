@@ -78,8 +78,10 @@ check('提醒寫入與快速開關', () => {
   assert.doesNotMatch(appState, /from\('reminders'\)[\s\S]{0,200}\.update\(/)
   assert.match(appState, /from\('reminders'\)\s*\.insert\(\{ user_id: userId, event_id: id, type: 'day_before' \}\)/)
   assert.match(read('src/components/EventCard.tsx'), /reminders\.toggle\(/)
-  // ScheduleTrackCard 只顯示「提醒中」標籤（沒有快速開關），本票不改它
-  assert.match(read('src/app/schedule/ScheduleTrackCard.tsx'), /reminders\.has\(/)
+  // B2v2 版型改寫了 ScheduleTrackCard，但提醒仍只顯示狀態（沒有快速開關），維持原行為。
+  const schedule = read('src/app/schedule/ScheduleTrackCard.tsx')
+  assert.match(schedule, /reminders\.has\(event\.id\)/)
+  assert.doesNotMatch(schedule, /reminders\.toggle\(/)
 })
 
 check('cron 支援前一週，067 之後只允許 calendar feed migration', () => {
@@ -101,7 +103,6 @@ check('提醒、單一偶像 ICS 與既有 migrations 維持 merge-base 版本',
       'src/app/api/cron',
       'src/app/api/ics/idols',
       'src/lib/reminderDispatch.ts',
-      'src/app/schedule/ScheduleTrackCard.tsx',
       'supabase/migrations',
       ':(exclude)supabase/migrations/068_calendar_feed_tokens.sql',
     ], { cwd: repoRoot }),

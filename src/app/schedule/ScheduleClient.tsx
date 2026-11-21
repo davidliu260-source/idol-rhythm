@@ -1,17 +1,15 @@
 'use client'
 
-import { getEventLocationLabel } from '@/lib/eventLocation'
-import { isEventOnDay, taipeiToday, toDateKey } from '@/lib/taipeiDate'
-import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, Clock3, Heart, ListFilter, MapPin, Search, Waves, X } from 'lucide-react'
+import { isEventOnDay, taipeiToday } from '@/lib/taipeiDate'
+import { type ReactNode, useEffect, useMemo, useState } from 'react'
+import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ListFilter, Search, Waves, X } from 'lucide-react'
 import clsx from 'clsx'
-import IdolAvatar from '@/components/IdolAvatar'
 import type { Event } from '@/lib/mockEvents'
 import { formatEventDate, EVENT_SUBTYPE_LABELS } from '@/lib/mockEvents'
 import type { EventSubType } from '@/lib/types'
-import { getEventDateLabel } from '@/lib/eventDisplay'
-import { useAppState } from '@/lib/appState'
+import { groupScheduleEvents } from '@/lib/scheduleGroups'
 import { listCurrentEvents } from '@/lib/upcomingEvents'
+import { useAppState } from '@/lib/appState'
 import ScheduleTrackCard from './ScheduleTrackCard'
 
 interface Props {
@@ -130,10 +128,10 @@ function ViewToggleButton({
     <button
       onClick={onClick}
       className={clsx(
-        'inline-flex flex-1 items-center justify-center gap-1.5 rounded-[14px] px-3 py-2.5 text-xs font-semibold transition-all',
+        'inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[14px] px-3 py-2.5 text-xs font-semibold transition-all',
         active
-          ? 'bg-[#ff4fa8] text-white shadow-[0_8px_30px_rgba(255,79,168,0.35)]'
-          : 'text-white/46 hover:text-white/76',
+          ? 'bg-[#ff4fa8] text-[#230e1c] shadow-[0_8px_30px_rgba(255,79,168,0.35)]'
+          : 'text-white/70 hover:text-white',
       )}
     >
       {icon}
@@ -210,7 +208,8 @@ function MonthGroup({
       <button
         type="button"
         onClick={onToggle}
-        className="mb-3 flex w-full items-center justify-between gap-3 rounded-[22px] border border-white/8 bg-white/[0.035] px-3 py-3 text-left transition-colors hover:bg-white/[0.055]"
+        aria-expanded={expanded}
+        className="mb-3 flex min-h-11 w-full items-center justify-between gap-3 rounded-[22px] border border-white/8 bg-white/[0.035] px-3 py-3 text-left transition-colors hover:bg-white/[0.055]"
       >
         <div className="flex min-w-0 items-center gap-3">
           <div className="min-w-0">
@@ -220,144 +219,25 @@ function MonthGroup({
         </div>
         <div className="flex items-center gap-2">
           <span className="rounded-full border border-[#ff6dbd24] bg-[#ff63bd10] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#ff8ecf]">
-            {group.events.length} 場
+            {group.count} 場
           </span>
           <ChevronDown className={clsx('h-4 w-4 text-white/45 transition-transform', expanded && 'rotate-180')} />
         </div>
       </button>
       {expanded && (
         <div className="flex flex-col gap-2">
-          {group.events.map((event) => (
-            <TrackDisclosure
-              key={event.id}
-              event={event}
-            />
+          {group.days.map(day => (
+            <div key={day.date} className="space-y-2">
+              <div className="flex items-center justify-between px-1 pt-1 text-sm font-semibold text-white/85">
+                <time dateTime={day.date}>{formatEventDate(day.date)}</time>
+                <span className="text-xs text-[#ff9ad4]">{day.count} 場</span>
+              </div>
+              {day.groups.map(group => <ScheduleTrackCard key={group.idolId} events={group.events} />)}
+            </div>
           ))}
         </div>
       )}
     </section>
-  )
-}
-
-function TrackDisclosure({
-  event,
-}: {
-  event: Event
-}) {
-  const { favorites } = useAppState()
-  const [expanded, setExpanded] = useState(false)
-  const [expandedVisible, setExpandedVisible] = useState(false)
-  const collapseTimerRef = useRef<number | null>(null)
-  const isFavorited = favorites.has(event.id)
-  const dateLabel = getEventDateLabel(event)
-  const placeLabel = getEventLocationLabel(event)
-
-  useEffect(() => {
-    return () => {
-      if (collapseTimerRef.current !== null) {
-        window.clearTimeout(collapseTimerRef.current)
-      }
-    }
-  }, [])
-
-  function toggleFavorite(e: React.MouseEvent<HTMLButtonElement>) {
-    e.stopPropagation()
-    favorites.toggle(event.id)
-  }
-
-  function toggleExpanded() {
-    if (collapseTimerRef.current !== null) {
-      window.clearTimeout(collapseTimerRef.current)
-      collapseTimerRef.current = null
-    }
-    setExpanded(true)
-    window.requestAnimationFrame(() => {
-      setExpandedVisible(true)
-    })
-  }
-
-  function collapseExpandedCard() {
-    setExpandedVisible(false)
-    collapseTimerRef.current = window.setTimeout(() => {
-      setExpanded(false)
-      collapseTimerRef.current = null
-    }, 180)
-  }
-
-  function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      toggleExpanded()
-    }
-  }
-
-  return (
-    <div className="flex flex-col gap-2">
-      {expanded ? (
-        <div
-          className={clsx(
-            'origin-top transition-all duration-200 ease-out',
-            expandedVisible ? 'scale-100 opacity-100' : 'scale-[0.98] opacity-0',
-          )}
-        >
-          <ScheduleTrackCard
-            event={event}
-            onCollapse={collapseExpandedCard}
-          />
-        </div>
-      ) : (
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={toggleExpanded}
-          onKeyDown={handleKeyDown}
-          className="group flex w-full cursor-pointer items-center gap-3 rounded-[18px] border border-white/8 bg-white/[0.028] px-3 py-2.5 text-left transition-all hover:border-[#ff63bd]/18 hover:bg-white/[0.045] active:scale-[0.99]"
-        >
-          <div className="rounded-[14px] border border-white/8 bg-white/[0.035] p-1">
-            <IdolAvatar
-              name={event.idolName}
-              avatarUrl={event.idolAvatarUrl}
-              color={idolPrimaryColor(event.idolId)}
-              size="sm"
-              className="rounded-[10px]"
-            />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 items-center gap-2">
-              <span className="truncate text-[12px] font-semibold text-[#ff73c1]">{event.idolName}</span>
-            </div>
-            <p className="mt-0.5 line-clamp-1 text-[14px] font-semibold leading-5 text-white/88">
-              {event.title}
-            </p>
-            <div className="mt-1 flex min-w-0 items-center gap-2 text-[10px] text-white/42">
-              <span className="inline-flex items-center gap-1">
-                <Clock3 className="h-3 w-3 text-[#ff92c7]" />
-                {dateLabel}
-              </span>
-              {placeLabel && (
-                <span className="inline-flex min-w-0 items-center gap-1">
-                  <MapPin className="h-3 w-3" />
-                  <span className="truncate">{placeLabel}</span>
-                </span>
-              )}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={toggleFavorite}
-            aria-label={isFavorited ? '取消收藏' : '收藏'}
-            className={clsx(
-              'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border transition-all',
-              isFavorited
-                ? 'border-[#ff5db7]/30 bg-[#ff5db7]/18 text-[#ff78c4] shadow-[0_0_18px_rgba(255,93,183,0.22)]'
-                : 'border-white/8 bg-white/[0.03] text-white/36 group-hover:text-white/65',
-            )}
-          >
-            <Heart className={clsx('h-4 w-4', isFavorited && 'fill-current')} />
-          </button>
-        </div>
-      )}
-    </div>
   )
 }
 
@@ -404,20 +284,20 @@ function CalendarView({
       <div className="flex items-center justify-between rounded-[22px] border border-white/8 bg-white/[0.03] px-3 py-3">
         <button
           onClick={goPrev}
-          className="rounded-full border border-white/8 bg-white/[0.03] p-2 text-white/56 active:opacity-70 transition-opacity"
+          className="rounded-full border border-white/8 bg-white/[0.03] grid h-11 w-11 place-items-center text-white/70 active:opacity-70 transition-opacity"
           aria-label="上一個月"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
         <button
           onClick={goToday}
-          className="text-sm font-semibold text-white hover:text-[#ff8fd1] transition-colors"
+          className="min-h-11 px-3 text-sm font-semibold text-white hover:text-[#ff8fd1] transition-colors"
         >
           {monthLabel}
         </button>
         <button
           onClick={goNext}
-          className="rounded-full border border-white/8 bg-white/[0.03] p-2 text-white/56 active:opacity-70 transition-opacity"
+          className="rounded-full border border-white/8 bg-white/[0.03] grid h-11 w-11 place-items-center text-white/70 active:opacity-70 transition-opacity"
           aria-label="下一個月"
         >
           <ChevronRight className="h-4 w-4" />
@@ -438,71 +318,75 @@ function CalendarView({
         </div>
       )}
 
-      {/* Weekday header */}
-      <div className="grid grid-cols-7 gap-1 text-center">
-        {WEEKDAY_LABELS.map((w, i) => (
-          <span
-            key={w}
-            className={clsx(
-              'text-[10px] font-semibold',
-              i === 0 || i === 6 ? 'text-[#ff8dce]/65' : 'text-white/38',
-            )}
-          >
-            {w}
-          </span>
-        ))}
-      </div>
-
-      {/* Day grid */}
-      <div className="grid grid-cols-7 gap-1 rounded-[24px] border border-white/8 bg-white/[0.025] p-2">
-        {cells.map((cell) => {
-          const key = dayKey(cell.date)
-          const dayEvents = eventsByDay.get(key) ?? []
-          const savedCount = dayEvents.filter((e) => favorites.has(e.id)).length
-          const isSelected = selectedDate ? sameDay(selectedDate, cell.date) : false
-          const isToday = sameDay(today, cell.date)
-          const hasEvents = dayEvents.length > 0
-
-          return (
-            <button
-              key={key}
-              onClick={() => setSelectedDate(cell.date)}
-              className={clsx(
-                'relative aspect-square rounded-[16px] border flex flex-col items-center justify-center gap-1 transition-colors active:opacity-70',
-                isSelected
-                  ? 'border-[#ff63bd]/45 bg-[#ff63bd]/14 shadow-[0_0_18px_rgba(255,99,189,0.15)]'
-                  : isToday
-                    ? 'border-[#ff63bd]/28 bg-white/[0.05]'
-                    : 'border-white/6 bg-white/[0.02]',
-                cell.isCurrentMonth ? '' : 'opacity-30',
-              )}
-            >
+      <div className="overflow-x-auto">
+        <div className="min-w-[322px]">
+          {/* Weekday header */}
+          <div className="mb-1 grid grid-cols-7 gap-0.5 px-px text-center">
+            {WEEKDAY_LABELS.map((w, i) => (
               <span
+                key={w}
                 className={clsx(
-                  'text-xs font-semibold tabular-nums',
-                  isToday ? 'text-[#ff94d3]' : 'text-white',
+                  'text-[10px] font-semibold',
+                  i === 0 || i === 6 ? 'text-[#ff8dce]/65' : 'text-white/38',
                 )}
               >
-                {cell.date.getDate()}
+                {w}
               </span>
-              {hasEvents && (
-                <div className="flex items-center gap-0.5">
-                  {savedCount > 0 && (
-                    <span className="h-1 w-1 rounded-full bg-[#ff63bd]" />
+            ))}
+          </div>
+
+          {/* Day grid */}
+          <div className="grid grid-cols-7 gap-0.5 rounded-2xl border border-white/8 bg-white/[0.025]">
+            {cells.map((cell) => {
+              const key = dayKey(cell.date)
+              const dayEvents = eventsByDay.get(key) ?? []
+              const savedCount = dayEvents.filter((e) => favorites.has(e.id)).length
+              const isSelected = selectedDate ? sameDay(selectedDate, cell.date) : false
+              const isToday = sameDay(today, cell.date)
+              const hasEvents = dayEvents.length > 0
+
+              return (
+                <button
+                  key={key}
+                  onClick={() => setSelectedDate(cell.date)}
+                  className={clsx(
+                    'relative min-h-11 min-w-11 aspect-square rounded-[16px] border flex flex-col items-center justify-center gap-1 transition-colors active:opacity-70',
+                    isSelected
+                      ? 'border-[#ff63bd]/45 bg-[#ff63bd]/14 shadow-[0_0_18px_rgba(255,99,189,0.15)]'
+                      : isToday
+                        ? 'border-[#ff63bd]/28 bg-white/[0.05]'
+                        : 'border-white/6 bg-white/[0.02]',
+                    cell.isCurrentMonth ? '' : 'opacity-30',
                   )}
-                  {dayEvents.length > savedCount && (
-                    <span className="h-1 w-1 rounded-full bg-white/36" />
+                >
+                  <span
+                    className={clsx(
+                      'text-xs font-semibold tabular-nums',
+                      isToday ? 'text-[#ff94d3]' : 'text-white',
+                    )}
+                  >
+                    {cell.date.getDate()}
+                  </span>
+                  {hasEvents && (
+                    <div className="flex items-center gap-0.5">
+                      {savedCount > 0 && (
+                        <span className="h-1 w-1 rounded-full bg-[#ff63bd]" />
+                      )}
+                      {dayEvents.length > savedCount && (
+                        <span className="h-1 w-1 rounded-full bg-white/36" />
+                      )}
+                      {dayEvents.length > 2 && (
+                        <span className="ml-0.5 text-[8px] leading-none text-white/45">
+                          +{dayEvents.length}
+                        </span>
+                      )}
+                    </div>
                   )}
-                  {dayEvents.length > 2 && (
-                    <span className="ml-0.5 text-[8px] leading-none text-white/45">
-                      +{dayEvents.length}
-                    </span>
-                  )}
-                </div>
-              )}
-            </button>
-          )
-        })}
+                </button>
+              )
+            })}
+          </div>
+        </div>
       </div>
 
       {/* Selected day events */}
@@ -513,21 +397,14 @@ function CalendarView({
               {formatEventDate(dayKey(selectedDate))}
               {selectedEvents.length > 0 && `（${selectedEvents.length} 筆）`}
             </p>
-            <span className="rounded-full border border-white/8 bg-white/[0.035] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.22em] text-white/34">
-              day select
-            </span>
           </div>
         )}
         {selectedDate && selectedEvents.length === 0 && (
           <p className="rounded-[18px] border border-white/8 bg-white/[0.02] py-4 text-center text-xs text-white/38">該日無活動</p>
         )}
-        {selectedEvents.map((event) => (
-          <ScheduleTrackCard
-            key={event.id}
-            event={event}
-            compact
-          />
-        ))}
+        {groupScheduleEvents(selectedEvents).flatMap(day =>
+          day.groups.map(group => <ScheduleTrackCard key={`${day.date}/${group.idolId}`} events={group.events} />),
+        )}
         {!selectedDate && (
           <p className="rounded-[18px] border border-white/8 bg-white/[0.02] py-4 text-center text-xs text-white/38">
             {events.length === 0 ? '沒有符合條件的活動' : '點選日期查看當天活動'}
@@ -605,14 +482,14 @@ function ScheduleSearchPanel({
           value={searchQuery}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder="搜尋藝人、活動、場地、城市"
-          className="h-11 w-full rounded-[18px] border border-white/8 bg-white/[0.04] pl-9 pr-10 text-sm font-medium text-white outline-none transition-colors placeholder:text-white/30 focus:border-[#ff63bd]/38 focus:bg-white/[0.06]"
+          className="h-11 w-full rounded-[18px] border border-white/8 bg-white/[0.04] pl-9 pr-12 text-sm font-medium text-white outline-none transition-colors placeholder:text-white/30 focus:border-[#ff63bd]/38 focus:bg-white/[0.06]"
         />
         {searchQuery.trim() && (
           <button
             type="button"
             onClick={() => onSearchChange('')}
             aria-label="清除搜尋"
-            className="absolute right-2.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-white/8 bg-white/[0.04] text-white/45"
+            className="absolute right-0 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/8 bg-white/[0.04] text-white/45"
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -623,7 +500,7 @@ function ScheduleSearchPanel({
         <div className="mb-2 flex items-center justify-between gap-3">
           <div className="inline-flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.22em] text-white/34">
             <ListFilter className="h-3 w-3 text-[#ff8ecf]" />
-            activity filter
+            活動篩選
           </div>
           <div className="text-[10px] font-medium text-white/32">
             {resultCount} / {totalCount} 筆
@@ -635,7 +512,7 @@ function ScheduleSearchPanel({
               key={category.id}
               onClick={() => onCategoryChange(category.id)}
               className={clsx(
-                'rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all',
+                'min-h-11 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all',
                 activeCategory === category.id
                   ? 'border-[#ff63bd]/30 bg-[#ff63bd]/16 text-[#ff94d3] shadow-[0_0_20px_rgba(255,99,189,0.12)]'
                   : 'border-white/8 bg-white/[0.03] text-white/52',
@@ -658,7 +535,8 @@ function ScheduleSearchPanel({
 interface MonthEventGroup {
   key: string
   label: string
-  events: Event[]
+  days: ReturnType<typeof groupScheduleEvents<Event>>
+  count: number
 }
 
 function matchesScheduleCategory(event: Event, category: ScheduleCategory): boolean {
@@ -709,27 +587,19 @@ function matchesScheduleCategory(event: Event, category: ScheduleCategory): bool
 function buildMonthGroups(events: Event[]): MonthEventGroup[] {
   const groups = new Map<string, MonthEventGroup>()
 
-  for (const event of events) {
-    const date = toDateKey(event.date)
-    if (date === null) continue
-    const key = date.slice(0, 7)
+  for (const day of groupScheduleEvents(events)) {
+    const key = day.date.slice(0, 7)
     const [year, month] = key.split('-')
-    const label = `${year} 年 ${Number(month)} 月`
     const group = groups.get(key)
-    if (group) group.events.push(event)
-    else groups.set(key, { key, label, events: [event] })
+    if (group) {
+      group.days.push(day)
+      group.count += day.count
+    } else {
+      groups.set(key, { key, label: `${year} 年 ${Number(month)} 月`, days: [day], count: day.count })
+    }
   }
 
   return Array.from(groups.values())
-    .map((group) => ({
-      ...group,
-      events: [...group.events].sort(sortEventsByDate),
-    }))
-    .sort((a, b) => sortEventsByDate(a.events[0], b.events[0]))
-}
-
-function sortEventsByDate(a: Event, b: Event): number {
-  return new Date(a.date).getTime() - new Date(b.date).getTime()
 }
 
 function getEmptyStateMessage(category: ScheduleCategory, searchQuery: string): string {
@@ -791,31 +661,4 @@ function matchesPlatformKeyword(event: Event, keyword: 'youtube' | 'netflix'): b
 
 function normalizeSearch(value: string): string {
   return value.trim().toLowerCase()
-}
-
-function idolPrimaryColor(idolId: string): string {
-  switch (idolId) {
-    case 'bts':
-      return '#8b5cf6'
-    case 'blackpink':
-      return '#ec4899'
-    case 'aespa':
-      return '#7c3aed'
-    case 'newjeans':
-      return '#14b8a6'
-    case 'stray-kids':
-      return '#ef4444'
-    case 'ive':
-      return '#f43f5e'
-    case 'twice':
-      return '#fb7185'
-    case 'lesserafim':
-      return '#f59e0b'
-    case 'txt':
-      return '#3b82f6'
-    case 'exo':
-      return '#6366f1'
-    default:
-      return '#7c3aed'
-  }
 }

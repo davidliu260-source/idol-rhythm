@@ -9,6 +9,7 @@ import { getEventDateLabel } from '@/lib/eventDisplay'
 import { useAppState } from '@/lib/appState'
 import SourceBadge from './SourceBadge'
 import EventTypeBadge from './EventTypeBadge'
+import { getIdolMarkSrc, resolveIdolColor } from '@/lib/idolMarks'
 import IdolAvatar from './IdolAvatar'
 import clsx from 'clsx'
 
@@ -63,8 +64,9 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
         <div className="flex items-center gap-3">
           <IdolAvatar
             name={event.idolName}
+            markSrc={getIdolMarkSrc(event.idolId)}
             avatarUrl={event.idolAvatarUrl}
-            color={idolPrimaryColor(event.idolId)}
+            color={resolveIdolColor({ slug: event.idolId, color: event.idolColor, name: event.idolName })}
             size="sm"
           />
 
@@ -137,8 +139,9 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
       <div className="flex items-start gap-3">
         <IdolAvatar
           name={event.idolName}
+          markSrc={getIdolMarkSrc(event.idolId)}
           avatarUrl={event.idolAvatarUrl}
-          color={idolPrimaryColor(event.idolId)}
+          color={resolveIdolColor({ slug: event.idolId, color: event.idolColor, name: event.idolName })}
           size="md"
         />
 
@@ -253,26 +256,4 @@ function ActionBtn({
       {label}
     </button>
   )
-}
-
-/**
- * Per-idol primary brand color, used as the IdolAvatar fallback when the
- * idol has no uploaded photo. Returns a single hex; IdolAvatar derives the
- * gradient (`color88 → color`) from it. Mock-data idol slugs are hardcoded
- * for parity with the pre-I1a visual; unknown ids fall back to indigo.
- */
-function idolPrimaryColor(idolId: string): string {
-  const colorMap: Record<string, string> = {
-    bts: '#7c3aed',
-    blackpink: '#ec4899',
-    aespa: '#06b6d4',
-    newjeans: '#3b82f6',
-    'stray-kids': '#f59e0b',
-    ive: '#10b981',
-    twice: '#f97316',
-    'le-sserafim': '#eab308',
-    txt: '#a855f7',
-    exo: '#ef4444',
-  }
-  return colorMap[idolId] ?? '#6366f1'
 }

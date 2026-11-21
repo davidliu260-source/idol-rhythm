@@ -35,7 +35,7 @@ interface SupabaseEventRow {
   stream_url: string | null
   is_published: boolean
   published_at: string | null
-  idols?: { slug: string; avatar_url: string | null } | null
+  idols?: { slug: string; avatar_url: string | null; color: string | null } | null
   event_sources?: SupabaseEventSourceRow[] | null
 }
 
@@ -95,6 +95,7 @@ function rowToEvent(row: SupabaseEventRow): Event {
     idolId: row.idols?.slug ?? row.idol_id,
     idolName: row.idol_name,
     idolAvatarUrl: row.idols?.avatar_url ?? null,
+    idolColor: row.idols?.color ?? null,
     title: displayTitleZh || row.title,
     originalTitle,
     type: row.type as EventType,
@@ -174,7 +175,7 @@ export async function getPublishedEvents({ throwOnError = false } = {}): Promise
 
   const { data, error } = await supabase
     .from('events')
-    .select('*, idols!inner(slug, avatar_url), event_sources(id, event_id, level, label, type, url)')
+    .select('*, idols!inner(slug, avatar_url, color), event_sources(id, event_id, level, label, type, url)')
     .eq('is_published', true)
     .in('trust_level', [...PUBLIC_TRUST_LEVELS])
     .neq('status', 'cancelled')
@@ -239,7 +240,7 @@ export async function getEventById(id: string): Promise<Event | null> {
 
   const { data, error } = await supabase
     .from('events')
-    .select('*, idols!inner(slug, avatar_url), event_sources(id, event_id, level, label, type, url)')
+    .select('*, idols!inner(slug, avatar_url, color), event_sources(id, event_id, level, label, type, url)')
     .eq('id', id)
     .eq('is_published', true)
     .in('trust_level', [...PUBLIC_TRUST_LEVELS])

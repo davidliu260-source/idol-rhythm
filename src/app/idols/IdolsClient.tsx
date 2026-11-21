@@ -12,6 +12,7 @@ import {
   Users,
 } from 'lucide-react'
 import FanWishForm from '@/components/FanWishForm'
+import { getIdolMarkSrc, resolveIdolColor } from '@/lib/idolMarks'
 import IdolAvatar from '@/components/IdolAvatar'
 import { useAppState } from '@/lib/appState'
 import type { Idol } from '@/lib/mockIdols'
@@ -248,7 +249,7 @@ function IdolRosterCard({
       <div
         className="absolute inset-y-4 left-0 w-1 rounded-r-full opacity-90"
         style={{
-          background: `linear-gradient(180deg, ${idol.color}, rgba(255,255,255,0.35))`,
+          background: `linear-gradient(180deg, ${resolveIdolColor({ slug: idol.id, color: idol.color, name: idol.name })}, rgba(255,255,255,0.35))`,
         }}
       />
 
@@ -258,7 +259,8 @@ function IdolRosterCard({
             <IdolAvatar
               name={idol.name}
               avatarUrl={idol.avatarUrl}
-              color={idol.color}
+              markSrc={getIdolMarkSrc(idol.id)}
+              color={resolveIdolColor({ slug: idol.id, color: idol.color, name: idol.name })}
               size="md"
             />
             <div className="min-w-0 flex-1">

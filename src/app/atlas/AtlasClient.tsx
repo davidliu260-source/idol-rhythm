@@ -20,6 +20,7 @@ import {
   Stamp,
   X,
 } from 'lucide-react'
+import { resolveIdolColor } from '@/lib/idolMarks'
 import IdolAvatar from '@/components/IdolAvatar'
 import { useAppState } from '@/lib/appState'
 import { STAMP_COPY, countStamps, formatStampCount, isStampEligible } from '@/lib/eventStamps'
@@ -499,7 +500,7 @@ function FavoriteShelfCard({
         <IdolAvatar
           name={event.idolName}
           avatarUrl={event.idolAvatarUrl}
-          color={idolPrimaryColor(event.idolId)}
+          color={resolveIdolColor({ slug: event.idolId, color: event.idolColor, name: event.idolName })}
           size="md"
         />
 
@@ -704,23 +705,6 @@ function NoSearchResult({ onClear }: { onClear: () => void }) {
       </button>
     </div>
   )
-}
-
-function idolPrimaryColor(idolId: string): string {
-  const colorMap: Record<string, string> = {
-    bts: '#7c3aed',
-    blackpink: '#ec4899',
-    aespa: '#06b6d4',
-    newjeans: '#3b82f6',
-    'stray-kids': '#f59e0b',
-    ive: '#ef4444',
-    twice: '#fb7185',
-    'le-sserafim': '#eab308',
-    txt: '#a855f7',
-    exo: '#ef4444',
-  }
-
-  return colorMap[idolId] ?? '#6366f1'
 }
 
 interface MonthGroup {

@@ -37,12 +37,16 @@ export function pickFallbackColor(name: string): string {
   return FALLBACK_PALETTE[h % FALLBACK_PALETTE.length]
 }
 
-export function resolveGroupColor(color: string | null | undefined, name: string): string {
+export function normalizeIdolColor(color: string | null | undefined): string | null {
   if (typeof color === 'string' && /^#[0-9a-f]{6}$/i.test(color.trim()) &&
       color.trim().toLowerCase() !== DEFAULT_IDOL_COLOR_SENTINEL) {
     return color.trim().toLowerCase()
   }
-  return pickFallbackColor(name)
+  return null
+}
+
+export function resolveGroupColor(color: string | null | undefined, name: string): string {
+  return normalizeIdolColor(color) ?? pickFallbackColor(name)
 }
 
 export function ensureRingContrast(hex: string, bg: string = RING_BG): string {

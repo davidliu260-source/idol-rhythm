@@ -13,6 +13,7 @@ import {
   Star,
   Users,
 } from 'lucide-react'
+import { getIdolMarkSrc, resolveIdolColor } from '@/lib/idolMarks'
 import IdolAvatar from '@/components/IdolAvatar'
 import EventCard from '@/components/EventCard'
 import { PAGE_HERO_SHELL } from '@/app/schedule/scheduleTheme'
@@ -56,7 +57,7 @@ export default async function IdolDetailPage({
           <div
             className="pointer-events-none absolute inset-y-6 left-5 w-1 rounded-full opacity-95"
             style={{
-              background: `linear-gradient(180deg, ${idol.color}, rgba(255,255,255,0.38))`,
+              background: `linear-gradient(180deg, ${resolveIdolColor({ slug: idol.id, color: idol.color, name: idol.name })}, rgba(255,255,255,0.38))`,
             }}
           />
 
@@ -75,7 +76,8 @@ export default async function IdolDetailPage({
               <IdolAvatar
                 name={idol.name}
                 avatarUrl={idol.avatarUrl}
-                color={idol.color}
+                markSrc={getIdolMarkSrc(idol.id)}
+                color={resolveIdolColor({ slug: idol.id, color: idol.color, name: idol.name })}
                 size="lg"
                 className="ring-2 ring-white/16"
               />

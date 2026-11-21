@@ -131,7 +131,9 @@ check('核對受保護路徑與分支起點，以及 migration 編號（067 之�
     'src/lib/ics/supabaseFeedStore.ts', 'src/lib/ics/sameOriginRequest.ts',
     'src/app/api/ics/me', 'src/app/api/calendar-feed',
   ].map(path => `:(exclude)${path}`)
-  execFileSync('git', ['diff', '--quiet', base, '--', ...protectedPaths, ...must3Allowed], { cwd })
+  // B2v2 只更新 AtlasClient 的取色，其他 atlas 檔案仍受保護。
+  const b2v2Allowed = ':(exclude)src/app/atlas/AtlasClient.tsx'
+  execFileSync('git', ['diff', '--quiet', base, '--', ...protectedPaths, ...must3Allowed, b2v2Allowed], { cwd })
   const untracked = execFileSync('git', ['ls-files', '--others', '--exclude-standard', '--', ...protectedPaths, ...must3Allowed], { cwd, encoding: 'utf8' })
   assert.equal(untracked, '', '受保護路徑出現未追蹤檔案')
   for (const file of readdirSync(new URL('supabase/migrations/', root), { withFileTypes: true })) {

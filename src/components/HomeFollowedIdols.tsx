@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { type Idol } from '@/lib/mockIdols'
 import { useAppState } from '@/lib/appState'
 import { avatarFallbackBackground, getRingColor, RING_BG } from '@/lib/idolRingColor'
+import { getIdolMarkSrc, resolveIdolColor } from '@/lib/idolMarks'
 
 const focus = 'rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70'
 
@@ -45,10 +46,11 @@ export default function HomeFollowedIdols({ idols }: { idols: Idol[] }) {
 
 function FollowedAvatar({ idol }: { idol: Idol }) {
   const [failed, setFailed] = useState(false)
-  const ring = getRingColor(idol.color, idol.name)
+  const ring = getRingColor(resolveIdolColor({ slug: idol.id, color: idol.color, name: idol.name }), idol.name)
+  const src = getIdolMarkSrc(idol.id) ?? idol.avatarUrl
   const boxShadow = `0 0 0 3px ${RING_BG}, 0 0 0 5px ${ring}`
-  if (idol.avatarUrl && !failed) {
-    return <img src={idol.avatarUrl} alt="" loading="lazy" className="h-[58px] w-[58px] rounded-full object-cover" onError={() => setFailed(true)} style={{ boxShadow }} />
+  if (src && !failed) {
+    return <img src={src} alt="" loading="lazy" className="h-[58px] w-[58px] rounded-full object-cover" onError={() => setFailed(true)} style={{ boxShadow }} />
   }
   return (
     <div aria-hidden="true" className="grid h-[58px] w-[58px] place-items-center rounded-full text-[16px] font-black text-white select-none" style={{ background: avatarFallbackBackground(ring), boxShadow }}>

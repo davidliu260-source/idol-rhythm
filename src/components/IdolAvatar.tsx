@@ -10,6 +10,8 @@ type Size = 'xs' | 'sm' | 'md' | 'lg'
 
 interface IdolAvatarProps {
   name: string
+  markSrc?: string | null
+  decorative?: boolean
   avatarUrl?: string | null
   /** Idol primary color (hex) used to build the fallback gradient block. */
   color?: string | null
@@ -17,45 +19,30 @@ interface IdolAvatarProps {
   className?: string
 }
 
-/**
- * Renders an idol thumbnail.
- *
- *   avatarUrl present     → <img>, object-cover
- *   avatarUrl missing OR
- *   image fails to load   → initial+gradient block
- *
- * I1b-C placeholder upgrade
- * ─────────────────────────
- *   - Uses `color` prop when admin has set one on idols.color
- *   - When color is null (the common case for freshly-seeded idols), derive
- *     a stable per-name color from FALLBACK_PALETTE so different idols don't
- *     all look like identical indigo squares
- *   - Initial is the first character of the name (works for Latin + CJK)
- *
- * The component is intentionally network-free — no external image hosts,
- * no Gravatar, no third-party CDN — it's just a colored block + letter.
- */
+/** Prefer the decorative B2v2 mark when the idol name is displayed alongside it. */
 export default function IdolAvatar({
   name,
+  markSrc,
+  decorative = Boolean(markSrc),
   avatarUrl,
   color,
   size = 'md',
   className,
 }: IdolAvatarProps) {
-  const [failed, setFailed] = useState(false)
-  const useImg = Boolean(avatarUrl) && !failed
+  const [failedSrc, setFailedSrc] = useState<string | null>(null)
+  const src = markSrc ?? avatarUrl
   const initial = (name || '?').trim().charAt(0) || '?'
   const baseColor = color || pickFallbackColor(name)
 
   const sizeCls = SIZE_CLASSES[size]
 
-  if (useImg) {
+  if (src && src !== failedSrc) {
     return (
       <img
-        src={avatarUrl as string}
-        alt={name}
+        src={src}
+        alt={decorative ? '' : name}
         loading="lazy"
-        onError={() => setFailed(true)}
+        onError={() => setFailedSrc(src)}
         className={clsx(sizeCls.wrap, 'object-cover bg-card', className)}
       />
     )
@@ -70,7 +57,8 @@ export default function IdolAvatar({
         className,
       )}
       style={{ background: `linear-gradient(135deg, ${baseColor}88, ${baseColor})` }}
-      aria-label={name}
+      aria-hidden={decorative}
+      aria-label={decorative ? undefined : name}
     >
       {initial.toUpperCase()}
     </div>

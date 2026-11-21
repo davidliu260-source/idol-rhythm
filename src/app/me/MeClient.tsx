@@ -20,6 +20,7 @@ import {
   Star,
   User,
 } from 'lucide-react'
+import { getIdolMarkSrc, resolveIdolColor } from '@/lib/idolMarks'
 import IdolAvatar from '@/components/IdolAvatar'
 import { PAGE_HERO_SHELL } from '@/app/schedule/scheduleTheme'
 import { useAppState } from '@/lib/appState'
@@ -283,7 +284,8 @@ export default function MeClient({
                 <IdolAvatar
                   name={idol.name}
                   avatarUrl={idol.avatarUrl}
-                  color={idol.color}
+                  markSrc={getIdolMarkSrc(idol.id)}
+                  color={resolveIdolColor({ slug: idol.id, color: idol.color, name: idol.name })}
                   size="sm"
                 />
                 <div className="min-w-0 flex-1">
