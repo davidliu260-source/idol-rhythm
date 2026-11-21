@@ -267,6 +267,7 @@
 | 064 | F1「我想去」匿名計數：新表 `event_wants`（user_id FK cascade／device_hash＝sha256，不存明文）＋ `event_want_actions`（限速短期紀錄）；RLS 開、無 policy、REVOKE ALL；SECURITY DEFINER RPC `set_event_want`（每分鐘 10／每小時 60／單活動未登入 10 分鐘 60）與 `get_event_wants`（只回彙總數）只 GRANT EXECUTE 給 anon/authenticated；不改 events／既有 RLS | 🔲 PR 中、未套用（貼上單 `M064_貼上單_F1.md`，Dave 在 SQL Editor 手動執行）|
 | 065 | F2 許願表單：新表 `fan_wishes`（kind ∈ add_group/add_city、只存正規化名稱 1–40 字；user_id FK cascade／device_hash＝sha256，不存明文；unique 去重）＋ `fan_wish_actions`（限速短期紀錄，不存名稱）；RLS 開、無 policy、REVOKE ALL；SECURITY DEFINER RPC `submit_fan_wish`（每分鐘 5／每天 20／全站未登入 10 分鐘 100）＋探測 `fan_wishes_enabled` 只 GRANT EXECUTE 給 anon/authenticated；`fan_wish_normalize_name` 不授權；前台無讀取路徑、v1 不公開彙總；不依賴 064、不改既有表／RLS | 🔲 PR 中、未套用（貼上單 `M065_貼上單_F2.md`，Dave 在 SQL Editor 手動執行）|
 | 066 | F3 圖鑑去過蓋章：新表 `event_stamps`（PK (user_id, event_id)；user_id FK auth.users cascade、event_id FK events cascade）；RLS 只允許本人 SELECT／INSERT／DELETE，INSERT 另檢查活動公開（is_published＋official/media/aggregator＋非 cancelled）且已開始（台北日期）；只 GRANT SELECT, INSERT, DELETE 給 authenticated，anon／service_role 無權限、無 UPDATE；無 SECURITY DEFINER、無公開計數；刪帳號靠 FK cascade；不改既有表／RLS | 🔲 PR 中、未套用（貼上單 `M066_貼上單_F3.md`，Dave 在 SQL Editor 手動執行）|
+| 069 | events 加 `auto_publish_blocked_reason`（可空；CHECK NULL/`empty_shell`/`manual`）＋ GRANT service_role `UPDATE (auto_publish_blocked_reason)`；空殼行程最低內容門檻（t34-v2），`empty_shell`＝因缺內容暫停（`auto_publish_blocked` 須為 false，補到內容自動上架並清空），`auto_publish_blocked=true` 仍是人工永久封鎖 | 🔲 未執行；**須在合併／部署前**由 Owner 在 SQL Editor 手動執行（貼上單 M076 第 1 段）；既有 50 筆改標（M076 第 3 段）須部署後另外點頭 |
 
 ---
 

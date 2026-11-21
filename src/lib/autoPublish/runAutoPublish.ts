@@ -4,6 +4,7 @@ import { inferEventType } from './inferEventType'
 import type { InferRule } from './inferEventType'
 import { resolveCandidateLocation, planLocationFill, buildAutofillMetaEntry, appendAutofillMeta } from './locationFill'
 import type { FillColumn, LocationGuards, AutofillMetaEntry } from './locationFill'
+import { EMPTY_SHELL_REASON, hasMinimumContent, TITLE_CITY_COUNTS_AS_CONTENT } from './minimumContent'
 import { normalizeCrawledEvent } from '../crawlers/taiwanEventCleanup'
 import type { TouchedCandidate } from '../crawlers/touchedCandidate'
 
@@ -18,7 +19,7 @@ export interface CandidateRow extends CandidateInput {
 }
 export interface EventRow extends ExistingEventInput { location_autofill_meta?: unknown }
 export type LocationPatch = Partial<Record<FillColumn, string>> & { location_autofilled_at: string; location_autofill_meta: AutofillMetaEntry[] }
-export type PublishPatch = Partial<LocationPatch> & { is_published: true; published_at: string; auto_published_at: string; auto_publish_rule_version: 't34-v1'; trust_level: PublishTrustLevel }
+export type PublishPatch = Partial<LocationPatch> & { is_published: true; published_at: string; auto_published_at: string; auto_publish_rule_version: typeof AUTO_PUBLISH_RULE_VERSION; trust_level: PublishTrustLevel; auto_publish_blocked_reason?: null }
 export interface DraftEventInsert {
   idol_id: string; idol_name: string; title: string; type: string; sub_type: string | null
   status: 'confirmed'; trust_level: PublishTrustLevel
@@ -28,7 +29,8 @@ export interface DraftEventInsert {
   translation_status: string; translation_source: string | null; translation_updated_at: string | null
   city: string | null; venue_name: string | null; address: string | null; map_url: string | null
   tags: string[]; ticket_url: null; stream_url: null; is_published: false; published_at: null
-  auto_publish_rule_version: 't34-v1'; auto_published_at: null; auto_publish_blocked: false
+  auto_publish_rule_version: typeof AUTO_PUBLISH_RULE_VERSION; auto_published_at: null; auto_publish_blocked: false
+  auto_publish_blocked_reason: typeof EMPTY_SHELL_REASON | null
   location_autofilled_at: string | null; location_autofill_meta: AutofillMetaEntry[] | null
 }
 export interface EventSourceInsert { event_id: string; level: PublishTrustLevel; label: string; type: string; url: string | null }
@@ -50,15 +52,16 @@ export interface AutoPublishStore {
 export interface AutoPublishRunReport {
   ran: boolean; switch: 'on' | 'off' | 'read_error'
   reason?: 'switch_off' | 'switch_read_error' | 'context_error' | 'crawler_dry_run' | 'exception'
-  ruleVersion: 't34-v1'; touched: number; evaluated: number
+  ruleVersion: typeof AUTO_PUBLISH_RULE_VERSION; touched: number; evaluated: number
   created: Array<{ candidateId: string; eventId: string; trustLevel: PublishTrustLevel; locationPending: boolean; typeRule: InferRule; cleanupRules?: string[] }>
+  held: Array<{ candidateId: string; eventId: string; target: 'create_event' }>
   publishedExisting: Array<{ candidateId: string; eventId: string; trustLevel: PublishTrustLevel; filledFields: FillColumn[] }>
   locationFilled: Array<{ candidateId: string; eventId: string; fields: Partial<Record<FillColumn, string>> }>
   parked: Partial<Record<ParkReason, number>>; skipped: Record<string, number>
   errors: Array<{ candidateId: string; eventId: string | null; step: string; message: string }>
 }
 export function emptyAutoPublishReport(): AutoPublishRunReport {
-  return { ran: false, switch: 'off', ruleVersion: AUTO_PUBLISH_RULE_VERSION, touched: 0, evaluated: 0, created: [], publishedExisting: [], locationFilled: [], parked: {}, skipped: {}, errors: [] }
+  return { ran: false, switch: 'off', ruleVersion: AUTO_PUBLISH_RULE_VERSION, touched: 0, evaluated: 0, created: [], held: [], publishedExisting: [], locationFilled: [], parked: {}, skipped: {}, errors: [] }
 }
 const message = (e: unknown) => e instanceof Error ? e.message : String(e)
 async function safe<T>(call: () => Promise<T>): Promise<T | Failure> {
@@ -150,7 +153,13 @@ export async function runAutoPublish(store: AutoPublishStore, input: { touched: 
           type: inferred.type,
           subType: inferred.subType,
         })
-        if (!fields.city && normalized.city) fields.city = normalized.city
+        const hasContent = hasMinimumContent({
+          ...fields,
+          city: TITLE_CITY_COUNTS_AS_CONTENT ? normalized.city : fields.city,
+          location_name_zh: c.location_name_zh,
+          display_summary_zh: c.display_summary_zh,
+        })
+        if (hasContent && !fields.city && normalized.city) fields.city = normalized.city
         const hasLocation = Object.keys(fields).length > 0
         const row: DraftEventInsert = {
           idol_id: c.detected_idol_id!, idol_name: idolNames.get(c.detected_idol_id!) ?? '', title: normalized.title, type: normalized.type ?? inferred.type, sub_type: normalized.subType,
@@ -161,6 +170,7 @@ export async function runAutoPublish(store: AutoPublishStore, input: { touched: 
           translation_status: c.translation_status ?? 'none', translation_source: c.translation_source ?? null, translation_updated_at: c.translation_updated_at ?? null,
           city: fields.city ?? null, venue_name: fields.venue_name ?? null, address: fields.address ?? null, map_url: c.detected_map_url ?? null,
           tags: [], ticket_url: null, stream_url: null, is_published: false, published_at: null, auto_publish_rule_version: AUTO_PUBLISH_RULE_VERSION, auto_published_at: null, auto_publish_blocked: false,
+          auto_publish_blocked_reason: hasContent ? null : EMPTY_SHELL_REASON,
           location_autofilled_at: hasLocation ? at : null,
           location_autofill_meta: hasLocation ? [buildAutofillMetaEntry({ filledAt: at, candidateId: c.id, crawlerSourceId: d.crawlerSourceId, fields })] : null,
         }
@@ -170,6 +180,10 @@ export async function runAutoPublish(store: AutoPublishStore, input: { touched: 
         if (!requireResult(await safe(() => store.linkCandidate(c.id, eventId!))).updated) { error(step, 'candidate link conflict'); continue }
         step = 'event_source'
         requireResult(await safe(() => store.insertEventSource(sourceRow(eventId!, d.trustLevel))))
+        if (!hasContent) {
+          report.held.push({ candidateId: c.id, eventId, target: d.target })
+          continue
+        }
         step = 'publish'
         if (!requireResult(await safe(() => store.publishEvent(eventId!, publishBase(d.trustLevel), {}))).updated) { error(step, 'event state changed'); continue }
         handledEventIds.add(eventId)
@@ -181,14 +195,17 @@ export async function runAutoPublish(store: AutoPublishStore, input: { touched: 
         step = 'get_event'
         const e = requireResult(await safe(() => store.getEvent(eventId!)))
         if (!e || e.is_published !== false || e.auto_publish_blocked !== false || e.status === 'cancelled') { skip('event_state_changed'); continue }
+        const planned = fill(e)
+        if (!hasMinimumContent({ ...e, ...planned?.fields })) { skip(EMPTY_SHELL_REASON); continue }
         step = 'event_source'
         if (c.source_url && !requireResult(await safe(() => store.hasEventSourceUrl(eventId!, c.source_url!)))) requireResult(await safe(() => store.insertEventSource(sourceRow(eventId!, d.trustLevel))))
         const levels: PublishTrustLevel[] = ['official', 'media', 'aggregator']
         const old = levels.indexOf(e.trust_level as PublishTrustLevel)
         const trust = old >= 0 && old < levels.indexOf(d.trustLevel) ? e.trust_level as PublishTrustLevel : d.trustLevel
-        const planned = fill(e)
+        const patch: PublishPatch = { ...publishBase(trust), ...planned?.patch }
+        if (e.auto_publish_blocked_reason === EMPTY_SHELL_REASON) patch.auto_publish_blocked_reason = null
         step = 'publish'
-        const r = requireResult(await safe(() => store.publishEvent(eventId!, { ...publishBase(trust), ...planned?.patch }, planned?.guards ?? {})))
+        const r = requireResult(await safe(() => store.publishEvent(eventId!, patch, planned?.guards ?? {})))
         if (!r.updated) { skip('event_state_changed'); continue }
         handledEventIds.add(eventId)
         report.publishedExisting.push({ candidateId: c.id, eventId, trustLevel: trust, filledFields: Object.keys(planned?.fields ?? {}) as FillColumn[] })

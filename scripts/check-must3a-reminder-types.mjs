@@ -84,12 +84,12 @@ check('提醒寫入與快速開關', () => {
   assert.doesNotMatch(schedule, /reminders\.toggle\(/)
 })
 
-check('cron 支援前一週，067 之後只允許 calendar feed migration', () => {
+check('cron 支援前一週，067 之後只允許 068 與 069', () => {
   assert.match(read('src/app/api/cron/dispatch-reminders/route.ts'), /'week_before'/)
   const migrations = readdirSync(new URL('../supabase/migrations/', import.meta.url))
   for (const path of migrations) {
     const number = path.match(/^\d+/)
-    assert.ok(!number || Number(number[0]) < 68 || path === '068_calendar_feed_tokens.sql', path)
+    assert.ok(!number || Number(number[0]) < 68 || ['068_calendar_feed_tokens.sql', '069_auto_publish_blocked_reason.sql'].includes(path), path)
   }
 })
 
@@ -105,6 +105,7 @@ check('提醒、單一偶像 ICS 與既有 migrations 維持 merge-base 版本',
       'src/lib/reminderDispatch.ts',
       'supabase/migrations',
       ':(exclude)supabase/migrations/068_calendar_feed_tokens.sql',
+      ':(exclude)supabase/migrations/069_auto_publish_blocked_reason.sql',
     ], { cwd: repoRoot }),
     'Protected paths differ from the merge-base with origin/main, or git diff failed',
   )

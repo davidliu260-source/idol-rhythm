@@ -1,4 +1,5 @@
 import { hasAnyLocation, locationFromRawData, toDetectedLocation } from '../crawlers/candidateLocation'
+import { AUTO_PUBLISH_RULE_VERSION } from './evaluateCandidate'
 import type { DetectedLocation } from '../crawlers/candidateLocation'
 
 export type LocationOrigin = 'fresh_payload' | 'detected' | 'raw_data'
@@ -10,7 +11,7 @@ export interface AutofillMetaEntry {
   candidate_id: string
   crawler_source_id: string | null
   fields: Partial<Record<FillColumn, string>>
-  rule_version: 't34-v1'
+  rule_version: typeof AUTO_PUBLISH_RULE_VERSION
 }
 export function resolveCandidateLocation(input: { freshLocation: DetectedLocation | null; candidate: { detected_city?: string | null; detected_venue_name?: string | null; detected_address?: string | null; raw_data?: unknown } }): { location: DetectedLocation; origin: LocationOrigin } | null {
   if (hasAnyLocation(input.freshLocation)) return { location: toDetectedLocation({ city: input.freshLocation!.detected_city, venueName: input.freshLocation!.detected_venue_name, address: input.freshLocation!.detected_address }), origin: 'fresh_payload' }
@@ -29,7 +30,7 @@ export function planLocationFill(event: { city?: string | null; venue_name?: str
   return Object.keys(fields).length ? { fields, guards } : null
 }
 export function buildAutofillMetaEntry(input: { filledAt: string; candidateId: string; crawlerSourceId: string | null; fields: Partial<Record<FillColumn, string>> }): AutofillMetaEntry {
-  return { filled_at: input.filledAt, candidate_id: input.candidateId, crawler_source_id: input.crawlerSourceId, fields: input.fields, rule_version: 't34-v1' }
+  return { filled_at: input.filledAt, candidate_id: input.candidateId, crawler_source_id: input.crawlerSourceId, fields: input.fields, rule_version: AUTO_PUBLISH_RULE_VERSION }
 }
 export function appendAutofillMeta(existing: unknown, entry: AutofillMetaEntry): AutofillMetaEntry[] | { error: 'meta_malformed' } {
   if (existing == null) return [entry]

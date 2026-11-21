@@ -11,7 +11,7 @@ const kp={...cs,id:'kp',name:'kpopofficial.com',parser_type:'kpopofficial_concer
 const candidate=(over={})=>({id:'c1',review_status:'pending',raw_title:'TWICE Tour',detected_idol_id:'i',detected_event_type:'concert',detected_date:'2027-01-01',source_url:'https://twice.jype.com/a',source_name:'JYP Schedule',source_type:'official_website',ai_confidence:null,raw_data:{crawler_source_id:'cs'},...over})
 const kpop=(over={})=>candidate({raw_title:'X Fan Meeting',detected_event_type:null,source_url:'https://kpopofficial.com/x',source_name:kp.name,source_type:'community',raw_data:{crawler_source_id:'kp',location:'Galaxy Arena, Macao'},...over})
 const event=(over={})=>({id:'e1',idol_id:'i',title:'Draft',date:'2027-01-01',is_published:false,auto_publish_blocked:false,status:'confirmed',trust_level:'pending',city:null,venue_name:null,address:null,...over})
-function fixture(candidates=[candidate()],events=[],over={}) {
+function fixture(candidates=[candidate({display_summary_zh:'巡演資訊'})],events=[],over={}) {
  const calls=[]
  const ctx={now,idols:[{id:'i',name:'TWICE',is_active:true}],crawlerSources:[cs,kp],events,eventSources:[]}
  const impl={readAutoPublishEnabled:async()=>({enabled:true}),loadContext:async()=>({candidates,ctx,idolNames:new Map([['i','TWICE']])}),getEvent:async id=>events.find(e=>e.id===id)??null,insertDraftEvent:async()=>({id:'new'}),linkCandidate:async()=>({updated:1}),hasEventSourceUrl:async()=>false,insertEventSource:async()=>({ok:true}),publishEvent:async()=>({updated:1}),fillEventLocation:async()=>({updated:1}),markCandidateApproved:async()=>({updated:1}),parkCandidate:async()=>({updated:1}),...over}
@@ -43,7 +43,7 @@ await check('W5–W6',async()=>{
  assert.equal(row.type,'concert');assert.equal(row.sub_type,'fanmeet');assert.equal(row.city,null);assert.equal(row.venue_name,'Galaxy Arena, Macao')
  assert.equal(row.location_autofill_meta.length,1)
  assert.deepEqual(Object.keys(row.location_autofill_meta[0]).sort(),['filled_at','candidate_id','crawler_source_id','fields','rule_version'].sort())
- assert.equal(row.location_autofill_meta[0].rule_version,'t34-v1')
+ assert.equal(row.location_autofill_meta[0].rule_version,'t34-v2')
  for(const call of f.calls) for(const v of call.args) if(v && typeof v==='object') {
   if('trust_level'in v)assert.equal(v.trust_level,'aggregator')
   if('level'in v)assert.equal(v.level,'aggregator')
@@ -65,7 +65,7 @@ await check('W9–W10',async()=>{
  }
 })
 await check('W11',async()=>{
- const f=fixture([candidate({id:'c1',approved_event_id:'e1'}),candidate({id:'c2',raw_title:'Different',detected_date:'2027-01-02',approved_event_id:'e1'})],[event()]);const r=await f.run();assert.equal(args(f,'publishEvent').length,1);assert.equal(r.skipped.duplicate_event_in_run,1)
+ const f=fixture([candidate({id:'c1',approved_event_id:'e1'}),candidate({id:'c2',raw_title:'Different',detected_date:'2027-01-02',approved_event_id:'e1'})],[event({venue_name:'Arena'})]);const r=await f.run();assert.equal(args(f,'publishEvent').length,1);assert.equal(r.skipped.duplicate_event_in_run,1)
 })
 const published=(over={})=>event({is_published:true,trust_level:'official',...over})
 const linked=(over={})=>candidate({approved_event_id:'e1',...over})
@@ -81,15 +81,15 @@ await check('W16',async()=>{for(const status of ['pending','approved']){const f=
 await check('W17',async()=>{for(const [c,events]of [[candidate({review_status:'parked'}),[]],[linked(),[event({auto_publish_blocked:true})]]]){const f=fixture([c],events);await f.run();assert.deepEqual(names(f),['readAutoPublishEnabled','loadContext'])}})
 await check('W18',async()=>{const f=fixture([candidate({detected_event_type:null})]),r=await f.run();assert.equal(r.errors[0].step,'event_type');assert.equal(args(f,'insertDraftEvent').length,0)})
 await check('W19',async()=>{
- let count=0;const f=fixture([candidate(),candidate({id:'c2',raw_title:'Second',detected_date:'2027-01-02'})],[],{insertEventSource:async()=>++count===1?{error:'denied'}:{ok:true}}),r=await f.run()
+ let count=0;const f=fixture([candidate({detected_venue_name:'Arena'}),candidate({id:'c2',raw_title:'Second',detected_date:'2027-01-02',detected_venue_name:'Arena'})],[],{insertEventSource:async()=>++count===1?{error:'denied'}:{ok:true}}),r=await f.run()
  assert.equal(r.errors[0].step,'event_source');assert.equal(args(f,'publishEvent').length,1);assert.equal(r.created[0].candidateId,'c2')
 })
 await check('W20',async()=>{const f=fixture(undefined,[],{linkCandidate:async()=>({updated:0})}),r=await f.run();assert.equal(r.errors[0].step,'link');assert.ok(!names(f).includes('insertEventSource'));assert.ok(!names(f).includes('publishEvent'))})
-await check('W21',async()=>{let count=0;const f=fixture([candidate(),candidate({id:'c2',raw_title:'Second',detected_date:'2027-01-02'})],[],{insertDraftEvent:async()=>{if(++count===1)throw Error('throw');return{id:'new2'}}}),r=await f.run();assert.equal(r.errors.length,1);assert.equal(r.created.length,1)})
+await check('W21',async()=>{let count=0;const f=fixture([candidate({detected_venue_name:'Arena'}),candidate({id:'c2',raw_title:'Second',detected_date:'2027-01-02',detected_venue_name:'Arena'})],[],{insertDraftEvent:async()=>{if(++count===1)throw Error('throw');return{id:'new2'}}}),r=await f.run();assert.equal(r.errors.length,1);assert.equal(r.created.length,1)})
 await check('W22',async()=>{const f=fixture();f.touched.push(f.touched[0]);const r=await f.run();assert.equal(r.evaluated,1);assert.deepEqual(args(f,'loadContext')[0][0],['c1'])})
 await check('W23',async()=>{
  assert.deepEqual(appendAutofillMeta({},{}),{error:'meta_malformed'})
- const f=fixture([linked({detected_city:'New'})],[event({location_autofill_meta:{}})]),r=await f.run();assert.equal(r.errors[0].message,'meta_malformed');assert.ok(!('city'in args(f,'publishEvent')[0][1]))
+ const f=fixture([linked({detected_city:'New'})],[event({location_autofill_meta:{},venue_name:'Arena'})]),r=await f.run();assert.equal(r.errors[0].message,'meta_malformed');assert.ok(!('city'in args(f,'publishEvent')[0][1]))
  assert.deepEqual(planLocationFill({city:'   ',venue_name:'Keep'},{detected_city:'Taipei',detected_venue_name:'No',detected_address:null}),{fields:{city:'Taipei'},guards:{city:'   '}})
 })
 function files(dir){return readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?files(dir+'/'+e.name):[dir+'/'+e.name])}
