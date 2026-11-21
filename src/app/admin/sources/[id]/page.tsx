@@ -63,11 +63,12 @@ async function getSource(id: string): Promise<SourceDetail | null> {
 export default async function AdminSourceDetailPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
+  const { id } = await params
   const [{ isAdmin }, source] = await Promise.all([
     getCurrentAdmin(),
-    getSource(params.id),
+    getSource(id),
   ])
 
   if (!source) notFound()

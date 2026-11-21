@@ -6,14 +6,15 @@ import { getIdolBySlug, getPublishedEvents } from '@/lib/supabase/events'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: Request, { params }: { params: { slug: string } }) {
-  const idol = await getIdolBySlug(params.slug)
+export async function GET(request: Request, { params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const idol = await getIdolBySlug(slug)
   if (!idol) return new NextResponse('Not Found', { status: 404 })
 
   const cutoffDate = addDaysToKey(taipeiToday(), -30)
   const events = (await getPublishedEvents()).filter(
     (event) =>
-      event.idolId === params.slug &&
+      event.idolId === slug &&
       CALENDAR_NOTIFY_TRUST_LEVELS.some(level => level === event.source.level) &&
       (event.endDate ?? event.startDate ?? event.date) >= cutoffDate,
   )
@@ -23,7 +24,7 @@ export async function GET(request: Request, { params }: { params: { slug: string
   return new NextResponse(body, {
     headers: {
       'Content-Type': 'text/calendar; charset=utf-8',
-      'Content-Disposition': `inline; filename="${params.slug}.ics"`,
+      'Content-Disposition': `inline; filename="${slug}.ics"`,
       'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
     },
   })

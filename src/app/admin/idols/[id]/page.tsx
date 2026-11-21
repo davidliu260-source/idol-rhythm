@@ -68,9 +68,9 @@ const GENDER_LABELS:   Record<string, string> = {
 export default async function AdminIdolDetailPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
-  const { id } = params
+  const { id } = await params
   const [{ isAdmin }, idol] = await Promise.all([
     getCurrentAdmin(),
     getIdolById(id),

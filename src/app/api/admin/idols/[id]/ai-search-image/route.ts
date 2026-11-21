@@ -42,7 +42,7 @@ type Response = OkResponse | ErrResponse
  */
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse<Response>> {
   const { isAdmin } = await getCurrentAdmin()
   if (!isAdmin) {
@@ -60,7 +60,7 @@ export async function GET(
     )
   }
 
-  const idolId = params.id
+  const { id: idolId } = await params
   const { data: idol, error } = await supabase
     .from('idols')
     .select('id, name, korean_name')

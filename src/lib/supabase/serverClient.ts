@@ -1,5 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { cookies, type UnsafeUnwrappedCookies } from 'next/headers'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 /**
@@ -14,7 +14,9 @@ export function getSupabaseServerClient(): SupabaseClient | null {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   if (!url || !key) return null
 
-  const cookieStore = cookies()
+  // Next.js 15 temporarily supports synchronous access. Migrate callers to
+  // await cookies() before upgrading to Next.js 16.
+  const cookieStore = cookies() as unknown as UnsafeUnwrappedCookies
 
   return createServerClient(url, key, {
     cookies: {

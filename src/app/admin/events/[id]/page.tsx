@@ -217,9 +217,9 @@ function getEventReviewedDisabledReason(event: AdminEventDetail): string | null 
 export default async function AdminEventDetailPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
-  const { id } = params
+  const { id } = await params
 
   const [eventResult, { isAdmin }] = await Promise.all([
     getAdminEvent(id),

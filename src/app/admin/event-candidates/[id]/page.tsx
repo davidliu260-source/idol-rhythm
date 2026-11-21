@@ -282,9 +282,9 @@ function sourceBadgeClass(risk: string): string {
 export default async function AdminCandidateDetailPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
-  const { id } = params
+  const { id } = await params
 
   const [{ isAdmin }, candidate] = await Promise.all([
     getCurrentAdmin(),

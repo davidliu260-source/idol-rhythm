@@ -9,10 +9,11 @@ import LoginForm from './LoginForm'
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: { next?: string; error?: string }
+  searchParams: Promise<{ next?: string; error?: string }>
 }) {
+  const { next: requestedNext, error } = await searchParams
   const user = await getCurrentUser()
-  const next = sanitizeNextPath(searchParams.next)
+  const next = sanitizeNextPath(requestedNext)
 
   // Already signed in
   if (user) {
@@ -80,10 +81,10 @@ export default async function LoginPage({
         </>
       }
     >
-      {searchParams.error ? (
+      {error ? (
         <div className="mb-4 rounded-[22px] border border-red-400/25 bg-red-500/10 px-4 py-3">
           <p className="text-xs leading-6 text-red-200">
-            登入失敗：{searchParams.error}
+            登入失敗：{error}
           </p>
         </div>
       ) : null}
