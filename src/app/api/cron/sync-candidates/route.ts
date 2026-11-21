@@ -117,12 +117,14 @@ export async function GET(
     trigger: 'vercel-cron',
   })
   if (!result) {
+    const message = error ?? '同步 active crawler sources 失敗'
+    console.error('[crawler-cron] summary', JSON.stringify({ mode, elapsedMs: Date.now() - startedAt, error: message }))
     return NextResponse.json(
       {
         ok: false,
         trigger: 'vercel-cron',
         mode,
-        error: error ?? '同步 active crawler sources 失敗',
+        error: message,
       },
       { status: 500 },
     )
@@ -141,9 +143,16 @@ export async function GET(
   }
   for (const error of autoPublish.errors) console.error('[auto-publish]', error)
 
-  // Surface as 500 only if EVERY source failed; otherwise return 200 with
+  // Surface as 502 only if EVERY source failed; otherwise return 200 with
   // partial errors so Vercel Cron logs distinguish "down" vs "noisy day".
   const { summary, results } = result
+  const log = summary.errorCount > 0 || summary.statusWriteErrorCount > 0 ? console.error : console.log
+  log('[crawler-cron] summary', JSON.stringify({
+    summary,
+    mode,
+    elapsedMs: Date.now() - startedAt,
+    results: results.map(({ sourceKey, status, errors }) => ({ sourceKey, status, errors })),
+  }))
   const allFailed =
     results.length > 0 && results.every((r) => r.errors.length > 0)
   if (allFailed) {

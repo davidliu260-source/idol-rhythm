@@ -40,16 +40,33 @@ const source = {
 }
 const detail = fixture('CalendarDetail-281')
 
-function statusUpdate(table, patch, writes) {
+function statusUpdate(table, patch, writes, statusRows) {
   assert.equal(table, 'crawler_sources')
   return {
-    eq: async (column, id) => {
+    eq: (column, id) => {
       assert.equal(column, 'id')
       assert.ok(Number.isFinite(Date.parse(patch.last_run_at)))
       writes.push({ id, status: patch.last_status, error: patch.last_error })
-      return { count: 1, error: null }
+      const row = { id, ...patch }
+      statusRows.set(id, row)
+      return { select: async () => ({ data: [row], error: null }) }
     },
   }
+}
+
+function crawlerSourcesMock(table, writes, statusRows, lookup, rows) {
+  let readId
+  const query = {
+    select: () => query,
+    eq(column, value) {
+      if (column === 'id') readId = value
+      return query
+    },
+    order: async () => ({ data: rows }),
+    maybeSingle: async () => readId ? { data: statusRows.get(readId) } : lookup(),
+    update: (patch) => statusUpdate(table, patch, writes, statusRows),
+  }
+  return query
 }
 
 if (process.argv.includes('--dry-run')) {
@@ -123,6 +140,7 @@ if (process.argv.includes('--dry-run')) {
       return new Response(detail)
     })
     const writes = []
+    const statusRows = new Map()
     let existingCandidate = null
     let events = [{ venue_name: null, address: '博愛二路 757 號' }]
     const rows = {
@@ -133,9 +151,9 @@ if (process.argv.includes('--dry-run')) {
     }
     const supabase = {
       from(table) {
+        if (table === 'crawler_sources') return crawlerSourcesMock(table, writes, statusRows, async () => ({ data: source }))
         const query = {
           select: () => query, eq: () => query, order: () => query, limit: () => query,
-          update: (patch) => statusUpdate(table, patch, writes),
           maybeSingle: async () => ({ data: rows[table]() }),
           then: (resolve) => resolve({ data: rows[table]() }),
         }
@@ -177,16 +195,12 @@ if (process.argv.includes('--dry-run')) {
     })
     for (const scenario of scenarios) {
       const writes = []
+      const statusRows = new Map()
       const supabase = {
         from(table) {
           if (table === 'idols' && scenario.throwOnIdols) throw new Error('idols query threw')
           assert.equal(table, 'crawler_sources')
-          const query = {
-            select: () => query, eq: () => query,
-            maybeSingle: async () => scenario.lookup,
-            update: (patch) => statusUpdate(table, patch, writes),
-          }
-          return query
+          return crawlerSourcesMock(table, writes, statusRows, async () => scenario.lookup)
         },
       }
       const result = await runCrawlerSource(supabase, source, false)
@@ -205,16 +219,11 @@ if (process.argv.includes('--dry-run')) {
       ['d', 'unknown_parser'],
     ].map(([id, parser_type]) => ({ id, source_key: id, name: id, parser_type }))
     const writes = []
+    const statusRows = new Map()
     const supabase = {
       from(table) {
         assert.equal(table, 'crawler_sources')
-        const query = {
-          select: () => query, eq: () => query,
-          order: async () => ({ data: rows }),
-          maybeSingle: async () => { throw new Error('JYP fetcher lookup threw') },
-          update: (patch) => statusUpdate(table, patch, writes),
-        }
-        return query
+        return crawlerSourcesMock(table, writes, statusRows, async () => { throw new Error('JYP fetcher lookup threw') }, rows)
       },
     }
     const { result, error } = await runActiveCrawlerSources(supabase, { dryRun: true, trigger: 'vercel-cron' })

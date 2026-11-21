@@ -38,6 +38,7 @@ const venue = {
 
 function mockSupabase({ lookup = () => yg, rows = [yg], writeResult, onWrite } = {}) {
   const writes = []
+  const statusRows = new Map()
   const lookups = []
   const idolQueries = []
   return {
@@ -55,23 +56,29 @@ function mockSupabase({ lookup = () => yg, rows = [yg], writeResult, onWrite } =
         return query
       }
       assert.equal(table, 'crawler_sources')
+      let readId
       const query = {
         select: () => query,
         eq(column, value) {
           if (column === 'source_key') lookups.push(value)
+          if (column === 'id') readId = value
           return query
         },
         order: async () => ({ data: rows }),
-        maybeSingle: async () => ({ data: lookup(lookups.at(-1)) }),
-        update(patch, options) {
-          assert.deepEqual(options, { count: 'exact' })
+        maybeSingle: async () => ({ data: readId ? statusRows.get(readId) : lookup(lookups.at(-1)) }),
+        update(patch) {
           return {
-            async eq(column, id) {
+            eq(column, id) {
               assert.equal(column, 'id')
               assert.ok(Number.isFinite(Date.parse(patch.last_run_at)))
               writes.push({ id, status: patch.last_status, error: patch.last_error })
-              onWrite?.()
-              return writeResult ?? { count: 1, error: null }
+              return { select: async () => {
+                onWrite?.()
+                if (writeResult) return writeResult
+                const row = { id, ...patch }
+                statusRows.set(id, row)
+                return { data: [row], error: null }
+              } }
             },
           }
         },
@@ -128,8 +135,8 @@ test('YG and venue expose DB errors and zero-row writes in results and summary',
   const logger = t.mock.method(console, 'error', () => {})
   const dbError = { code: '42501', message: 'permission denied' }
   for (const [source, writeResult, expected] of [
-    [yg, { count: null, error: dbError }, /permission denied/],
-    [venue, { count: 0, error: null }, /實際更新 0 列/],
+    [yg, { data: null, error: dbError }, /permission denied/],
+    [venue, { data: [], error: null }, /實際更新 0 列/],
   ]) {
     const supabase = mockSupabase({ rows: [source], lookup: () => source, writeResult })
     const { result, error } = await runActiveCrawlerSources(supabase)

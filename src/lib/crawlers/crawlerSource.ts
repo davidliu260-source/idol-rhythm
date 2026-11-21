@@ -8,6 +8,7 @@
  * scheduling, retry, queue) is out of scope.
  */
 
+import { AsyncLocalStorage } from 'node:async_hooks'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export const LAST_ERROR_MAX_LEN = 2000
@@ -22,6 +23,32 @@ export type SourceTypeEnum =
   | 'unknown'
 
 export type RunStatus = 'success' | 'partial_error' | 'error' | 'skipped'
+
+const STATUS_COLUMNS = 'id, last_run_at, last_status, last_error, updated_at'
+
+function stringifyStatusDiagnostic(value: unknown): string {
+  return JSON.stringify(value, (_key, entry) => {
+    if (!entry || typeof entry !== 'object' || !('last_error' in entry)) return entry
+    const { last_error, ...fields } = entry
+    return {
+      ...fields,
+      last_error_head: typeof last_error === 'string' ? last_error.slice(0, 200) : null,
+      last_error_length: typeof last_error === 'string' ? last_error.length : 0,
+    }
+  })
+}
+
+interface StatusWriteTracker {
+  calls: number
+  lastResult: string | null
+}
+
+const statusWriteTracker = new AsyncLocalStorage<StatusWriteTracker>()
+
+export function withStatusWriteTracking<T>(run: (tracker: StatusWriteTracker) => Promise<T>): Promise<T> {
+  const tracker = { calls: 0, lastResult: null }
+  return statusWriteTracker.run(tracker, run, tracker)
+}
 
 export interface CrawlerSourceRow {
   id: string
@@ -91,32 +118,61 @@ export async function updateRunStatus(
   crawlerSourceId: string,
   patch: { last_status: RunStatus; last_error: string | null },
 ): Promise<string | null> {
+  const tracker = statusWriteTracker.getStore()
+  if (tracker) tracker.calls += 1
+
   const now = new Date().toISOString()
-  const trimmed =
-    patch.last_error && patch.last_error.length > LAST_ERROR_MAX_LEN
-      ? patch.last_error.slice(0, LAST_ERROR_MAX_LEN)
-      : patch.last_error
+  const expected = {
+    last_run_at: now,
+    last_status: patch.last_status,
+    last_error: patch.last_error?.slice(0, LAST_ERROR_MAX_LEN) ?? null,
+  }
+  let returned: unknown = null
+  let readBack: unknown = null
+  let result: string | null = null
 
   try {
-    const { count, error } = await supabase
+    const { data, error } = await supabase
       .from('crawler_sources')
-      .update({
-        last_run_at: now,
-        last_status: patch.last_status,
-        last_error: trimmed,
-        updated_at: now,
-      }, { count: 'exact' })
+      .update({ ...expected, updated_at: now })
       .eq('id', crawlerSourceId)
+      .select(STATUS_COLUMNS)
 
+    returned = data
     if (error) throw error
-    if (count !== 1) throw new Error(`預期更新 1 列，實際更新 ${count ?? '未知'} 列`)
+    if (data?.length !== 1) throw new Error(`預期更新 1 列，實際更新 ${data?.length ?? 0} 列`)
+
+    const { data: row, error: readError } = await supabase
+      .from('crawler_sources')
+      .select(STATUS_COLUMNS)
+      .eq('id', crawlerSourceId)
+      .maybeSingle()
+
+    readBack = row
+    if (readError) throw readError
+    if (!row) throw new Error('讀不到寫入後的狀態')
+    for (const [step, actual] of [['RETURNING', data[0]], ['讀回', row]] as const) {
+      if (
+        actual.last_status !== expected.last_status ||
+        Date.parse(actual.last_run_at) !== Date.parse(expected.last_run_at) ||
+        actual.last_error !== expected.last_error
+      ) {
+        throw new Error(`${step}狀態不一致`)
+      }
+    }
+
+    console.log('[crawler-status] write ok', JSON.stringify({
+      id: crawlerSourceId, last_status: row.last_status, last_run_at: row.last_run_at,
+    }))
     return null
   } catch (error) {
     const detail = error && typeof error === 'object' && 'message' in error
       ? String(error.message)
       : String(error)
-    const message = `${STATUS_WRITE_ERROR_PREFIX}（crawlerSourceId=${crawlerSourceId}）：${detail}`
-    console.error(message, error)
-    return message
+    result = `${STATUS_WRITE_ERROR_PREFIX}（crawlerSourceId=${crawlerSourceId}）：${detail}；預期=${stringifyStatusDiagnostic(expected)}；RETURNING=${stringifyStatusDiagnostic(returned)}；實際讀回=${stringifyStatusDiagnostic(readBack)}`
+    console.error(result, error)
+    return result
+  } finally {
+    if (tracker) tracker.lastResult = result ?? 'ok'
   }
 }
