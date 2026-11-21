@@ -1,3 +1,7 @@
+import {
+  AUTO_TRANSLATE_ENABLED, emptyTranslationSummary, translateAfterAutoPublish,
+  translationErrorMessage, type TranslationSummary,
+} from '@/lib/ai/autoTranslate'
 import { runAutoPublish, emptyAutoPublishReport, type AutoPublishRunReport } from '@/lib/autoPublish/runAutoPublish'
 import { createSupabaseAutoPublishStore } from '@/lib/autoPublish/supabaseAutoPublishStore'
 import { NextResponse, type NextRequest } from 'next/server'
@@ -16,6 +20,7 @@ interface CronOkResponse {
   ok: true
   trigger: 'vercel-cron'
   mode: 'insert' | 'dry-run'
+  autoTranslate: TranslationSummary | null
   autoPublish: AutoPublishRunReport
   summary: CrawlerRunSummary
   results: SourceRunResult[]
@@ -26,6 +31,7 @@ interface CronErrResponse {
   trigger: 'vercel-cron'
   mode: 'insert' | 'dry-run'
   error: string
+  autoTranslate?: TranslationSummary | null
   autoPublish?: AutoPublishRunReport
   summary?: CrawlerRunSummary
   results?: SourceRunResult[]
@@ -59,7 +65,7 @@ type CronResponse = CronOkResponse | CronErrResponse
  * Scope:
  *   - 開關關＝只寫候選；開＝本輪 touched 的自動上架與補空地點。
  *   - 不讀寫開關以外的設定；永不改開關。dryRun 不跑自動上架。
- *   - Never calls AI parse.
+ *   - 已上架後才跑中文顯示翻譯。
  */
 export async function GET(
   request: NextRequest,
@@ -143,6 +149,26 @@ export async function GET(
   }
   for (const error of autoPublish.errors) console.error('[auto-publish]', error)
 
+  let autoTranslate: TranslationSummary | null = null
+  if (!dryRun && AUTO_TRANSLATE_ENABLED && autoPublish.switch === 'on') {
+    autoTranslate = emptyTranslationSummary()
+    try {
+      const { createSupabaseAutoTranslateStore } = await import('@/lib/ai/supabaseAutoTranslateStore')
+      const { claudeTranslator } = await import('@/lib/ai/claudeTranslator')
+      await translateAfterAutoPublish(
+        { store: createSupabaseAutoTranslateStore(supabase), translator: claudeTranslator, clock: Date.now },
+        [...autoPublish.created, ...autoPublish.publishedExisting].map(({ eventId }) => eventId),
+        startedAt,
+        autoTranslate,
+      )
+    } catch (error) {
+      autoTranslate.failures.push({ eventId: '', step: 'batch', message: translationErrorMessage(error) })
+    }
+    const { failures, ...counts } = autoTranslate
+    for (const failure of failures) console.error('[auto-translate]', failure)
+    console.log('[auto-translate] summary', counts)
+  }
+
   // Surface as 502 only if EVERY source failed; otherwise return 200 with
   // partial errors so Vercel Cron logs distinguish "down" vs "noisy day".
   const { summary, results } = result
@@ -165,6 +191,7 @@ export async function GET(
         summary,
         results,
         autoPublish,
+        autoTranslate,
       },
       { status: 502 },
     )
@@ -178,6 +205,7 @@ export async function GET(
       summary,
       results,
       autoPublish,
+      autoTranslate,
     },
     { status: 200 },
   )

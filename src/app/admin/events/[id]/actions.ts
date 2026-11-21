@@ -5,7 +5,9 @@ import { redirect } from 'next/navigation'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
 import { inferTrustLevelFromSources } from '@/lib/admin/sourceReview'
-import { generateChineseDisplayWithClaude } from '@/lib/ai/generateChineseDisplay'
+import { translateEvent } from '@/lib/ai/autoTranslate'
+import { claudeTranslator } from '@/lib/ai/claudeTranslator'
+import { createSupabaseAutoTranslateStore } from '@/lib/ai/supabaseAutoTranslateStore'
 
 // ── Guard ──────────────────────────────────────────────────────────────────────
 
@@ -27,10 +29,6 @@ function revalidateEventPaths(id: string): void {
   revalidatePath('/')
   revalidatePath('/schedule')
   revalidatePath(`/events/${id}`)
-}
-
-function isProtectedTranslationStatus(status: unknown): boolean {
-  return status === 'manual' || status === 'reviewed'
 }
 
 export interface GenerateChineseActionResult {
@@ -127,81 +125,13 @@ export async function generateEventChineseDisplay(
     const supabase = getSupabaseServerClient()
     if (!supabase) throw new Error('Supabase 未設定')
 
-    const { data: event, error: fetchError } = await supabase
-      .from('events')
-      .select('*, event_sources(label, type, url)')
-      .eq('id', id)
-      .single()
-
-    if (fetchError || !event) {
-      throw new Error(`找不到活動：${fetchError?.message ?? '無資料'}`)
-    }
-
-    if (event.is_published) {
-      throw new Error('已發布活動不支援直接產生繁中欄位，請先下架或改用人工編輯流程')
-    }
-
-    if (isProtectedTranslationStatus(event.translation_status)) {
-      throw new Error('此活動的中文欄位已是人工編輯或已審閱狀態，為避免覆蓋不自動產生')
-    }
-
-    if (
-      event.display_title_zh ||
-      event.display_summary_zh ||
-      event.location_name_zh
-    ) {
-      throw new Error('此活動已有中文顯示欄位，第一版不支援覆蓋既有內容')
-    }
-
-    const sources = (event.event_sources ?? []) as Array<{
-      label: string | null
-      type: string | null
-      url: string | null
-    }>
-    const primarySource = sources[0]
-    const dateText =
-      (event.date_label as string | null) ||
-      [
-        event.start_date as string | null,
-        event.end_date as string | null,
-      ].filter(Boolean).join(' - ') ||
-      (event.date as string | null)
-    const locationText = [
-      event.location as string | null,
-      event.city as string | null,
-      event.venue_name as string | null,
-      event.address as string | null,
-    ].filter(Boolean).join(' / ')
-
-    const generated = await generateChineseDisplayWithClaude({
-      title: event.title as string,
-      content: event.description as string | null,
-      idolName: event.idol_name as string | null,
-      eventType: event.type as string | null,
-      eventSubType: event.sub_type as string | null,
-      dateText,
-      locationText,
-      sourceName: primarySource?.label ?? null,
-      sourceType: primarySource?.type ?? null,
-    })
-
-    const { error: updateError } = await supabase
-      .from('events')
-      .update({
-        display_title_zh: generated.displayTitleZh,
-        display_summary_zh: generated.displaySummaryZh,
-        location_name_zh: generated.locationNameZh,
-        translation_status: 'machine',
-        translation_source: 'ai',
-        translation_updated_at: new Date().toISOString(),
-      })
-      .eq('id', id)
-      .eq('is_published', false)
-
-    if (updateError) {
-      throw new Error(
-        `寫入繁中欄位失敗：${updateError.code ? `[${updateError.code}] ` : ''}${updateError.message}`,
-      )
+    const result = await translateEvent(
+      { store: createSupabaseAutoTranslateStore(supabase), translator: claudeTranslator, clock: Date.now },
+      id,
+      { resetAttempts: true },
+    )
+    if (result.outcome !== 'translated') {
+      return { ok: false, error: result.message ?? '活動已變更或正在翻譯，請重新整理後再試' }
     }
 
     revalidateEventPaths(id)

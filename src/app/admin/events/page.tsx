@@ -1,4 +1,5 @@
 export const dynamic = 'force-dynamic'
+export const maxDuration = 300
 
 import { taipeiToday } from '@/lib/taipeiDate'
 import Link from 'next/link'
@@ -10,6 +11,8 @@ import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
 import type { TrustLevel } from '@/lib/types'
 import EventsClient from './EventsClient'
+import BackfillTranslation from './BackfillTranslation'
+import { hasChineseDisplay } from '@/lib/ai/autoTranslate'
 
 // ── Admin-only event shape (includes draft fields) ────────────────────────────
 
@@ -27,6 +30,7 @@ interface AdminEvent {
   isPublished: boolean
   publishedAt: string | null
   sourceCount: number
+  translationFailures: number
 }
 
 // Fetches ALL events (including drafts) using the server client so the
@@ -43,7 +47,7 @@ async function getAdminEvents(): Promise<{ events: AdminEvent[]; error: string |
 
   const { data, error } = await supabase
     .from('events')
-    .select('id, idol_name, title, type, sub_type, status, trust_level, date, country_flag, location, is_published, published_at, event_sources(id)')
+    .select('id, idol_name, title, type, sub_type, status, trust_level, date, country_flag, location, is_published, published_at, translation_attempts, display_title_zh, display_summary_zh, location_name_zh, event_sources(id)')
     .order('date', { ascending: false })
 
   if (error) {
@@ -66,6 +70,7 @@ async function getAdminEvents(): Promise<{ events: AdminEvent[]; error: string |
     location: (row.location ?? null) as string | null,
     isPublished: row.is_published as boolean,
     publishedAt: row.published_at as string | null,
+    translationFailures: hasChineseDisplay(row) ? 0 : row.translation_attempts,
     sourceCount: Array.isArray(row.event_sources) ? row.event_sources.length : 0,
   }))
 
@@ -150,6 +155,8 @@ export default async function AdminEventsPage() {
         <MiniStat icon={<ShieldCheck className="h-3.5 w-3.5" />} label="官方確認" value={officialCount} color="text-violet-500" />
         <MiniStat icon={<Clock className="h-3.5 w-3.5" />} label="即將到來" value={upcomingCount} color="text-primary" />
       </div>
+
+      {isAdmin && <BackfillTranslation />}
 
       {/* Events list with checkbox + bulk publish actions */}
       <EventsClient events={events} isAdmin={isAdmin} />
