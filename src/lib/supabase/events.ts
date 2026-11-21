@@ -161,12 +161,16 @@ function rowToEventSource(row: SupabaseEventSourceRow): EventSource {
 // ── Public read functions ─────────────────────────────────────────────────────
 
 /**
- * Returns all published, non-cancelled events with official or media trust level.
- * Returns an empty array if Supabase is not configured or the query fails.
+ * Returns published, non-cancelled events at the public trust levels.
+ * An unavailable client or failed query returns an empty array by default.
+ * Use throwOnError when a query failure must be distinguished from an empty result.
  */
-export async function getPublishedEvents(): Promise<Event[]> {
+export async function getPublishedEvents({ throwOnError = false } = {}): Promise<Event[]> {
   const supabase = getSupabaseClient()
-  if (!supabase) return []
+  if (!supabase) {
+    if (throwOnError) throw new Error('Published events client is unavailable')
+    return []
+  }
 
   const { data, error } = await supabase
     .from('events')
@@ -176,7 +180,10 @@ export async function getPublishedEvents(): Promise<Event[]> {
     .neq('status', 'cancelled')
     .order('date', { ascending: true })
 
-  if (error || !data) return []
+  if (error || !data) {
+    if (throwOnError) throw new Error('Published events query failed')
+    return []
+  }
 
   return (data as SupabaseEventRow[]).map(rowToEvent)
 }

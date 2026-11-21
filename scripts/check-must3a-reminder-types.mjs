@@ -82,16 +82,16 @@ check('提醒寫入與快速開關', () => {
   assert.match(read('src/app/schedule/ScheduleTrackCard.tsx'), /reminders\.has\(/)
 })
 
-check('cron 支援前一週且 migration 編號止於 067', () => {
+check('cron 支援前一週，067 之後只允許 calendar feed migration', () => {
   assert.match(read('src/app/api/cron/dispatch-reminders/route.ts'), /'week_before'/)
   const migrations = readdirSync(new URL('../supabase/migrations/', import.meta.url))
   for (const path of migrations) {
     const number = path.match(/^\d+/)
-    assert.ok(!number || Number(number[0]) < 68, path)
+    assert.ok(!number || Number(number[0]) < 68 || path === '068_calendar_feed_tokens.sql', path)
   }
 })
 
-check('Protected paths are unchanged versus merge-base with origin/main', () => {
+check('提醒、單一偶像 ICS 與既有 migrations 維持 merge-base 版本', () => {
   const repoRoot = new URL('../', import.meta.url)
   // Compare against the branch point so later commits on origin/main don't cause false failures.
   const base = execFileSync('git', ['merge-base', 'origin/main', 'HEAD'], { cwd: repoRoot }).toString().trim()
@@ -99,11 +99,11 @@ check('Protected paths are unchanged versus merge-base with origin/main', () => 
     () => execFileSync('git', [
       'diff', '--quiet', base, '--',
       'src/app/api/cron',
+      'src/app/api/ics/idols',
       'src/lib/reminderDispatch.ts',
-      'src/lib/ics',
-      'src/app/api/ics',
       'src/app/schedule/ScheduleTrackCard.tsx',
       'supabase/migrations',
+      ':(exclude)supabase/migrations/068_calendar_feed_tokens.sql',
     ], { cwd: repoRoot }),
     'Protected paths differ from the merge-base with origin/main, or git diff failed',
   )
