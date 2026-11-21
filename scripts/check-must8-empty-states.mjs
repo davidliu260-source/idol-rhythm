@@ -116,7 +116,7 @@ check('城市與偶像空狀態提供下一步，底部導覽保留城市', () =
   assert.match(read('src/components/BottomNav.tsx'), /['"]\/cities['"]/)
 })
 
-check('核對受保護路徑與分支起點，以及 migration 編號', () => {
+check('核對受保護路徑與分支起點，以及 migration 編號（067 之後只允許 068_calendar_feed_tokens）', () => {
   const cwd = root
   const base = execFileSync('git', ['merge-base', 'origin/main', 'HEAD'], { cwd, encoding: 'utf8' }).trim()
   const protectedPaths = [
@@ -124,11 +124,18 @@ check('核對受保護路徑與分支起點，以及 migration 編號', () => {
     'src/lib/reminderTypes.ts', 'src/lib/reminderDispatch.ts', 'src/lib/appState.tsx',
     'src/components/BottomNav.tsx', 'vercel.json',
   ]
-  execFileSync('git', ['diff', '--quiet', base, '--', ...protectedPaths], { cwd })
-  const untracked = execFileSync('git', ['ls-files', '--others', '--exclude-standard', '--', ...protectedPaths], { cwd, encoding: 'utf8' })
+  // MUST3（F4）在 MUST8 之後合併：只放行它自己的 migration 與 feed 檔案，其餘保護不變
+  const must3Allowed = [
+    'supabase/migrations/068_calendar_feed_tokens.sql',
+    'src/lib/ics/buildIcs.ts', 'src/lib/ics/followsFeed.ts',
+    'src/lib/ics/supabaseFeedStore.ts', 'src/lib/ics/sameOriginRequest.ts',
+    'src/app/api/ics/me', 'src/app/api/calendar-feed',
+  ].map(path => `:(exclude)${path}`)
+  execFileSync('git', ['diff', '--quiet', base, '--', ...protectedPaths, ...must3Allowed], { cwd })
+  const untracked = execFileSync('git', ['ls-files', '--others', '--exclude-standard', '--', ...protectedPaths, ...must3Allowed], { cwd, encoding: 'utf8' })
   assert.equal(untracked, '', '受保護路徑出現未追蹤檔案')
   for (const file of readdirSync(new URL('supabase/migrations/', root), { withFileTypes: true })) {
     const number = file.name.match(/^\d+/)?.[0]
-    assert.ok(!file.isFile() || !number || Number(number) < 68, `出現新 migration：${file.name}`)
+    assert.ok(!file.isFile() || !number || Number(number) < 68 || file.name === '068_calendar_feed_tokens.sql', `出現新 migration：${file.name}`)
   }
 })
