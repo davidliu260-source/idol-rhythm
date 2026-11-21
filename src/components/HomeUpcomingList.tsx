@@ -68,6 +68,7 @@ export default function HomeUpcomingList({ events, ongoingIds }: { events: Event
         {visible.map(event => <UpcomingEventCard key={event.id} event={event} ongoing={ongoing.has(event.id)} />)}
         {filtered.length === 0 && <div className="py-6 text-sm" style={{ color: CATEGORY_NEUTRALS.muted }}>
           <p>{events.length === 0 ? '目前沒有即將到來的活動' : tabFiltered.length === 0 ? '追蹤的偶像目前沒有公開行程' : '這個類型近期沒有活動'}</p>
+          {events.length > 0 && tabFiltered.length === 0 && <p className="mt-1">有新的公開資訊時會自動出現在這裡</p>}
           {events.length > 0 && tabFiltered.length === 0 && <button type="button" className="mt-2 text-white" onClick={() => selectTab('all')}>查看完整行程 →</button>}
           {tabFiltered.length > 0 && <button type="button" className="mt-2 text-white" onClick={() => setSelected('all')}>看全部</button>}
         </div>}

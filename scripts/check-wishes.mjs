@@ -167,8 +167,9 @@ check('S2 前端護欄', () => {
   for (const snippet of ['aria-pressed', 'aria-live="polite"', 'min-h-[44px]', 'maxLength={WISH_NAME_MAX_CHARS}']) assertIncludes(ui, snippet)
   assertCount(ui, '<input', 1)
   assertCount(read(idols), '<FanWishForm defaultKind="add_group" />', 1)
-  assertCount(read(cities), '<FanWishForm defaultKind="add_city" className="mt-4" />', 1)
-  assertIncludes(read(cities), '尚未開放')
+  // MUST8：城市頁改成真正的城市列表（Dave 11/20 決定保留城市分頁），許願表單仍保留
+  assertCount(read(cities), '<FanWishForm defaultKind="add_city" />', 1)
+  assertAbsent(read(cities), '尚未開放')
 })
 
 check('S3 禁止字面隱藏字元', () => {
@@ -181,7 +182,7 @@ check('S3 禁止字面隱藏字元', () => {
 check('G1 F2 檔案在合併後未被改動', () => {
   execFileSync('git', [
     'diff', '--quiet', 'd7f6442', '--',
-    migration, pure, rpc, form, idols, cities,
+    migration, pure, rpc, form, idols,
   ], { cwd: ROOT, stdio: ['ignore', 'ignore', 'inherit'] })
 })
 
