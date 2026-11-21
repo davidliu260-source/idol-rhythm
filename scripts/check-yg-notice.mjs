@@ -194,17 +194,18 @@ if (process.argv.includes('--dry-run')) {
     t.mock.method(globalThis, 'fetch', async (url) => new Response(url.endsWith('page=1') ? list : fixture('5890')))
     const queried = []
     const writes = []
+    let statusRow
     const supabase = {
       from(table) {
         let field
         const query = {
-          update(patch, options) {
+          update(patch) {
             assert.equal(table, 'crawler_sources')
-            assert.deepEqual(options, { count: 'exact' })
-            return { eq: async (column, id) => {
+            return { eq: (column, id) => {
               assert.equal(column, 'id')
               writes.push([id, patch.last_status, patch.last_error])
-              return { count: 1, error: null }
+              statusRow = { id, ...patch }
+              return { select: async () => ({ data: [statusRow], error: null }) }
             } }
           },
           select() { return query },
@@ -216,7 +217,7 @@ if (process.argv.includes('--dry-run')) {
           },
           async maybeSingle() {
             queried.push([table, field])
-            return { data: table === 'crawler_sources' ? source : null }
+            return { data: table === 'crawler_sources' ? (field === 'id' ? statusRow : source) : null }
           },
           then(resolve) {
             assert.equal(table, 'events')

@@ -1,4 +1,4 @@
-import { STATUS_WRITE_ERROR_PREFIX, updateRunStatus, type RunStatus } from './crawlerSource'
+import { STATUS_WRITE_ERROR_PREFIX, updateRunStatus, withStatusWriteTracking, type RunStatus } from './crawlerSource'
 import { runVenueCalendarFetcher } from './runVenueCalendarFetcher'
 import { runYgNoticeFetcher } from './runYgNoticeFetcher'
 import type { TouchedCandidate } from './touchedCandidate'
@@ -360,19 +360,42 @@ export async function runActiveCrawlerSources(
     })
   }
 
-  for (const source of sources) {
-    if (Date.now() >= stopStartingAt) {
-      await recordUndispatched(source, 'skipped', '本輪剩餘時間不足，下輪再跑', [])
-      continue
-    }
-    try {
-      const { touched: sourceTouched, ...result } = await runCrawlerSource(supabase, source, dryRun, trigger)
-      touched.push(...sourceTouched)
-      results.push(result)
-    } catch (e) {
-      const message = `fetcher 拋出例外：${e instanceof Error ? e.message : String(e)}`
-      await recordUndispatched(source, 'error', message, [message])
-    }
+  for (let index = 0; index < sources.length; index += 1) {
+    const source = sources[index]
+    const startedAt = Date.now()
+    console.log('[crawler-source] start', JSON.stringify({
+      source_key: source.source_key,
+      parser_type: source.parser_type,
+      index: index + 1,
+      total: sources.length,
+    }))
+    await withStatusWriteTracking(async (tracker) => {
+      try {
+        if (Date.now() >= stopStartingAt) {
+          await recordUndispatched(source, 'skipped', '本輪剩餘時間不足，下輪再跑', [])
+          return
+        }
+        try {
+          const { touched: sourceTouched, ...result } = await runCrawlerSource(supabase, source, dryRun, trigger)
+          touched.push(...sourceTouched)
+          results.push(result)
+        } catch (e) {
+          const message = `fetcher 拋出例外：${e instanceof Error ? e.message : String(e)}`
+          await recordUndispatched(source, 'error', message, [message])
+        }
+      } finally {
+        const result = results[index]
+        const log = tracker.calls === 0 ? console.error : console.log
+        log('[crawler-source] end', JSON.stringify({
+          source_key: source.source_key,
+          statusWriteCalls: tracker.calls,
+          lastStatusWriteResult: tracker.lastResult?.slice(0, 300) ?? null,
+          status: result?.status ?? null,
+          errorCount: result?.errors.length ?? null,
+          elapsedMs: Date.now() - startedAt,
+        }))
+      }
+    })
   }
 
   return {
