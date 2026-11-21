@@ -27,6 +27,7 @@ import {
 import { type Idol } from '@/lib/mockIdols'
 import { useAppState } from '@/lib/appState'
 import { getEventDateLabel } from '@/lib/eventDisplay'
+import { resolveIdolColor } from '@/lib/idolMarks'
 import IdolAvatar from './IdolAvatar'
 import ScheduleTrackCard from '@/app/schedule/ScheduleTrackCard'
 
@@ -391,10 +392,14 @@ function HomeTrackDisclosure({
             expandedVisible ? 'scale-100 opacity-100' : 'scale-[0.98] opacity-0',
           )}
         >
-          <ScheduleTrackCard
-            event={event}
-            onCollapse={collapseExpandedCard}
-          />
+          <ScheduleTrackCard events={[event]} />
+          <button
+            type="button"
+            onClick={collapseExpandedCard}
+            className="mt-2 min-h-11 rounded-xl px-3 text-sm text-white/80 hover:bg-white/10"
+          >
+            收合卡片
+          </button>
         </div>
       ) : (
         <div
@@ -408,7 +413,7 @@ function HomeTrackDisclosure({
             <IdolAvatar
               name={event.idolName}
               avatarUrl={event.idolAvatarUrl}
-              color={idolPrimaryColor(event.idolId)}
+              color={resolveIdolColor({ slug: event.idolId, color: event.idolColor, name: event.idolName })}
               size="sm"
               className="rounded-[10px]"
             />
@@ -452,10 +457,4 @@ function HomeTrackDisclosure({
       )}
     </div>
   )
-}
-
-function idolPrimaryColor(idolId: string): string {
-  const palette = ['#6d4cff', '#ff5fae', '#00c2ff', '#7a5cff', '#4fd1a5', '#ff8d4d']
-  const hash = Array.from(idolId).reduce((sum, char) => sum + char.charCodeAt(0), 0)
-  return palette[hash % palette.length]
 }

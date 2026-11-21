@@ -5,9 +5,9 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Bell, ChevronRight, Heart, LibraryBig, LogIn, Sparkles, Star } from 'lucide-react'
 import { type Event } from '@/lib/mockEvents'
-import { getIdolById } from '@/lib/mockIdols'
 import { useAppState } from '@/lib/appState'
 import { reminderTypesLabel } from '@/lib/reminderTypes'
+import { getIdolMarkSrc, resolveIdolColor } from '@/lib/idolMarks'
 import IdolAvatar from './IdolAvatar'
 
 // Display caps (per work order)
@@ -269,10 +269,6 @@ function CountdownCard({
   now: Date
   reminderLabel?: string | null
 }) {
-  // getIdolById expects slug. rowToEvent (lib/supabase/events.ts) sets
-  // event.idolId = slug, and mock events use 'bts' / 'blackpink' etc. So
-  // both data sources match. Unknown slugs fall back to a generic gradient.
-  const idol = getIdolById(event.idolId)
   const label = getCountdownLabel(event.date, now)
 
   return (
@@ -282,7 +278,8 @@ function CountdownCard({
           <IdolAvatar
             name={event.idolName}
             avatarUrl={event.idolAvatarUrl}
-            color={idol?.color ?? '#6366f1'}
+            markSrc={getIdolMarkSrc(event.idolId)}
+            color={resolveIdolColor({ slug: event.idolId, color: event.idolColor, name: event.idolName })}
             size="xs"
           />
           <span className="truncate text-xs font-semibold text-[#ff8bc8]">

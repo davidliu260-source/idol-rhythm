@@ -1,266 +1,96 @@
 'use client'
 
-import { getEventLocationLabel } from '@/lib/eventLocation'
-import { type ReactNode } from 'react'
-import { useRouter } from 'next/navigation'
-import { Bell, Clock3, Heart, MapPin, Minimize2, Radio } from 'lucide-react'
+import Link from 'next/link'
+import { Bell, Clock3, Heart, MapPin } from 'lucide-react'
 import clsx from 'clsx'
+import EventTypeBadge from '@/components/EventTypeBadge'
 import IdolAvatar from '@/components/IdolAvatar'
+import SourceBadge from '@/components/SourceBadge'
 import { useAppState } from '@/lib/appState'
 import { getEventDateLabel } from '@/lib/eventDisplay'
-import { EVENT_SUBTYPE_LABELS, EVENT_TYPE_LABELS, type Event } from '@/lib/mockEvents'
+import { getEventLocationLabel, hasAnyEventLocation } from '@/lib/eventLocation'
+import { getIdolMarkSrc, resolveIdolColor } from '@/lib/idolMarks'
+import type { Event } from '@/lib/types'
 
-interface ScheduleTrackCardProps {
-  event: Event
-  compact?: boolean
-  onCollapse?: () => void
+export default function ScheduleTrackCard({ events }: { events: readonly [Event, ...Event[]] }) {
+  const [idol] = events
+  const markSrc = getIdolMarkSrc(idol.idolId)
+  const color = resolveIdolColor({ slug: idol.idolId, color: idol.idolColor, name: idol.idolName })
+
+  return (
+    <article className="relative rounded-[22px] border border-[#ff4fa826] bg-gradient-to-b from-[#2e2336] to-[#1f1826] p-3 pl-4">
+      <div aria-hidden="true" className="absolute inset-y-4 left-0 w-1 rounded-r-full" style={{ backgroundColor: color }} />
+      <header className="mb-2 flex items-center gap-2.5">
+        <IdolAvatar name={idol.idolName} markSrc={markSrc} color={color} decorative />
+        <div className="min-w-0">
+          <h3>
+            <Link href={`/idols/${encodeURIComponent(idol.idolId)}`} className="flex min-h-11 min-w-11 items-center break-words text-xl font-bold leading-tight text-white hover:underline">
+              {idol.idolName}
+            </Link>
+          </h3>
+          <p className="text-xs text-white/70">{events.length} 場</p>
+        </div>
+      </header>
+
+      <ul className="space-y-2">
+        {events.map(event => <ScheduleEventRow key={event.id} event={event} />)}
+      </ul>
+    </article>
+  )
 }
 
-export default function ScheduleTrackCard({
-  event,
-  compact = false,
-  onCollapse,
-}: ScheduleTrackCardProps) {
-  const router = useRouter()
+function ScheduleEventRow({ event }: { event: Event }) {
   const { favorites, reminders } = useAppState()
   const isFavorited = favorites.has(event.id)
   const hasReminder = reminders.has(event.id)
-  const dateLabel = getEventDateLabel(event)
-
-  function navigateToDetail() {
-    router.push(`/events/${event.id}`)
-  }
-
-  function onCardKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      navigateToDetail()
-    }
-  }
-
-  function handleFavorite(e: React.MouseEvent<HTMLButtonElement>) {
-    e.stopPropagation()
-    favorites.toggle(event.id)
-  }
-
-  function handleCollapse(e: React.MouseEvent<HTMLButtonElement>) {
-    e.stopPropagation()
-    onCollapse?.()
-  }
+  const place = hasAnyEventLocation(event) ? getEventLocationLabel(event) : null
 
   return (
-    <div
-      role="link"
-      tabIndex={0}
-      onClick={navigateToDetail}
-      onKeyDown={onCardKeyDown}
-      className={clsx(
-        'group relative overflow-hidden rounded-[22px] border px-4 py-4 transition-all active:scale-[0.985] cursor-pointer',
-        'border-[#ff4fa826] bg-[linear-gradient(180deg,rgba(46,35,54,0.94),rgba(31,24,38,0.98))] shadow-[0_10px_40px_rgba(0,0,0,0.25)]',
-        'before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-[linear-gradient(90deg,transparent,rgba(255,115,196,0.65),transparent)]',
-        compact ? 'min-h-[168px]' : 'min-h-[184px]',
-      )}
-    >
-      <div className="pointer-events-none absolute inset-y-4 left-0 w-[4px] rounded-r-full bg-[linear-gradient(180deg,rgba(255,96,174,0.85),rgba(137,89,255,0.55))]" />
-
-      <div className="relative flex items-start gap-3">
-        <div className="relative pt-0.5">
-          <div className="rounded-[18px] border border-white/8 bg-white/[0.03] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
-            <IdolAvatar
-              name={event.idolName}
-              avatarUrl={event.idolAvatarUrl}
-              color={idolPrimaryColor(event.idolId)}
-              size="md"
-              className="rounded-[14px]"
-            />
-          </div>
+    <li className="flex items-start gap-1 rounded-2xl border border-white/10 bg-white/[0.04] pr-1.5 transition-colors hover:bg-white/[0.07]">
+      <Link href={`/events/${event.id}`} className="min-h-11 min-w-0 flex-1 self-stretch rounded-2xl px-2.5 py-2.5">
+        <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+          <EventTypeBadge type={event.type} subType={event.subType} />
+          <SourceBadge source={event.source.level} />
         </div>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="truncate text-[13px] font-semibold tracking-[0.02em] text-[#ff61b7]">
-                  {event.idolName}
-                </span>
-              </div>
-              <h3 className="mt-1 text-[17px] font-semibold leading-[1.26] text-white">
-                {event.title}
-              </h3>
-            </div>
-
-            {onCollapse && (
-              <div className="flex items-center gap-2">
-                <CollapseButton onClick={handleCollapse} />
-              </div>
-            )}
-          </div>
-
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <KindPill event={event} />
-            <StatusPill level={event.source.level} />
-            {hasReminder && (
-              <MetaPill icon={<Bell className="h-3 w-3" />} label="提醒中" tone="violet" />
-            )}
-          </div>
-
-          <div className="mt-3 rounded-2xl border border-white/8 bg-white/[0.035] px-3.5 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-white/72">
-              <span className="inline-flex items-center gap-1.5 font-medium text-white/88">
-                <Clock3 className="h-3.5 w-3.5 text-[#ff92c7]" />
-                {dateLabel}
-                {event.time ? ` · ${event.time}` : ''}
-              </span>
-              {(
-                <span className="inline-flex min-w-0 items-center gap-1.5">
-                  <MapPin className="h-3.5 w-3.5 text-white/45" />
-                  <span className="truncate">
-                    {getEventLocationLabel(event)}
-                    {event.country ? ` · ${event.country}` : ''}
-                  </span>
-                </span>
-              )}
-            </div>
-          </div>
-
-          {!compact && event.description && (
-            <p className="mt-3 line-clamp-2 text-[12px] leading-5 text-white/58">
-              {event.description}
-            </p>
+        <h4 className="break-words text-sm font-semibold leading-snug text-white">{event.title}</h4>
+        {event.originalTitle && <p className="mt-0.5 truncate text-xs text-white/70">{event.originalTitle}</p>}
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-white/75">
+          <span className="inline-flex items-center gap-1">
+            <Clock3 aria-hidden="true" className="h-3 w-3 shrink-0 text-[#ff92c7]" />
+            {getEventDateLabel(event)}{event.time ? ` · ${event.time}` : ''}
+          </span>
+          {place && (
+            <span className="inline-flex min-w-0 items-center gap-1">
+              <MapPin aria-hidden="true" className="h-3 w-3 shrink-0" />
+              <span className="break-words">{place}{event.country ? ` · ${event.country}` : ''}</span>
+            </span>
           )}
         </div>
-
-        <HeartButton active={isFavorited} onClick={handleFavorite} />
+      </Link>
+      <div className="flex shrink-0 flex-col gap-1 py-1.5 sm:flex-row">
+        <button
+          type="button"
+          onClick={() => favorites.toggle(event.id)}
+          aria-label={`收藏：${event.title}`}
+          aria-pressed={isFavorited}
+          className={clsx(
+            'grid h-11 w-11 place-items-center rounded-full border',
+            isFavorited ? 'border-pink-300/30 bg-pink-400/15 text-pink-300' : 'border-white/15 text-white/70 hover:text-white',
+          )}
+        >
+          <Heart aria-hidden="true" className={clsx('h-4 w-4', isFavorited && 'fill-current')} />
+        </button>
+        {hasReminder && (
+          <span
+            role="img"
+            aria-label={`已設提醒：${event.title}`}
+            title="提醒中"
+            className="grid h-11 w-11 place-items-center rounded-full border border-violet-300/30 bg-violet-400/15 text-violet-200"
+          >
+            <Bell aria-hidden="true" className="h-4 w-4 fill-current" />
+          </span>
+        )}
       </div>
-    </div>
+    </li>
   )
-}
-
-function KindPill({ event }: { event: Event }) {
-  const label =
-    (event.subType && EVENT_SUBTYPE_LABELS[event.subType]) ||
-    EVENT_TYPE_LABELS[event.type] ||
-    event.type
-
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-[#ff79bd2e] bg-[#ff5eb314] px-2.5 py-1 text-[11px] font-medium text-[#ff9cd0]">
-      <Radio className="h-3 w-3" />
-      {label}
-    </span>
-  )
-}
-
-function StatusPill({ level }: { level: Event['source']['level'] }) {
-  const config = {
-    official: {
-      label: '官方確認',
-      className: 'border-emerald-400/25 bg-emerald-400/12 text-emerald-300',
-    },
-    media: {
-      label: '媒體確認',
-      className: 'border-sky-400/25 bg-sky-400/12 text-sky-300',
-    },
-    aggregator: { label: '非官方整理', className: 'border-amber-300/25 bg-amber-400/10 text-amber-300' },
-    pending: {
-      label: 'Community',
-      className: 'border-white/10 bg-white/[0.07] text-white/70',
-    },
-  }[level]
-
-  return (
-    <span className={clsx('inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium', config.className)}>
-      <span className="h-1.5 w-1.5 rounded-full bg-current opacity-80" />
-      {config.label}
-    </span>
-  )
-}
-
-function MetaPill({
-  icon,
-  label,
-  tone,
-}: {
-  icon: ReactNode
-  label: string
-  tone: 'violet'
-}) {
-  return (
-    <span
-      className={clsx(
-        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium',
-        tone === 'violet' && 'border-fuchsia-400/20 bg-fuchsia-400/10 text-fuchsia-200',
-      )}
-    >
-      {icon}
-      {label}
-    </span>
-  )
-}
-
-function HeartButton({
-  active,
-  onClick,
-}: {
-  active: boolean
-  onClick: (e: React.MouseEvent<HTMLButtonElement>) => void
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={active ? '取消收藏' : '收藏'}
-      className={clsx(
-        'mt-auto flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border transition-all',
-        active
-          ? 'border-[#ff5db7]/30 bg-[#ff5db7]/18 text-[#ff78c4] shadow-[0_0_24px_rgba(255,93,183,0.28)]'
-          : 'border-white/10 bg-white/[0.035] text-white/38 hover:text-white/70',
-      )}
-    >
-      <Heart className={clsx('h-4.5 w-4.5', active && 'fill-current')} />
-    </button>
-  )
-}
-
-function CollapseButton({
-  onClick,
-}: {
-  onClick: (e: React.MouseEvent<HTMLButtonElement>) => void
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label="收合卡片"
-      className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/44 transition-all hover:scale-105 hover:text-white/78 active:scale-95"
-    >
-      <Minimize2 className="h-4 w-4" />
-    </button>
-  )
-}
-
-function idolPrimaryColor(idolId: string): string {
-  switch (idolId) {
-    case 'bts':
-      return '#8b5cf6'
-    case 'blackpink':
-      return '#ec4899'
-    case 'aespa':
-      return '#7c3aed'
-    case 'newjeans':
-      return '#14b8a6'
-    case 'stray-kids':
-      return '#ef4444'
-    case 'ive':
-      return '#f43f5e'
-    case 'twice':
-      return '#fb7185'
-    case 'lesserafim':
-      return '#f59e0b'
-    case 'txt':
-      return '#3b82f6'
-    case 'exo':
-      return '#6366f1'
-    default:
-      return '#7c3aed'
-  }
 }

@@ -180,9 +180,10 @@ check('S3 禁止字面隱藏字元', () => {
 })
 
 check('G1 F2 檔案在合併後未被改動', () => {
+  // B2v2 更新偶像名冊頭像，許願表單入口仍由上面的檢查涵蓋。
   execFileSync('git', [
     'diff', '--quiet', 'd7f6442', '--',
-    migration, pure, rpc, form, idols,
+    migration, pure, rpc, form,
   ], { cwd: ROOT, stdio: ['ignore', 'ignore', 'inherit'] })
 })
 

@@ -91,10 +91,11 @@ export interface Event {
   idolName: string
   /**
    * Joined from idols.avatar_url at query time (not stored on events row).
-   * NULL when the idol has no avatar uploaded yet — UI falls back to the
-   * initial+gradient block.
+   * NULL when the idol has no avatar uploaded yet.
    */
   idolAvatarUrl?: string | null
+  /** Raw idols.color from the join. The UI resolves the display color. */
+  idolColor?: string | null
   /**
    * Public display title. Supabase rows may prefer display_title_zh here while
    * keeping the source title in originalTitle.
