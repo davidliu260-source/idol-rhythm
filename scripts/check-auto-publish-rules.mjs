@@ -44,7 +44,7 @@ const run = (over={}, expected={}) => { const d=evaluateCandidate(base(over),ctx
 const kp={source_type:'community',source_name:CS_KPOP.name,source_url:'https://kpopofficial.com/ive-macao',raw_data:{crawler_source_id:'cs-kpop',parser_type:'kpopofficial_concerts',title:'IVE Macao',location:'Galaxy Arena, Macao'},raw_title:'IVE Macao',detected_event_type:null}
 const bp={raw_data:{crawler_source_id:'cs-bp',parser_type:'blackpink_official_tour',city:'GOYANG',venue:'GOYANG STADIUM'},source_name:CS_BP.name,source_url:CS_BP.source_url}
 const publish={action:'publish_official',trustLevel:'official'}
-check('R1',()=>run({}, {...publish,target:'create_event',locationStatus:'location_pending',rawLocation:null,ruleVersion:'t34-v1'}))
+check('R1',()=>run({}, {...publish,target:'create_event',locationStatus:'location_pending',rawLocation:null,ruleVersion:'t34-v2'}))
 check('R2',()=>run({detected_venue_name:'KSPO DOME'},{...publish,locationStatus:'has_location',rawLocation:null}))
 check('R3',()=>run({source_type:'media_outlet',source_name:'Soompi',source_url:'https://www.soompi.com/a/1',raw_data:{provider:'generic_webpage',crawlerSourceId:'cs-media'},ai_confidence:0.9},{action:'publish_official',trustLevel:'media'}))
 check('R4',()=>run(kp,{action:'publish_aggregator',trustLevel:'aggregator',locationStatus:'location_pending',rawLocation:{detected_city:null,detected_venue_name:'Galaxy Arena, Macao',detected_address:null},rawLocationOrigin:'raw_data',eventType:null}))
@@ -65,7 +65,7 @@ check('R36',()=>run({review_status:'approved',approved_event_id:'e-gone'},{...pu
 check('R37',()=>['rejected','parked'].forEach(review_status=>run({review_status},{action:'skip',skipReason:'not_in_scope'})))
 check('R38',()=>run({detected_idol_id:null,detected_date:null,source_type:'fan_account'},{parkReason:'fan_account',allReasons:['fan_account','missing_idol','missing_date']}))
 check('R39',()=>{const a=base({id:'c-a',created_at:'2026-11-01T00:00:00Z',source_url:'u#a'}), b=base({id:'c-b',created_at:'2026-11-02T00:00:00Z',source_url:'u#b'});const d=evaluateCandidates([b,a],ctx);assert.equal(d[0].candidateId,'c-b');assert.equal(d[0].parkReason,'duplicate');assert.equal(d[1].action,'publish_official')})
-check('R40',()=>{assert.equal(AUTO_PUBLISH_RULE_VERSION,'t34-v1');assert.ok(PARK_REASONS.every(r=>!/location|city|venue|address/.test(r))); for(const c of [base(),base(kp),base({ai_confidence:0.9})]) assert.ok(['official','media','aggregator'].includes(evaluateCandidate(c,ctx).trustLevel))})
+check('R40',()=>{assert.equal(AUTO_PUBLISH_RULE_VERSION,'t34-v2');assert.ok(PARK_REASONS.every(r=>!/location|city|venue|address/.test(r))); for(const c of [base(),base(kp),base({ai_confidence:0.9})]) assert.ok(['official','media','aggregator'].includes(evaluateCandidate(c,ctx).trustLevel))})
 check('R41',()=>{for(const c of [base(),base(kp),base({review_status:'approved',approved_event_id:'e-draft'})]) {const before=JSON.stringify([c,ctx]);assert.deepEqual(evaluateCandidate(c,ctx),evaluateCandidate(c,ctx));assert.equal(JSON.stringify([c,ctx]),before)}})
 check('R42',()=>[{},kp,{raw_data:{...base().raw_data,location:'Hall'}},bp].forEach(c=>{const d=run(c,{locationStatus:'location_pending'});assert.ok(d.action.startsWith('publish'))}))
 const loc=(city,venue,address=null)=>({detected_city:city,detected_venue_name:venue,detected_address:address})

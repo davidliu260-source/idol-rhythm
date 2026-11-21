@@ -2,7 +2,7 @@ import { getReviewSourceInfo, matchesAggregatorPattern } from '../admin/sourceRe
 import { isEventEnded, toDateKey } from '../taipeiDate'
 import { locationFromRawData, locationFromRawContent } from '../crawlers/candidateLocation'
 
-export const AUTO_PUBLISH_RULE_VERSION = 't34-v1'
+export const AUTO_PUBLISH_RULE_VERSION = 't34-v2'
 
 /** 與 runGenericWebpageFetcher.COMMIT_CONFIDENCE_THRESHOLD 同值；不要 import 那支檔（會帶入 supabase/anthropic）。 */
 export const LOW_CONFIDENCE_THRESHOLD = 0.65
@@ -94,6 +94,12 @@ export interface ExistingEventInput {
   trust_level: string
   status: string
   auto_publish_blocked?: boolean | null
+  auto_publish_blocked_reason?: string | null
+  time?: string | null
+  description?: string | null
+  display_summary_zh?: string | null
+  ticket_url?: string | null
+  stream_url?: string | null
   city?: string | null
   venue_name?: string | null
   address?: string | null

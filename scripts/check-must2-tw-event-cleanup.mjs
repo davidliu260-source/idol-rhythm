@@ -182,7 +182,7 @@ async function run(overrides = {}, events = [], freshLocation = null) {
 }
 
 test('create_event writes the cleaned title, inferred city and refined category', async () => {
-  const { report, drafts } = await run()
+  const { report, drafts } = await run({ display_summary_zh: '巡演資訊' })
   assert.deepEqual(report.errors, [])
   assert.equal(report.created[0].locationPending, false)
   assert.deepEqual(report.created[0].cleanupRules, ['clean_title', 'infer_city', 'concert'])
@@ -220,7 +220,7 @@ test('publishing an existing event does not write its title or category', async 
   const existing = {
     id: 'existing', idol_id: 'idol', title: 'Original draft', type: 'official',
     date: '2027-01-01', is_published: false, auto_publish_blocked: false,
-    status: 'confirmed', trust_level: 'pending',
+    status: 'confirmed', trust_level: 'pending', venue_name: 'Arena',
   }
   const { report, drafts, patches } = await run({ approved_event_id: existing.id }, [existing])
   assert.deepEqual(report.errors, [])
