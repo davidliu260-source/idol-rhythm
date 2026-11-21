@@ -24,9 +24,10 @@ import clsx from 'clsx'
 export default async function IdolDetailPage({
   params,
 }: {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }) {
-  const idol = await getIdolBySlug(params.slug)
+  const { slug } = await params
+  const idol = await getIdolBySlug(slug)
   if (!idol) return notFound()
 
   const allEvents = await getPublishedEvents()
@@ -92,7 +93,7 @@ export default async function IdolDetailPage({
             </div>
             <div className="mt-5">
               <FollowIdolButton idolSlug={idol.id} idolName={idol.name} />
-              <SubscribeCalendarButton slug={params.slug} />
+              <SubscribeCalendarButton slug={slug} />
             </div>
           </div>
         </section>

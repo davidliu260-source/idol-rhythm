@@ -13,10 +13,11 @@ import EventDetailInfoRows from '@/components/EventDetailInfoRows'
 export default async function EventDetailPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
-  const supabaseEvent = await getSupabaseEventById(params.id)
-  const event = supabaseEvent ?? getMockEventById(params.id)
+  const { id } = await params
+  const supabaseEvent = await getSupabaseEventById(id)
+  const event = supabaseEvent ?? getMockEventById(id)
   if (!event) return notFound()
 
   const isDemoEvent = !supabaseEvent

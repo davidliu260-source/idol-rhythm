@@ -171,9 +171,11 @@ check('S2 前端護欄', () => {
 })
 
 check('G1 F1 檔案在合併後未被改動', () => {
+  // 活動詳情頁在 MUST4（Next 15：params 改成 Promise）有合法修改；
+  // 它的 F1 內容已由上面的 assertIncludes 檢查，這裡不再凍結整個檔案。
   execFileSync('git', [
     'diff', '--quiet', 'd80967c', '--',
-    'supabase/migrations/064_event_wants.sql', pure, rpc, ui, ...cards, detail,
+    'supabase/migrations/064_event_wants.sql', pure, rpc, ui, ...cards,
   ], { cwd: ROOT, stdio: ['ignore', 'ignore', 'inherit'] })
 })
 

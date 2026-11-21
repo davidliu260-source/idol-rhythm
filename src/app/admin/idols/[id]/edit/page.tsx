@@ -53,9 +53,9 @@ async function getIdolById(id: string): Promise<IdolDetail | null> {
 export default async function AdminEditIdolPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
-  const { id } = params
+  const { id } = await params
 
   const [{ isAdmin }, idol] = await Promise.all([
     getCurrentAdmin(),

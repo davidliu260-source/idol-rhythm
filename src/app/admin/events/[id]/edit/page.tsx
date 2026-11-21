@@ -99,9 +99,9 @@ async function getEventForEdit(id: string): Promise<EventRow | null> {
 export default async function AdminEditEventPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
-  const { id } = params
+  const { id } = await params
 
   const [{ isAdmin }, eventResult, { idols, idolsError }] = await Promise.all([
     getCurrentAdmin(),
