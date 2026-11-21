@@ -1,9 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, ChevronLeft, Bell, Heart, Share2 } from 'lucide-react'
 import { useAppState } from '@/lib/appState'
+import {
+  choiceToTypes,
+  REMINDER_CHOICE_LABELS,
+  typesToChoice,
+  type ReminderChoice,
+} from '@/lib/reminderTypes'
 import clsx from 'clsx'
 
 const heroButtonClass = 'grid h-11 w-11 place-items-center rounded-full bg-black/[0.24] text-white transition-colors hover:bg-black/[0.32] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white'
@@ -66,6 +72,59 @@ export function EventDetailReminderBtn({ eventId, variant = 'default' }: { event
         className={clsx(variant === 'hero' ? 'h-[19px] w-[19px] transition-colors' : 'h-4 w-4 transition-colors', hasReminder ? 'text-primary' : 'text-white')}
       />
     </button>
+  )
+}
+
+const reminderChoices: ReminderChoice[] = ['day_before', 'week_before', 'both']
+
+export function EventDetailReminderPicker({ eventId }: { eventId: string }) {
+  const { reminders } = useAppState()
+  const headingId = useId()
+  const choice = typesToChoice(reminders.getTypes(eventId))
+  const hasReminder = reminders.has(eventId)
+  const status = hasReminder
+    ? (choice ? `已設定：${REMINDER_CHOICE_LABELS[choice]}` : '已設定提醒')
+    : '尚未設定提醒'
+
+  return (
+    <section className="rounded-[22px] border border-white/8 bg-white/[0.035] p-4">
+      <h2 id={headingId} className="text-sm font-semibold text-white">提醒</h2>
+      <p aria-live="polite" className="mt-1 text-xs text-white/70">{status}</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <div role="group" aria-labelledby={headingId} className="flex flex-wrap gap-2">
+          {reminderChoices.map((option) => (
+            <button
+              key={option}
+              type="button"
+              aria-pressed={choice === option}
+              disabled={reminders.isLoading}
+              onClick={() => reminders.setTypes(eventId, choiceToTypes(option))}
+              className={clsx(
+                'min-h-[44px] rounded-full border px-3 text-sm font-medium transition-colors disabled:opacity-50',
+                choice === option
+                  ? 'border-violet-300/40 bg-violet-400/20 text-violet-100'
+                  : 'border-white/10 bg-white/[0.04] text-white/75 hover:text-white',
+              )}
+            >
+              {option === 'both' ? '兩者' : REMINDER_CHOICE_LABELS[option]}
+            </button>
+          ))}
+        </div>
+        {hasReminder && (
+          <button
+            type="button"
+            disabled={reminders.isLoading}
+            onClick={() => reminders.setTypes(eventId, [])}
+            className="min-h-[44px] rounded-full px-3 text-sm text-white/70 transition-colors hover:text-white disabled:opacity-50"
+          >
+            關閉提醒
+          </button>
+        )}
+      </div>
+      {reminders.mode === 'local' && (
+        <p className="mt-2 text-xs leading-relaxed text-white/60">目前只存在這台裝置；登入後才會收到站內通知</p>
+      )}
+    </section>
   )
 }
 

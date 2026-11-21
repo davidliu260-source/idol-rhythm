@@ -6,7 +6,7 @@ import { notFound } from 'next/navigation'
 import { ExternalLink, Sparkles, Ticket, Tv } from 'lucide-react'
 import { getEventById as getMockEventById } from '@/lib/mockEvents'
 import { getEventById as getSupabaseEventById } from '@/lib/supabase/events'
-import { EventDetailShareBtn } from '@/components/EventDetailActions'
+import { EventDetailReminderPicker, EventDetailShareBtn } from '@/components/EventDetailActions'
 import EventDetailHero from '@/components/EventDetailHero'
 import EventDetailInfoRows from '@/components/EventDetailInfoRows'
 
@@ -99,6 +99,7 @@ export default async function EventDetailPage({
           />
           <ShareAction title={event.title} text={shareText} />
         </section>
+        <EventDetailReminderPicker eventId={event.id} />
         </div>
       </div>
     </div>
