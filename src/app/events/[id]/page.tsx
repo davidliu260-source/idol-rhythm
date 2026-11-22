@@ -4,23 +4,29 @@ export const dynamic = 'force-dynamic'
 
 import { notFound } from 'next/navigation'
 import { ExternalLink, Sparkles, Ticket, Tv } from 'lucide-react'
-import { getEventById as getMockEventById } from '@/lib/mockEvents'
-import { getEventById as getSupabaseEventById } from '@/lib/supabase/events'
+import type { Metadata } from 'next'
+import { buildEventMeta } from '@/lib/seo/metadata'
+import { getEventDetail } from './data'
 import { EventDetailReminderPicker, EventDetailShareBtn } from '@/components/EventDetailActions'
 import EventDetailHero from '@/components/EventDetailHero'
 import EventDetailInfoRows from '@/components/EventDetailInfoRows'
 
-export default async function EventDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}) {
-  const { id } = await params
-  const supabaseEvent = await getSupabaseEventById(id)
-  const event = supabaseEvent ?? getMockEventById(id)
-  if (!event) return notFound()
+type EventPageProps = { params: Promise<{ id: string }> }
 
-  const isDemoEvent = !supabaseEvent
+export async function generateMetadata({ params }: EventPageProps): Promise<Metadata> {
+  const { id } = await params
+  const detail = await getEventDetail(id)
+  if (!detail) return { title: '活動' }
+
+  const metadata = buildEventMeta(detail.event)
+  return detail.isDemoEvent ? { ...metadata, robots: { index: false } } : metadata
+}
+
+export default async function EventDetailPage({ params }: EventPageProps) {
+  const { id } = await params
+  const detail = await getEventDetail(id)
+  if (!detail) return notFound()
+  const { event, isDemoEvent } = detail
   const summaryText = event.displaySummaryZh?.trim() || event.description.trim()
   const hasLocalizedSummary = Boolean(event.displaySummaryZh?.trim())
   const shareText = `${event.idolName} · ${event.title}`

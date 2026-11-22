@@ -193,9 +193,12 @@ export async function getPublishedEvents({ throwOnError = false } = {}): Promise
  * Returns all active idols.
  * Returns an empty array if Supabase is not configured or the query fails.
  */
-export async function getActiveIdols(): Promise<Idol[]> {
+export async function getActiveIdols({ throwOnError = false } = {}): Promise<Idol[]> {
   const supabase = getSupabaseClient()
-  if (!supabase) return []
+  if (!supabase) {
+    if (throwOnError) throw new Error('Active idols client is unavailable')
+    return []
+  }
 
   const { data, error } = await supabase
     .from('idols')
@@ -203,7 +206,10 @@ export async function getActiveIdols(): Promise<Idol[]> {
     .eq('is_active', true)
     .order('name', { ascending: true })
 
-  if (error || !data) return []
+  if (error || !data) {
+    if (throwOnError) throw new Error('Active idols query failed')
+    return []
+  }
 
   return (data as SupabaseIdolRow[]).map(rowToIdol)
 }

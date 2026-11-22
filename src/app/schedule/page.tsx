@@ -1,3 +1,5 @@
+import { pageMetadata } from '@/lib/seo/metadata'
+
 export const dynamic = 'force-dynamic'
 
 import { Calendar } from 'lucide-react'
@@ -5,6 +7,8 @@ import { getPublishedEvents } from '@/lib/supabase/events'
 import { listCurrentEvents } from '@/lib/upcomingEvents'
 import ScheduleClient from './ScheduleClient'
 import { PAGE_HERO_SHELL } from './scheduleTheme'
+
+export const metadata = pageMetadata('/schedule', '偶像活動行事曆', '查看近期在台灣與線上的偶像演唱會、見面會、售票及直播行程。活動資訊整理自官方與可信媒體等公開來源，場次日期、開始時間、地點及售票方式以主辦公告為準。')
 
 export default async function SchedulePage() {
   const events = listCurrentEvents(await getPublishedEvents())

@@ -3,10 +3,15 @@ import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import BottomNav from '@/components/BottomNav'
 import { AppStateProvider } from '@/lib/appState'
+import { DEFAULT_DESCRIPTION, DEFAULT_TITLE, SITE_NAME, SITE_URL } from '@/lib/seo/metadata'
 
 export const metadata: Metadata = {
-  title: 'Idol Rhythm · 星動時刻',
-  description: '追蹤你的偶像行程，不錯過每一個星動瞬間。',
+  metadataBase: new URL(SITE_URL),
+  title: { default: DEFAULT_TITLE, template: '%s｜星動時刻' },
+  description: DEFAULT_DESCRIPTION,
+  applicationName: SITE_NAME,
+  openGraph: { type: 'website', siteName: SITE_NAME, locale: 'zh_TW' },
+  twitter: { card: 'summary_large_image' },
   manifest: '/manifest.json',
 }
 

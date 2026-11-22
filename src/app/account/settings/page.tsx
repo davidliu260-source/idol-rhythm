@@ -1,5 +1,7 @@
 export const dynamic = 'force-dynamic'
 
+export const metadata = { robots: { index: false, follow: false } }
+
 import { redirect } from 'next/navigation'
 import { Settings } from 'lucide-react'
 import AuthPageLayout from '@/components/AuthPageLayout'

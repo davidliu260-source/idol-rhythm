@@ -1,5 +1,7 @@
 export const dynamic = 'force-dynamic'
 
+export const metadata = { robots: { index: false, follow: false } }
+
 import { getActiveIdols, getPublishedEvents } from '@/lib/supabase/events'
 import MeClient from './MeClient'
 

@@ -55,12 +55,16 @@ test('行程頁的計數、搜尋、時間軸與月曆皆使用公開篩選後�
 
 test('偶像頁保留兩格統計，圖鑑和活動詳情保留已結束活動入口', () => {
   const idol = read('src/app/idols/[slug]/page.tsx')
-  assert.match(idol, /listCurrentEvents\(idolEvents\)/)
+  assert.match(idol, /await getIdolDetail\(slug\)/)
+  assert.match(read('src/app/idols/[slug]/data.ts'), /listCurrentEvents\(idolEvents\)/)
   assert.match(idol, /grid-cols-2 gap-2/)
   assert.match(idol, /<StatTile label="即將到來"/)
   assert.match(idol, /<StatTile\s+label="成員"/)
   assert.doesNotMatch(idol, /已結束|最近 10 筆|\bpast\b/)
   assert.match(read('src/app/atlas/page.tsx'), /const events = await getPublishedEvents\(\)/)
   assert.match(read('src/app/atlas/AtlasClient.tsx'), /title="已結束"/)
-  assert.match(read('src/app/events/[id]/page.tsx'), /await getSupabaseEventById\(/)
+  assert.match(read('src/app/events/[id]/page.tsx'), /await getEventDetail\(id\)/)
+  const eventData = read('src/app/events/[id]/data.ts')
+  assert.match(eventData, /getPublicEvent = cache\(getEventById\)/)
+  assert.match(eventData, /await getPublicEvent\(id\)/)
 })
