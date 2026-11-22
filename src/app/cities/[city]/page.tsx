@@ -7,6 +7,7 @@ import { ArrowLeft, MapPin } from 'lucide-react'
 import { PAGE_HERO_SHELL } from '@/app/schedule/scheduleTheme'
 import EventCard from '@/components/EventCard'
 import { cityHref, decodeCityParam, getCityEvents, resolveCityParam } from '@/lib/cities'
+import { buildCityMeta } from '@/lib/seo/metadata'
 import { getPublishedEvents } from '@/lib/supabase/events'
 
 export const dynamic = 'force-dynamic'
@@ -17,8 +18,9 @@ type CityPageProps = { params: Promise<{ city: string }> }
 
 export async function generateMetadata({ params }: CityPageProps): Promise<Metadata> {
   const { city } = await params
-  const name = resolveCityParam(city, await getEvents())
-  return { title: name ? `${name}的偶像活動｜星動時刻` : '城市｜星動時刻' }
+  const events = await getEvents()
+  const name = resolveCityParam(city, events)
+  return name ? buildCityMeta(name, getCityEvents(events, name).length) : { title: '城市' }
 }
 
 export default async function CityPage({ params }: CityPageProps) {

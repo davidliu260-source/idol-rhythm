@@ -1,3 +1,5 @@
+import { pageMetadata } from '@/lib/seo/metadata'
+
 import Link from 'next/link'
 import clsx from 'clsx'
 import { CalendarDays, ChevronRight, MapPin } from 'lucide-react'
@@ -7,6 +9,8 @@ import { buildCityDirectory, cityHref, type CityDirectoryEntry } from '@/lib/cit
 import { getPublishedEvents } from '@/lib/supabase/events'
 
 export const dynamic = 'force-dynamic'
+
+export const metadata = pageMetadata('/cities', '台灣各城市偶像活動', '依城市查看台北、高雄等地的偶像演唱會、見面會與官方活動，查看目前未結束的公開場次。資料整理自官方與可信媒體等公開來源，活動時間及地點以主辦公告為準。')
 
 export default async function CitiesPage() {
   const events = await getPublishedEvents()

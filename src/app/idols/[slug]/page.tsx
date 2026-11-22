@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic'
 
-import { listCurrentEvents } from '@/lib/upcomingEvents'
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -17,25 +17,25 @@ import { getIdolMarkSrc, resolveIdolColor } from '@/lib/idolMarks'
 import IdolAvatar from '@/components/IdolAvatar'
 import EventCard from '@/components/EventCard'
 import { PAGE_HERO_SHELL } from '@/app/schedule/scheduleTheme'
-import { getIdolBySlug, getPublishedEvents } from '@/lib/supabase/events'
+import { buildIdolMeta } from '@/lib/seo/metadata'
+import { getIdolDetail } from './data'
 import FollowIdolButton from './FollowIdolButton'
 import SubscribeCalendarButton from './SubscribeCalendarButton'
 import clsx from 'clsx'
 
-export default async function IdolDetailPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>
-}) {
+type IdolPageProps = { params: Promise<{ slug: string }> }
+
+export async function generateMetadata({ params }: IdolPageProps): Promise<Metadata> {
   const { slug } = await params
-  const idol = await getIdolBySlug(slug)
-  if (!idol) return notFound()
+  const detail = await getIdolDetail(slug)
+  return detail ? buildIdolMeta(detail.idol, detail.upcoming.length) : { title: '偶像' }
+}
 
-  const allEvents = await getPublishedEvents()
-  const idolEvents = allEvents.filter((event) => event.idolId === idol.id)
-
-  const upcoming = listCurrentEvents(idolEvents)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+export default async function IdolDetailPage({ params }: IdolPageProps) {
+  const { slug } = await params
+  const detail = await getIdolDetail(slug)
+  if (!detail) return notFound()
+  const { idol, upcoming } = detail
 
   const typeLabel =
     idol.type === 'group' ? '團體 Group' : idol.type === 'solo' ? '個人 Solo' : ''

@@ -1,5 +1,7 @@
 export const dynamic = 'force-dynamic'
 
+export const metadata = { robots: { index: false, follow: false } }
+
 import { KeyRound } from 'lucide-react'
 import AuthPageLayout from '@/components/AuthPageLayout'
 import ForgotPasswordForm from './ForgotPasswordForm'

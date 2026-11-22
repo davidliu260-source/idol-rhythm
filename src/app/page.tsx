@@ -19,6 +19,8 @@ import HomeLatestPublished from '@/components/HomeLatestPublished'
 import { getWeekDays, getWeekDots, hasWeekEvents, listLatestPublished } from '@/lib/homeWeekAndFeed'
 import type { CategoryFilter } from '@/lib/upcomingFilters'
 
+export const metadata = { alternates: { canonical: '/' } }
+
 export default async function HomePage() {
   const [publishedEvents, idols] = await Promise.all([
     getPublishedEvents(),
