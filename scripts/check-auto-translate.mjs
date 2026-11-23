@@ -458,6 +458,7 @@ test('受保護路徑維持與 origin/main 的 merge base 一致', () => {
     'src/lib/autoPublish/minimumContent.ts', 'src/lib/autoPublish/evaluateCandidate.ts', 'src/lib/autoPublish/runAutoPublish.ts',
     'src/lib/ai/generateChineseDisplay.ts', 'src/lib/ai/parseCandidate.ts',
     `:(exclude)${routePath}`, `:(exclude)${migrationPath}`,
+    ':(exclude)supabase/migrations/071_event_error_reports.sql',
   ]
   assert.equal(git('diff', '--name-only', base, '--', ...paths), '')
   assert.equal(git('ls-files', '--others', '--exclude-standard', '--', ...paths), '')

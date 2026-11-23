@@ -35,6 +35,7 @@ interface SupabaseEventRow {
   stream_url: string | null
   is_published: boolean
   published_at: string | null
+  updated_at?: string | null
   idols?: { slug: string; avatar_url: string | null; color: string | null } | null
   event_sources?: SupabaseEventSourceRow[] | null
 }
@@ -101,6 +102,7 @@ function rowToEvent(row: SupabaseEventRow): Event {
     type: row.type as EventType,
     subType: (row.sub_type ?? undefined) as EventSubType | undefined,
     status: row.status as EventStatus,
+    updatedAt: row.updated_at ?? undefined,
     date: startDate,
     startDate,
     endDate: row.end_date ?? undefined,

@@ -116,7 +116,7 @@ check('城市與偶像空狀態提供下一步，底部導覽保留城市', () =
   assert.match(read('src/components/BottomNav.tsx'), /['"]\/cities['"]/)
 })
 
-check('核對受保護路徑與分支起點，以及 migration 編號（067 之後只允許 068、069 與 070）', () => {
+check('核對受保護路徑與分支起點，以及 migration 編號（067 之後只允許 068、069、070 與 071）', () => {
   const cwd = root
   const base = execFileSync('git', ['merge-base', 'origin/main', 'HEAD'], { cwd, encoding: 'utf8' }).trim()
   const protectedPaths = [
@@ -134,12 +134,12 @@ check('核對受保護路徑與分支起點，以及 migration 編號（067 之�
   // B2v2 只更新 AtlasClient 的取色，其他 atlas 檔案仍受保護。
   const b2v2Allowed = ':(exclude)src/app/atlas/AtlasClient.tsx'
   const emptyShellAllowed = ':(exclude)supabase/migrations/069_auto_publish_blocked_reason.sql'
-  const autoTranslateAllowed = [':(exclude)supabase/migrations/070_event_translation_attempts.sql', ':(exclude)src/app/api/cron/sync-candidates/route.ts']
+  const autoTranslateAllowed = [':(exclude)supabase/migrations/070_event_translation_attempts.sql', ':(exclude)supabase/migrations/071_event_error_reports.sql', ':(exclude)src/app/api/cron/sync-candidates/route.ts']
   execFileSync('git', ['diff', '--quiet', base, '--', ...protectedPaths, ...must3Allowed, b2v2Allowed, emptyShellAllowed, ...autoTranslateAllowed], { cwd })
   const untracked = execFileSync('git', ['ls-files', '--others', '--exclude-standard', '--', ...protectedPaths, ...must3Allowed, emptyShellAllowed, ...autoTranslateAllowed], { cwd, encoding: 'utf8' })
   assert.equal(untracked, '', '受保護路徑出現未追蹤檔案')
   for (const file of readdirSync(new URL('supabase/migrations/', root), { withFileTypes: true })) {
     const number = file.name.match(/^\d+/)?.[0]
-    assert.ok(!file.isFile() || !number || Number(number) < 68 || ['068_calendar_feed_tokens.sql', '069_auto_publish_blocked_reason.sql', '070_event_translation_attempts.sql'].includes(file.name), `出現新 migration：${file.name}`)
+    assert.ok(!file.isFile() || !number || Number(number) < 68 || ['068_calendar_feed_tokens.sql', '069_auto_publish_blocked_reason.sql', '070_event_translation_attempts.sql', '071_event_error_reports.sql'].includes(file.name), `出現新 migration：${file.name}`)
   }
 })

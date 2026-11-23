@@ -126,6 +126,7 @@ export interface Event {
   ticketUrl?: string
   streamUrl?: string
   publishedAt?: string
+  updatedAt?: string
   tags: string[]
 }
 

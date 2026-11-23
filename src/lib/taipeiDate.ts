@@ -48,3 +48,22 @@ export function isWithinTaipeiDays(value: string, days: number, now?: Date): boo
   const today = taipeiToday(now)
   return key !== null && today <= key && key <= addDaysToKey(today, days)
 }
+
+const dateTimeFormatter = new Intl.DateTimeFormat('en-CA', {
+  timeZone: TAIPEI_TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+})
+
+export function formatTaipeiDateTime(iso: string | null | undefined): string | null {
+  if (!iso) return null
+  const timestamp = Date.parse(iso)
+  if (!Number.isFinite(timestamp)) return null
+  const parts = dateTimeFormatter.formatToParts(timestamp)
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find(p => p.type === type)?.value
+  return `${part('year')}/${part('month')}/${part('day')} ${part('hour')}:${part('minute')}`
+}
