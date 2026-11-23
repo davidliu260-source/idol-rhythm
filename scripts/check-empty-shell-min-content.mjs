@@ -191,7 +191,7 @@ test('069 grants only the reason column and protected paths match the branch poi
     'src/lib/crawlers', 'src/app/api/cron', 'src/app/api/ics', 'src/lib/ics',
     'src/lib/reminderDispatch.ts', 'package.json', 'vercel.json',
     'supabase/migrations', `:(exclude)${migration}`,
-    ':(exclude)supabase/migrations/070_event_translation_attempts.sql', ':(exclude)src/app/api/cron/sync-candidates/route.ts',
+    ':(exclude)supabase/migrations/070_event_translation_attempts.sql', ':(exclude)supabase/migrations/071_event_error_reports.sql', ':(exclude)src/app/api/cron/sync-candidates/route.ts',
   ]
   assert.equal(git('diff', '--name-only', base, '--', ...protectedPaths), '')
   assert.equal(git('ls-files', '--others', '--exclude-standard', '--', ...protectedPaths), '')

@@ -1,3 +1,5 @@
+import EventErrorReport from '@/components/EventErrorReport'
+import { formatTaipeiDateTime } from '@/lib/taipeiDate'
 import { EventWantButton } from '@/components/EventWant'
 import { getPublicTrustLabel } from '@/lib/trustLevels'
 export const dynamic = 'force-dynamic'
@@ -29,6 +31,7 @@ export default async function EventDetailPage({ params }: EventPageProps) {
   const { event, isDemoEvent } = detail
   const summaryText = event.displaySummaryZh?.trim() || event.description.trim()
   const hasLocalizedSummary = Boolean(event.displaySummaryZh?.trim())
+  const updatedAt = isDemoEvent ? null : formatTaipeiDateTime(event.updatedAt)
   const shareText = `${event.idolName} · ${event.title}`
 
   return (
@@ -88,6 +91,10 @@ export default async function EventDetailPage({ params }: EventPageProps) {
               查看來源
             </a>
           )}
+          {updatedAt && (
+            <p className="mt-3 text-xs text-white/65">資料最後更新：{updatedAt}（台北時間）</p>
+          )}
+          {!isDemoEvent && <EventErrorReport key={event.id} eventId={event.id} />}
         </section>
 
         <section className="grid grid-cols-1 gap-2 sm:grid-cols-3">

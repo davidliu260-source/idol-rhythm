@@ -182,6 +182,16 @@ export default async function AdminPage() {
           </div>
           <ChevronRight className="h-4 w-4 text-muted" />
         </Link>
+        <Link
+          href="/admin/reports"
+          className="flex items-center justify-between rounded-xl bg-card border border-card-border px-4 py-3 hover:border-violet-500/40 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <FileSearch className="h-4 w-4 text-violet-500" />
+            <span className="text-sm text-text-base">錯誤回報</span>
+          </div>
+          <ChevronRight className="h-4 w-4 text-muted" />
+        </Link>
       </div>
 
       {/* Phase info */}
