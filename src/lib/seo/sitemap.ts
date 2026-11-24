@@ -1,4 +1,5 @@
-import { hasMinimumContent } from '../autoPublish/minimumContent'
+import { hasMinimumContentOrOfficialNotice } from '../autoPublish/minimumContent'
+import { getEventOfficialNoticeUrl } from '../officialNotice'
 import { buildCityDirectory, cityHref } from '../cities'
 import type { Event, Idol } from '../types'
 import { listCurrentEvents } from '../upcomingEvents'
@@ -26,7 +27,9 @@ export function buildSitemapEntries({ idols, events, now }: {
   }
 
   for (const event of currentEvents) {
-    if (hasMinimumContent({
+    // MUST #10：YG／SMTOWN 公告不算正文與摘要，改把官方公告連結算進最低內容。
+    const officialNoticeUrl = getEventOfficialNoticeUrl(event)
+    if (hasMinimumContentOrOfficialNotice({
       time: event.time,
       location: event.location,
       venue_name: event.venueName,
@@ -36,7 +39,7 @@ export function buildSitemapEntries({ idols, events, now }: {
       display_summary_zh: event.displaySummaryZh,
       ticket_url: event.ticketUrl,
       stream_url: event.streamUrl,
-    })) add(`/events/${encodeURIComponent(event.id)}`, event.publishedAt)
+    }, { factsOnlyNotice: !!officialNoticeUrl, officialNoticeUrl })) add(`/events/${encodeURIComponent(event.id)}`, event.publishedAt)
   }
   return [...entries.values()]
 }

@@ -10,6 +10,7 @@ import type { EventSubType } from '@/lib/types'
 import { groupScheduleEvents } from '@/lib/scheduleGroups'
 import { listCurrentEvents } from '@/lib/upcomingEvents'
 import { useAppState } from '@/lib/appState'
+import { getEventOfficialNoticeUrl } from '@/lib/officialNotice'
 import ScheduleTrackCard from './ScheduleTrackCard'
 
 interface Props {
@@ -642,7 +643,8 @@ function getSearchHaystack(event: Event): string {
       event.city,
       event.country,
       event.source.label,
-      event.description,
+      // MUST #10：YG／SMTOWN 公告不靠正文命中搜尋。
+      getEventOfficialNoticeUrl(event) ? undefined : event.description,
       event.tags?.join(' '),
       // Subtype label (e.g. '快閃店') + keyword aliases (e.g. 'pop-up popup')
       // lets users search "快閃店" or "popup" and match the correct events

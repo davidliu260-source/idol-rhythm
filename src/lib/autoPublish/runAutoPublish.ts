@@ -4,7 +4,8 @@ import { inferEventType } from './inferEventType'
 import type { InferRule } from './inferEventType'
 import { resolveCandidateLocation, planLocationFill, buildAutofillMetaEntry, appendAutofillMeta } from './locationFill'
 import type { FillColumn, LocationGuards, AutofillMetaEntry } from './locationFill'
-import { EMPTY_SHELL_REASON, hasMinimumContent, TITLE_CITY_COUNTS_AS_CONTENT } from './minimumContent'
+import { EMPTY_SHELL_REASON, hasMinimumContentOrOfficialNotice, TITLE_CITY_COUNTS_AS_CONTENT } from './minimumContent'
+import { factsOnlyNoticeTicketUrl, isFactsOnlyNoticeCandidate } from '../officialNotice'
 import { normalizeCrawledEvent } from '../crawlers/taiwanEventCleanup'
 import type { TouchedCandidate } from '../crawlers/touchedCandidate'
 
@@ -28,7 +29,7 @@ export interface DraftEventInsert {
   display_title_zh: string | null; display_summary_zh: string | null; location_name_zh: string | null
   translation_status: string; translation_source: string | null; translation_updated_at: string | null
   city: string | null; venue_name: string | null; address: string | null; map_url: string | null
-  tags: string[]; ticket_url: null; stream_url: null; is_published: false; published_at: null
+  tags: string[]; ticket_url: string | null; stream_url: null; is_published: false; published_at: null
   auto_publish_rule_version: typeof AUTO_PUBLISH_RULE_VERSION; auto_published_at: null; auto_publish_blocked: false
   auto_publish_blocked_reason: typeof EMPTY_SHELL_REASON | null
   location_autofilled_at: string | null; location_autofill_meta: AutofillMetaEntry[] | null
@@ -106,6 +107,8 @@ export async function runAutoPublish(store: AutoPublishStore, input: { touched: 
       if (failed(meta)) { error('location_meta', meta.error); return null }
       return { fields: plan.fields, guards: plan.guards, patch: { ...plan.fields, location_autofilled_at: at, location_autofill_meta: meta } }
     }
+    // MUST #10：YG／SMTOWN 公告只留事實，不帶摘要；官方公告連結算進最低內容。
+    const factsOnlyNotice = isFactsOnlyNoticeCandidate(c, d.parserType)
     const sourceRow = (id: string, trustLevel: PublishTrustLevel): EventSourceInsert => ({ event_id: id, level: trustLevel, label: c.source_name ?? ctx.crawlerSources.find(s => s.id === d.crawlerSourceId)?.name ?? '候選來源', type: c.source_type ?? 'unknown', url: c.source_url })
     try {
       if (d.action === 'park') {
@@ -153,12 +156,15 @@ export async function runAutoPublish(store: AutoPublishStore, input: { touched: 
           type: inferred.type,
           subType: inferred.subType,
         })
-        const hasContent = hasMinimumContent({
+        const displaySummaryZh = factsOnlyNotice ? null : c.display_summary_zh ?? null
+        const ticketUrl = factsOnlyNoticeTicketUrl(c, d.parserType)
+        const hasContent = hasMinimumContentOrOfficialNotice({
           ...fields,
           city: TITLE_CITY_COUNTS_AS_CONTENT ? normalized.city : fields.city,
           location_name_zh: c.location_name_zh,
-          display_summary_zh: c.display_summary_zh,
-        })
+          display_summary_zh: displaySummaryZh,
+          ticket_url: ticketUrl,
+        }, { factsOnlyNotice, officialNoticeUrl: c.source_url })
         if (hasContent && !fields.city && normalized.city) fields.city = normalized.city
         const hasLocation = Object.keys(fields).length > 0
         const row: DraftEventInsert = {
@@ -166,10 +172,10 @@ export async function runAutoPublish(store: AutoPublishStore, input: { touched: 
           status: 'confirmed', trust_level: d.trustLevel,
           date: (c.detected_start_date ?? c.detected_date)!, start_date: (c.detected_start_date ?? c.detected_date)!, end_date: c.detected_end_date ?? null, date_label: c.detected_date_label ?? null,
           time: null, country: '', country_flag: '', location: null, description: null,
-          display_title_zh: c.display_title_zh ?? null, display_summary_zh: c.display_summary_zh ?? null, location_name_zh: c.location_name_zh ?? null,
+          display_title_zh: c.display_title_zh ?? null, display_summary_zh: displaySummaryZh, location_name_zh: c.location_name_zh ?? null,
           translation_status: c.translation_status ?? 'none', translation_source: c.translation_source ?? null, translation_updated_at: c.translation_updated_at ?? null,
           city: fields.city ?? null, venue_name: fields.venue_name ?? null, address: fields.address ?? null, map_url: c.detected_map_url ?? null,
-          tags: [], ticket_url: null, stream_url: null, is_published: false, published_at: null, auto_publish_rule_version: AUTO_PUBLISH_RULE_VERSION, auto_published_at: null, auto_publish_blocked: false,
+          tags: [], ticket_url: ticketUrl, stream_url: null, is_published: false, published_at: null, auto_publish_rule_version: AUTO_PUBLISH_RULE_VERSION, auto_published_at: null, auto_publish_blocked: false,
           auto_publish_blocked_reason: hasContent ? null : EMPTY_SHELL_REASON,
           location_autofilled_at: hasLocation ? at : null,
           location_autofill_meta: hasLocation ? [buildAutofillMetaEntry({ filledAt: at, candidateId: c.id, crawlerSourceId: d.crawlerSourceId, fields })] : null,
@@ -196,7 +202,7 @@ export async function runAutoPublish(store: AutoPublishStore, input: { touched: 
         const e = requireResult(await safe(() => store.getEvent(eventId!)))
         if (!e || e.is_published !== false || e.auto_publish_blocked !== false || e.status === 'cancelled') { skip('event_state_changed'); continue }
         const planned = fill(e)
-        if (!hasMinimumContent({ ...e, ...planned?.fields })) { skip(EMPTY_SHELL_REASON); continue }
+        if (!hasMinimumContentOrOfficialNotice({ ...e, ...planned?.fields }, { factsOnlyNotice, officialNoticeUrl: c.source_url })) { skip(EMPTY_SHELL_REASON); continue }
         step = 'event_source'
         if (c.source_url && !requireResult(await safe(() => store.hasEventSourceUrl(eventId!, c.source_url!)))) requireResult(await safe(() => store.insertEventSource(sourceRow(eventId!, d.trustLevel))))
         const levels: PublishTrustLevel[] = ['official', 'media', 'aggregator']

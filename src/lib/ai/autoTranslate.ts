@@ -1,5 +1,6 @@
 import { taipeiToday } from '../taipeiDate'
 import type { ChineseDisplayInput, GeneratedChineseDisplay } from './generateChineseDisplay'
+import { findOfficialNoticeUrl } from '../officialNotice'
 
 export const AUTO_TRANSLATE_ENABLED = true
 export const AUTO_TRANSLATE_MAX_PER_RUN = 100
@@ -16,7 +17,7 @@ type ChineseFields = {
   location_name_zh: string | null
 }
 
-type EventSource = { label: string | null; type: string | null }
+type EventSource = { label: string | null; type: string | null; url?: string | null }
 
 export type TranslationEvent = ChineseFields & {
   title: string
@@ -86,10 +87,15 @@ export function isUnfinished(event: Pick<TranslationEvent, 'end_date' | 'start_d
   return (event.end_date ?? event.start_date ?? event.date) >= taipeiToday(now)
 }
 
+/** MUST #10：活動任一來源是 YG／SMTOWN 公告頁，就只翻名稱與地點，不送正文、不寫摘要。 */
+export function isFactsOnlyNoticeEvent(event: Pick<TranslationEvent, 'event_sources'>): boolean {
+  return !!findOfficialNoticeUrl(event.event_sources)
+}
+
 export function buildChineseDisplayInput(event: TranslationEvent, sources: EventSource[]): ChineseDisplayInput {
   return {
     title: event.title,
-    content: event.description,
+    content: isFactsOnlyNoticeEvent({ event_sources: sources }) ? null : event.description,
     idolName: event.idol_name,
     eventType: event.type,
     eventSubType: event.sub_type,
@@ -111,14 +117,14 @@ export function translationErrorMessage(error: unknown): string {
     : '翻譯發生未知錯誤'
 }
 
-function chineseFields(generated: Awaited<ReturnType<TranslationDeps['translator']>>): ChineseFields {
+function chineseFields(generated: Awaited<ReturnType<TranslationDeps['translator']>>, factsOnlyNotice: boolean): ChineseFields {
   if (!generated || ![generated.displayTitleZh, generated.displaySummaryZh, generated.locationNameZh]
     .every(value => value === null || typeof value === 'string')) {
     throw new Error('AI 回傳格式錯誤')
   }
   const fields = {
     display_title_zh: generated.displayTitleZh?.trim() || null,
-    display_summary_zh: generated.displaySummaryZh?.trim() || null,
+    display_summary_zh: factsOnlyNotice ? null : generated.displaySummaryZh?.trim() || null,
     location_name_zh: generated.locationNameZh?.trim() || null,
   }
   if (!hasChineseDisplay(fields)) throw new Error('AI 未產生可寫入的繁中欄位')
@@ -158,7 +164,7 @@ export async function translateEvent(
 
     let fields: ChineseFields
     try {
-      fields = chineseFields(await translator(buildChineseDisplayInput(event, event.event_sources ?? [])))
+      fields = chineseFields(await translator(buildChineseDisplayInput(event, event.event_sources ?? [])), isFactsOnlyNoticeEvent(event))
     } catch (error) {
       if (error instanceof TranslatorConfigError) {
         try {

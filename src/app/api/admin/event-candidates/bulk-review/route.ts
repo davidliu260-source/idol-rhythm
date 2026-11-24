@@ -2,6 +2,7 @@ import { taipeiToday } from '@/lib/taipeiDate'
 import { NextResponse, type NextRequest } from 'next/server'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
+import { factsOnlyNoticeTicketUrl, isFactsOnlyNoticeCandidate } from '@/lib/officialNotice'
 
 interface BulkReviewRequest {
   ids: string[]
@@ -96,6 +97,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkRevie
           (candidate.detected_start_date as string | null) ??
           (candidate.detected_date as string | null) ??
           today
+        // MUST #10：YG／SMTOWN 公告只留事實：不寫正文、不帶摘要；YG 已抽出的售票網址寫進 ticket_url。
+        const factsOnlyNotice = isFactsOnlyNoticeCandidate(candidate)
         const { data: eventData, error: eventErr } = await supabase
           .from('events')
           .insert({
@@ -111,9 +114,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkRevie
             country: '',
             country_flag: '',
             location: null,
-            description: candidate.raw_content ?? null,
+            description: factsOnlyNotice ? null : candidate.raw_content ?? null,
             display_title_zh: (candidate.display_title_zh as string | null) ?? null,
-            display_summary_zh: (candidate.display_summary_zh as string | null) ?? null,
+            display_summary_zh: factsOnlyNotice ? null : (candidate.display_summary_zh as string | null) ?? null,
             location_name_zh: (candidate.location_name_zh as string | null) ?? null,
             translation_status: (candidate.translation_status as string | null) ?? 'none',
             translation_source: (candidate.translation_source as string | null) ?? null,
@@ -126,7 +129,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkRevie
             address: (candidate.detected_address as string | null) ?? null,
             map_url: (candidate.detected_map_url as string | null) ?? null,
             tags: [],
-            ticket_url: null,
+            ticket_url: factsOnlyNoticeTicketUrl(candidate),
             stream_url: null,
             is_published: false,
             published_at: null,

@@ -10,6 +10,7 @@
  *      1. Sync candidate's Chinese display fields to the linked event:
  *         display_title_zh, display_summary_zh, location_name_zh,
  *         translation_status, translation_source, translation_updated_at.
+ *         (display_summary_zh is skipped for YG／SMTOWN facts-only notices.)
  *      2. If event sync fails: count as error, DO NOT clear needs_recheck.
  *      3. If event sync succeeds OR no Chinese fields to sync: clear flag.
  *   B. Otherwise (pending / rejected / no approved_event_id):
@@ -32,6 +33,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
+import { isFactsOnlyNoticeCandidate } from '@/lib/officialNotice'
 
 interface BulkResolveRecheckRequest {
   ids: string[]
@@ -96,7 +98,7 @@ export async function POST(
       const { data: candidate, error: fetchError } = await supabase
         .from('event_candidates')
         .select(
-          'review_status, approved_event_id, display_title_zh, display_summary_zh, location_name_zh, translation_status, translation_source',
+          'review_status, approved_event_id, display_title_zh, display_summary_zh, location_name_zh, translation_status, translation_source, raw_data',
         )
         .eq('id', id)
         .single()
@@ -129,7 +131,9 @@ export async function POST(
 
         if (candidate.display_title_zh != null)
           syncPayload.display_title_zh = candidate.display_title_zh as string
-        if (candidate.display_summary_zh != null)
+        // MUST #10: YG／SMTOWN official notices keep facts only — never sync
+        // a summary back to the event (mirrors single-row resolveRecheck).
+        if (candidate.display_summary_zh != null && !isFactsOnlyNoticeCandidate(candidate))
           syncPayload.display_summary_zh = candidate.display_summary_zh as string
         if (candidate.location_name_zh != null)
           syncPayload.location_name_zh = candidate.location_name_zh as string

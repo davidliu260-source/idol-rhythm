@@ -459,6 +459,8 @@ test('受保護路徑維持與 origin/main 的 merge base 一致', () => {
     'src/lib/ai/generateChineseDisplay.ts', 'src/lib/ai/parseCandidate.ts',
     `:(exclude)${routePath}`, `:(exclude)${migrationPath}`,
     ':(exclude)supabase/migrations/071_event_error_reports.sql',
+    // MUST #10（YG／SMTOWN 公告只留事實）只放行這兩支：公告來源例外與不帶摘要
+    ':(exclude)src/lib/autoPublish/minimumContent.ts', ':(exclude)src/lib/autoPublish/runAutoPublish.ts',
   ]
   assert.equal(git('diff', '--name-only', base, '--', ...paths), '')
   assert.equal(git('ls-files', '--others', '--exclude-standard', '--', ...paths), '')
