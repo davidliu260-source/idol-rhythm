@@ -71,6 +71,7 @@ const { buildIcs } = await import('../src/lib/ics/buildIcs.ts')
 const { getEventById } = await import('../src/lib/supabase/events.ts')
 const candidateActions = await import(pathToFileURL(fileURLToPath(new URL('src/app/admin/event-candidates/[id]/actions.ts', root))).href)
 const bulkRoute = await import(pathToFileURL(fileURLToPath(new URL('src/app/api/admin/event-candidates/bulk-review/route.ts', root))).href)
+const bulkRecheckRoute = await import(pathToFileURL(fileURLToPath(new URL('src/app/api/admin/event-candidates/bulk-resolve-recheck/route.ts', root))).href)
 const detailPage = await import(pathToFileURL(fileURLToPath(new URL('src/app/events/[id]/page.tsx', root))).href)
 
 // ── 共用假資料 ────────────────────────────────────────────────────────────────
@@ -320,6 +321,22 @@ test('重審同步：公告來源不把摘要同步到活動，其他來源照�
     const [payload] = client.updated('events')
     assert.equal(payload.display_title_zh, '中文標題')
     assert.equal('display_summary_zh' in payload, expectSummary, raw_data.source)
+  }
+})
+
+test('批次重審同步：公告來源不把摘要同步到活動，其他來源照舊', async () => {
+  for (const [raw_data, expectSummary] of [[smRaw, false], [ygRaw, false], [schedRaw, true], [undefined, true]]) {
+    const client = m.serverClient = fakeServerClient({
+      review_status: 'approved', approved_event_id: 'ev', display_title_zh: '中文標題', display_summary_zh: '候選摘要',
+      location_name_zh: null, translation_status: 'machine', translation_source: 'ai', raw_data,
+    })
+    const response = await bulkRecheckRoute.POST({ json: async () => ({ ids: ['cand'] }) })
+    assert.deepEqual(response.body, { ok: true, total: 1, resolved: 1, synced: 1, failed: 0, errors: [] })
+    const [payload] = client.updated('events')
+    assert.equal(payload.display_title_zh, '中文標題')
+    assert.equal('display_summary_zh' in payload, expectSummary, String(raw_data?.source))
+    if (expectSummary) assert.equal(payload.display_summary_zh, '候選摘要')
+    assert.deepEqual(client.updated('event_candidates'), [{ needs_recheck: false }])
   }
 })
 
