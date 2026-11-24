@@ -1,4 +1,5 @@
 import { cityHref } from '../cities'
+import { getEventOfficialNoticeUrl } from '../officialNotice'
 import { formatTaipeiDateLabel, toDateKey } from '../taipeiDate'
 import type { Event, Idol } from '../types'
 
@@ -70,9 +71,10 @@ export function eventPlace(event: Pick<Event, 'city' | 'venueName' | 'location'>
   return event.city?.trim() || event.venueName?.trim() || event.location?.trim() || undefined
 }
 
-export function buildEventMeta(event: Pick<Event, 'id' | 'idolName' | 'title' | 'date' | 'city' | 'venueName' | 'location' | 'displaySummaryZh' | 'description'>) {
+export function buildEventMeta(event: Pick<Event, 'id' | 'idolName' | 'title' | 'date' | 'city' | 'venueName' | 'location' | 'displaySummaryZh' | 'description'> & Partial<Pick<Event, 'officialNoticeUrl' | 'source'>>) {
   const details = [event.idolName, eventDateLabel(event.date), eventPlace(event)].filter(Boolean).join('・')
-  const summary = event.displaySummaryZh?.trim() || event.description.trim()
+  // MUST #10：YG／SMTOWN 公告只留事實，SEO 描述不帶正文或摘要。
+  const summary = getEventOfficialNoticeUrl(event) ? '' : event.displaySummaryZh?.trim() || event.description.trim()
   const path = `/events/${encodeURIComponent(event.id)}`
   const description = summary
     ? descriptionWithNotice(`${details}。${summary}`)

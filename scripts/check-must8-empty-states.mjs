@@ -135,6 +135,8 @@ check('核對受保護路徑與分支起點，以及 migration 編號（067 之�
   const b2v2Allowed = ':(exclude)src/app/atlas/AtlasClient.tsx'
   const emptyShellAllowed = ':(exclude)supabase/migrations/069_auto_publish_blocked_reason.sql'
   const autoTranslateAllowed = [':(exclude)supabase/migrations/070_event_translation_attempts.sql', ':(exclude)supabase/migrations/071_event_error_reports.sql', ':(exclude)src/app/api/cron/sync-candidates/route.ts']
+  // MUST #10（YG／SMTOWN 公告只留事實）只放行批次核准 route
+  autoTranslateAllowed.push(':(exclude)src/app/api/admin/event-candidates/bulk-review/route.ts')
   execFileSync('git', ['diff', '--quiet', base, '--', ...protectedPaths, ...must3Allowed, b2v2Allowed, emptyShellAllowed, ...autoTranslateAllowed], { cwd })
   const untracked = execFileSync('git', ['ls-files', '--others', '--exclude-standard', '--', ...protectedPaths, ...must3Allowed, emptyShellAllowed, ...autoTranslateAllowed], { cwd, encoding: 'utf8' })
   assert.equal(untracked, '', '受保護路徑出現未追蹤檔案')

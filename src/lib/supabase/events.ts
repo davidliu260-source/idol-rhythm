@@ -1,4 +1,5 @@
 import { PUBLIC_TRUST_LEVELS } from '../trustLevels'
+import { findOfficialNoticeUrl } from '../officialNotice'
 import type { Event, EventType, EventSubType, EventStatus, EventSource, TrustLevel, SourceType, Idol, GenderType, IdolCategory, GroupOrSolo } from '../types'
 import { getSupabaseClient } from './client'
 
@@ -88,6 +89,7 @@ function rowToEvent(row: SupabaseEventRow): Event {
     displayTitleZh && displayTitleZh !== row.title ? row.title : undefined
   const displayLocation = row.location_name_zh?.trim() || row.location || undefined
   const startDate = row.start_date ?? row.date
+  const officialNoticeUrl = findOfficialNoticeUrl(row.event_sources)
 
   return {
     id: row.id,
@@ -122,6 +124,7 @@ function rowToEvent(row: SupabaseEventRow): Event {
     source,
     description: row.description ?? '',
     displaySummaryZh: row.display_summary_zh ?? undefined,
+    ...(officialNoticeUrl ? { officialNoticeUrl } : {}),
     translationStatus: (row.translation_status ?? undefined) as Event['translationStatus'],
     isFavorited: false, // UI state — managed by localStorage / auth layer
     ticketUrl: row.ticket_url ?? undefined,

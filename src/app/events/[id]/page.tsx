@@ -2,6 +2,7 @@ import EventErrorReport from '@/components/EventErrorReport'
 import { formatTaipeiDateTime } from '@/lib/taipeiDate'
 import { EventWantButton } from '@/components/EventWant'
 import { getPublicTrustLabel } from '@/lib/trustLevels'
+import { getEventOfficialNoticeUrl } from '@/lib/officialNotice'
 export const dynamic = 'force-dynamic'
 
 import { notFound } from 'next/navigation'
@@ -29,7 +30,9 @@ export default async function EventDetailPage({ params }: EventPageProps) {
   const detail = await getEventDetail(id)
   if (!detail) return notFound()
   const { event, isDemoEvent } = detail
-  const summaryText = event.displaySummaryZh?.trim() || event.description.trim()
+  // MUST #10：YG／SMTOWN 公告只留事實；即使資料列還有正文或摘要，也不顯示摘要區塊。
+  const officialNoticeUrl = getEventOfficialNoticeUrl(event)
+  const summaryText = officialNoticeUrl ? '' : event.displaySummaryZh?.trim() || event.description.trim()
   const hasLocalizedSummary = Boolean(event.displaySummaryZh?.trim())
   const updatedAt = isDemoEvent ? null : formatTaipeiDateTime(event.updatedAt)
   const shareText = `${event.idolName} · ${event.title}`
@@ -80,7 +83,17 @@ export default async function EventDetailPage({ params }: EventPageProps) {
             label={event.source.label}
             description={event.source.type ? getSourceTypeLabel(event.source.type) : '來源已通過前台顯示規則'}
           />
-          {event.source.url && (
+          {officialNoticeUrl ? (
+            <a
+              href={officialNoticeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-white/8 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-white/72"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              看官方公告
+            </a>
+          ) : event.source.url && (
             <a
               href={event.source.url}
               target="_blank"

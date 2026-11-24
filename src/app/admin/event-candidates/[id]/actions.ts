@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
 import { generateChineseDisplayWithClaude } from '@/lib/ai/generateChineseDisplay'
+import { factsOnlyNoticeTicketUrl, isFactsOnlyNoticeCandidate } from '@/lib/officialNotice'
 
 // ── Guard ──────────────────────────────────────────────────────────────────────
 
@@ -117,9 +118,12 @@ export async function generateCandidateChineseDisplay(
       candidate.detected_address as string | null,
     ].filter(Boolean).join(' / ')
 
+    // MUST #10：YG／SMTOWN 公告不送正文、不寫摘要，只翻名稱與地點。
+    const factsOnlyNotice = isFactsOnlyNoticeCandidate(candidate)
+
     const generated = await generateChineseDisplayWithClaude({
       title: candidate.raw_title as string,
-      content: candidate.raw_content as string | null,
+      content: factsOnlyNotice ? null : candidate.raw_content as string | null,
       idolName: ((candidate.idols as unknown) as { name: string } | null)?.name ?? null,
       eventType: candidate.detected_event_type as string | null,
       eventSubType: candidate.detected_event_sub_type as string | null,
@@ -129,11 +133,16 @@ export async function generateCandidateChineseDisplay(
       sourceType: candidate.source_type as string | null,
     })
 
+    const displaySummaryZh = factsOnlyNotice ? null : generated.displaySummaryZh
+    if (!generated.displayTitleZh && !displaySummaryZh && !generated.locationNameZh) {
+      throw new Error('AI 未產生可寫入的繁中名稱或地點')
+    }
+
     const { error: updateError } = await supabase
       .from('event_candidates')
       .update({
         display_title_zh: generated.displayTitleZh,
-        display_summary_zh: generated.displaySummaryZh,
+        display_summary_zh: displaySummaryZh,
         location_name_zh: generated.locationNameZh,
         translation_status: 'machine',
         translation_source: 'ai',
@@ -283,6 +292,9 @@ export async function approveCandidate(id: string): Promise<void> {
     locationText: candidate.location_name_zh,
   }) ?? candidate.detected_city ?? null
 
+  // MUST #10：YG／SMTOWN 公告只留事實：不寫正文、不帶摘要；YG 已抽出的售票網址寫進 ticket_url。
+  const factsOnlyNotice = isFactsOnlyNoticeCandidate(candidate)
+
   const { data: eventData, error: eventError } = await supabase
     .from('events')
     .insert({
@@ -298,9 +310,9 @@ export async function approveCandidate(id: string): Promise<void> {
       country: '',
       country_flag: '',
       location: null,
-      description: candidate.raw_content ?? null,
+      description: factsOnlyNotice ? null : candidate.raw_content ?? null,
       display_title_zh: (candidate.display_title_zh as string | null) ?? null,
-      display_summary_zh: (candidate.display_summary_zh as string | null) ?? null,
+      display_summary_zh: factsOnlyNotice ? null : (candidate.display_summary_zh as string | null) ?? null,
       location_name_zh: (candidate.location_name_zh as string | null) ?? null,
       translation_status: (candidate.translation_status as string | null) ?? 'none',
       translation_source: (candidate.translation_source as string | null) ?? null,
@@ -313,7 +325,7 @@ export async function approveCandidate(id: string): Promise<void> {
       address: (candidate.detected_address as string | null) ?? null,
       map_url: (candidate.detected_map_url as string | null) ?? null,
       tags: [],
-      ticket_url: null,
+      ticket_url: factsOnlyNoticeTicketUrl(candidate),
       stream_url: null,
       is_published: false,
       published_at: null,
@@ -397,7 +409,7 @@ export async function resolveRecheck(id: string): Promise<ResolveRecheckActionRe
     const { data: candidate, error: fetchError } = await supabase
       .from('event_candidates')
       .select(
-        'review_status, approved_event_id, display_title_zh, display_summary_zh, location_name_zh, translation_status, translation_source',
+        'review_status, approved_event_id, display_title_zh, display_summary_zh, location_name_zh, translation_status, translation_source, raw_data',
       )
       .eq('id', id)
       .single()
@@ -428,7 +440,8 @@ export async function resolveRecheck(id: string): Promise<ResolveRecheckActionRe
 
       if (candidate.display_title_zh != null)
         syncPayload.display_title_zh = candidate.display_title_zh as string
-      if (candidate.display_summary_zh != null)
+      // MUST #10：YG／SMTOWN 公告不把摘要同步到前台活動。
+      if (candidate.display_summary_zh != null && !isFactsOnlyNoticeCandidate(candidate))
         syncPayload.display_summary_zh = candidate.display_summary_zh as string
       if (candidate.location_name_zh != null)
         syncPayload.location_name_zh = candidate.location_name_zh as string

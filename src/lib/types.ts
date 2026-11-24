@@ -121,6 +121,8 @@ export interface Event {
   source: EventSource
   description: string
   displaySummaryZh?: string
+  /** MUST #10：來自 YG／SMTOWN 公告時的官方公告連結。有值時前台只顯示事實，不顯示正文或摘要。 */
+  officialNoticeUrl?: string
   translationStatus?: 'none' | 'pending' | 'machine' | 'reviewed' | 'manual'
   isFavorited: boolean
   ticketUrl?: string

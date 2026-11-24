@@ -129,7 +129,7 @@ check('行程查詢帶入原始團色，前台原始碼無舊取色函式或固�
 })
 
 check('爬蟲、ICS、API、提醒排程、Supabase 與 Vercel 路徑維持分支起點', () => {
-  const protectedPaths = ['supabase', 'src/lib/crawlers', 'src/lib/ics', 'src/app/api', 'src/lib/reminderDispatch.ts', 'vercel.json', ':(exclude)supabase/migrations/069_auto_publish_blocked_reason.sql', ':(exclude)supabase/migrations/070_event_translation_attempts.sql', ':(exclude)supabase/migrations/071_event_error_reports.sql', ':(exclude)src/app/api/cron/sync-candidates/route.ts']
+  const protectedPaths = ['supabase', 'src/lib/crawlers', 'src/lib/ics', 'src/app/api', 'src/lib/reminderDispatch.ts', 'vercel.json', ':(exclude)supabase/migrations/069_auto_publish_blocked_reason.sql', ':(exclude)supabase/migrations/070_event_translation_attempts.sql', ':(exclude)supabase/migrations/071_event_error_reports.sql', ':(exclude)src/app/api/cron/sync-candidates/route.ts', ':(exclude)src/app/api/admin/event-candidates/bulk-review/route.ts']
   const base = git('merge-base', 'origin/main', 'HEAD').trim()
   assert.equal(git('diff', '--name-only', base, '--', ...protectedPaths), '')
   assert.equal(git('ls-files', '--others', '--', ...protectedPaths), '')
