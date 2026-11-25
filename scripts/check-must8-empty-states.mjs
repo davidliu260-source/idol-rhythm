@@ -136,7 +136,7 @@ check('核對受保護路徑與分支起點，以及 migration 編號（067 之�
   // T35 只放行 migration 073 與林口→桃園
   const t35Allowed = [':(exclude)supabase/migrations/073_t35_ticket_sales_country_time_status.sql', ':(exclude)src/lib/crawlers/taiwanEventCleanup.ts']
   const emptyShellAllowed = ':(exclude)supabase/migrations/069_auto_publish_blocked_reason.sql'
-  const autoTranslateAllowed = [':(exclude)supabase/migrations/070_event_translation_attempts.sql', ':(exclude)supabase/migrations/071_event_error_reports.sql', ':(exclude)src/app/api/cron/sync-candidates/route.ts']
+  const autoTranslateAllowed = [':(exclude)supabase/migrations/070_event_translation_attempts.sql', ':(exclude)supabase/migrations/071_event_error_reports.sql', ':(exclude)supabase/migrations/072_crawler_source_alerts.sql', ':(exclude)src/app/api/cron/sync-candidates/route.ts']
   // MUST #10（YG／SMTOWN 公告只留事實）批次核准與批次重審同步 route（只放行這兩支檔案）
   autoTranslateAllowed.push(':(exclude)src/app/api/admin/event-candidates/bulk-review/route.ts', ':(exclude)src/app/api/admin/event-candidates/bulk-resolve-recheck/route.ts')
   // MUST #10（JYP 改用公告頁）jyp_notice 爬蟲、後台 route 與停用 jyp_schedule（只放行這幾支檔案）
@@ -146,6 +146,6 @@ check('核對受保護路徑與分支起點，以及 migration 編號（067 之�
   assert.equal(untracked, '', '受保護路徑出現未追蹤檔案')
   for (const file of readdirSync(new URL('supabase/migrations/', root), { withFileTypes: true })) {
     const number = file.name.match(/^\d+/)?.[0]
-    assert.ok(!file.isFile() || !number || Number(number) < 68 || ['068_calendar_feed_tokens.sql', '069_auto_publish_blocked_reason.sql', '070_event_translation_attempts.sql', '071_event_error_reports.sql', '073_t35_ticket_sales_country_time_status.sql'].includes(file.name), `出現新 migration：${file.name}`)
+    assert.ok(!file.isFile() || !number || Number(number) < 68 || ['068_calendar_feed_tokens.sql', '069_auto_publish_blocked_reason.sql', '070_event_translation_attempts.sql', '071_event_error_reports.sql', '072_crawler_source_alerts.sql', '073_t35_ticket_sales_country_time_status.sql'].includes(file.name), `出現新 migration：${file.name}`)
   }
 })

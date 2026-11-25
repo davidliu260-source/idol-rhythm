@@ -89,7 +89,7 @@ check('cron 支援前一週，067 之後只允許 068、069、070 與 071', () =
   const migrations = readdirSync(new URL('../supabase/migrations/', import.meta.url))
   for (const path of migrations) {
     const number = path.match(/^\d+/)
-    assert.ok(!number || Number(number[0]) < 68 || ['068_calendar_feed_tokens.sql', '069_auto_publish_blocked_reason.sql', '070_event_translation_attempts.sql', '071_event_error_reports.sql', '073_t35_ticket_sales_country_time_status.sql'].includes(path), path)
+    assert.ok(!number || Number(number[0]) < 68 || ['068_calendar_feed_tokens.sql', '069_auto_publish_blocked_reason.sql', '070_event_translation_attempts.sql', '071_event_error_reports.sql', '072_crawler_source_alerts.sql', '073_t35_ticket_sales_country_time_status.sql'].includes(path), path)
   }
 })
 
@@ -106,7 +106,7 @@ check('提醒、單一偶像 ICS 與既有 migrations 維持 merge-base 版本',
       'supabase/migrations',
       ':(exclude)supabase/migrations/068_calendar_feed_tokens.sql',
       ':(exclude)supabase/migrations/069_auto_publish_blocked_reason.sql',
-      ':(exclude)supabase/migrations/070_event_translation_attempts.sql', ':(exclude)supabase/migrations/071_event_error_reports.sql', ':(exclude)src/app/api/cron/sync-candidates/route.ts',
+      ':(exclude)supabase/migrations/070_event_translation_attempts.sql', ':(exclude)supabase/migrations/071_event_error_reports.sql', ':(exclude)supabase/migrations/072_crawler_source_alerts.sql', ':(exclude)src/app/api/cron/sync-candidates/route.ts',
       ':(exclude)supabase/migrations/073_t35_ticket_sales_country_time_status.sql',
     ], { cwd: repoRoot }),
     'Protected paths differ from the merge-base with origin/main, or git diff failed',
