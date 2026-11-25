@@ -65,6 +65,10 @@ export function createSupabaseAutoPublishStore(supabase: SupabaseClient): AutoPu
       const { error } = await supabase.from('event_sources').insert(row)
       return error ? { error: error.message } : { ok: true }
     },
+    async insertTicketSale(row) {
+      const { error } = await supabase.from('event_ticket_sales').insert(row)
+      return error ? { error: error.message } : { ok: true }
+    },
     async publishEvent(id, patch, guards) {
       let query = supabase.from('events').update(patch).eq('id', id).eq('is_published', false).eq('auto_publish_blocked', false)
       for (const [col, value] of Object.entries(guards)) query = value === null ? query.is(col, null) : query.eq(col, value)

@@ -8,6 +8,9 @@ import { EMPTY_SHELL_REASON, hasMinimumContentOrOfficialNotice, TITLE_CITY_COUNT
 import { factsOnlyNoticeTicketUrl, isFactsOnlyNoticeCandidate } from '../officialNotice'
 import { normalizeCrawledEvent } from '../crawlers/taiwanEventCleanup'
 import type { TouchedCandidate } from '../crawlers/touchedCandidate'
+import { inferRegionFields } from '../regionInference'
+import { venueCalendarFields, type TicketSaleInsert } from './venueCalendarFields'
+export type { TicketSaleInsert } from './venueCalendarFields'
 
 export interface CandidateRow extends CandidateInput {
   detected_event_sub_type?: string | null
@@ -25,7 +28,9 @@ export interface DraftEventInsert {
   idol_id: string; idol_name: string; title: string; type: string; sub_type: string | null
   status: 'confirmed'; trust_level: PublishTrustLevel
   date: string; start_date: string; end_date: string | null; date_label: string | null
-  time: null; country: ''; country_flag: ''; location: null; description: null
+  time: string | null; time_status: 'unknown' | 'announced'
+  /** T35：country_code 推不出來為 NULL；country／country_flag 是 NOT NULL 舊欄位，推不出來照舊 ''。 */
+  country_code: string | null; country: string; country_flag: string; location: null; description: null
   display_title_zh: string | null; display_summary_zh: string | null; location_name_zh: string | null
   translation_status: string; translation_source: string | null; translation_updated_at: string | null
   city: string | null; venue_name: string | null; address: string | null; map_url: string | null
@@ -45,6 +50,8 @@ export interface AutoPublishStore {
   linkCandidate(candidateId: string, eventId: string): Promise<Updated>
   hasEventSourceUrl(eventId: string, url: string): Promise<boolean | Failure>
   insertEventSource(row: EventSourceInsert): Promise<{ ok: true } | Failure>
+  /** T35 B-3：場館行事曆的一般售票時間（需 migration 073 的 event_ticket_sales）。 */
+  insertTicketSale(row: TicketSaleInsert): Promise<{ ok: true } | Failure>
   publishEvent(eventId: string, patch: PublishPatch, guards: LocationGuards): Promise<Updated>
   fillEventLocation(eventId: string, patch: LocationPatch, guards: LocationGuards): Promise<Updated>
   markCandidateApproved(candidateId: string): Promise<Updated>
@@ -58,11 +65,13 @@ export interface AutoPublishRunReport {
   held: Array<{ candidateId: string; eventId: string; target: 'create_event' }>
   publishedExisting: Array<{ candidateId: string; eventId: string; trustLevel: PublishTrustLevel; filledFields: FillColumn[] }>
   locationFilled: Array<{ candidateId: string; eventId: string; fields: Partial<Record<FillColumn, string>> }>
+  /** T35 B-4：同藝人＋同日＋同城併入既有活動（只加來源、連結候選，不建新列）。 */
+  merged: Array<{ candidateId: string; eventId: string; sourceAdded: boolean }>
   parked: Partial<Record<ParkReason, number>>; skipped: Record<string, number>
   errors: Array<{ candidateId: string; eventId: string | null; step: string; message: string }>
 }
 export function emptyAutoPublishReport(): AutoPublishRunReport {
-  return { ran: false, switch: 'off', ruleVersion: AUTO_PUBLISH_RULE_VERSION, touched: 0, evaluated: 0, created: [], held: [], publishedExisting: [], locationFilled: [], parked: {}, skipped: {}, errors: [] }
+  return { ran: false, switch: 'off', ruleVersion: AUTO_PUBLISH_RULE_VERSION, touched: 0, evaluated: 0, created: [], held: [], publishedExisting: [], locationFilled: [], merged: [], parked: {}, skipped: {}, errors: [] }
 }
 const message = (e: unknown) => e instanceof Error ? e.message : String(e)
 async function safe<T>(call: () => Promise<T>): Promise<T | Failure> {
@@ -89,9 +98,13 @@ export async function runAutoPublish(store: AutoPublishStore, input: { touched: 
   const { candidates, ctx, idolNames } = loaded
   const decisions = evaluateCandidates(candidates, { ...ctx, now: input.now })
   const handledEventIds = new Set<string>()
+  /** T35 B-4：本批建立並上架的活動（候選 id → 活動 id），給同批的 merge 決策對應。 */
+  const createdEventByCandidate = new Map<string, string>()
   const at = input.now.toISOString()
   const skip = (reason: string) => { report.skipped[reason] = (report.skipped[reason] ?? 0) + 1 }
-  for (const d of decisions) {
+  // T35 B-4：併入同批較早候選的 merge 決策要等那一場建好，所以放到最後處理。
+  const ordered = [...decisions.filter(d => !(d.action === 'merge' && d.mergeWithCandidateId)), ...decisions.filter(d => d.action === 'merge' && d.mergeWithCandidateId)]
+  for (const d of ordered) {
     report.evaluated++
     const c = candidates.find(c => c.id === d.candidateId)!
     let eventId: string | null = null
@@ -141,6 +154,27 @@ export async function runAutoPublish(store: AutoPublishStore, input: { touched: 
         report.locationFilled.push({ candidateId: c.id, eventId, fields: planned.fields })
         continue
       }
+      if (d.action === 'merge') {
+        eventId = d.existingEventId ?? (d.mergeWithCandidateId ? createdEventByCandidate.get(d.mergeWithCandidateId) ?? null : null)
+        if (!eventId) {
+          // 同批較早的那一場沒有成功上架（被擋、空殼或寫入失敗）：不建新列，交給人工。
+          if (c.review_status !== 'pending') { skip('approved_not_parked'); continue }
+          step = 'park'
+          const r = requireResult(await safe(() => store.parkCandidate(c.id, 'duplicate')))
+          if (r.updated) report.parked.duplicate = (report.parked.duplicate ?? 0) + 1
+          continue
+        }
+        let sourceAdded = false
+        step = 'event_source'
+        if (c.source_url && !requireResult(await safe(() => store.hasEventSourceUrl(eventId!, c.source_url!)))) {
+          requireResult(await safe(() => store.insertEventSource(sourceRow(eventId!, d.trustLevel))))
+          sourceAdded = true
+        }
+        step = 'link'
+        if (!requireResult(await safe(() => store.linkCandidate(c.id, eventId!))).updated) { error(step, 'candidate link conflict'); continue }
+        report.merged.push({ candidateId: c.id, eventId, sourceAdded })
+        continue
+      }
       const publishBase = (trust: PublishTrustLevel): PublishPatch => ({ is_published: true, published_at: at, auto_published_at: at, auto_publish_rule_version: AUTO_PUBLISH_RULE_VERSION, trust_level: trust })
       if (d.target === 'create_event') {
         const inferred = inferEventType(c, d.parserType)
@@ -167,15 +201,19 @@ export async function runAutoPublish(store: AutoPublishStore, input: { touched: 
         }, { factsOnlyNotice, officialNoticeUrl: c.source_url })
         if (hasContent && !fields.city && normalized.city) fields.city = normalized.city
         const hasLocation = Object.keys(fields).length > 0
+        // T35 B-1：國家由城市／場館／地點推；B-3：場館行事曆帶入開演時間、官方售票連結。
+        const region = inferRegionFields({ city: fields.city ?? normalized.city, venueName: fields.venue_name ?? c.detected_venue_name, location: c.location_name_zh, address: fields.address ?? c.detected_address })
+        const venueFields = venueCalendarFields(c, d.parserType)
         const row: DraftEventInsert = {
           idol_id: c.detected_idol_id!, idol_name: idolNames.get(c.detected_idol_id!) ?? '', title: normalized.title, type: normalized.type ?? inferred.type, sub_type: normalized.subType,
           status: 'confirmed', trust_level: d.trustLevel,
           date: (c.detected_start_date ?? c.detected_date)!, start_date: (c.detected_start_date ?? c.detected_date)!, end_date: c.detected_end_date ?? null, date_label: c.detected_date_label ?? null,
-          time: null, country: '', country_flag: '', location: null, description: null,
+          time: venueFields.time, time_status: venueFields.timeStatus ?? 'unknown',
+          country_code: region.country_code, country: region.country, country_flag: region.country_flag, location: null, description: null,
           display_title_zh: c.display_title_zh ?? null, display_summary_zh: displaySummaryZh, location_name_zh: c.location_name_zh ?? null,
           translation_status: c.translation_status ?? 'none', translation_source: c.translation_source ?? null, translation_updated_at: c.translation_updated_at ?? null,
           city: fields.city ?? null, venue_name: fields.venue_name ?? null, address: fields.address ?? null, map_url: c.detected_map_url ?? null,
-          tags: [], ticket_url: ticketUrl, stream_url: null, is_published: false, published_at: null, auto_publish_rule_version: AUTO_PUBLISH_RULE_VERSION, auto_published_at: null, auto_publish_blocked: false,
+          tags: [], ticket_url: ticketUrl ?? venueFields.ticketUrl, stream_url: null, is_published: false, published_at: null, auto_publish_rule_version: AUTO_PUBLISH_RULE_VERSION, auto_published_at: null, auto_publish_blocked: false,
           auto_publish_blocked_reason: hasContent ? null : EMPTY_SHELL_REASON,
           location_autofilled_at: hasLocation ? at : null,
           location_autofill_meta: hasLocation ? [buildAutofillMetaEntry({ filledAt: at, candidateId: c.id, crawlerSourceId: d.crawlerSourceId, fields })] : null,
@@ -186,6 +224,12 @@ export async function runAutoPublish(store: AutoPublishStore, input: { touched: 
         if (!requireResult(await safe(() => store.linkCandidate(c.id, eventId!))).updated) { error(step, 'candidate link conflict'); continue }
         step = 'event_source'
         requireResult(await safe(() => store.insertEventSource(sourceRow(eventId!, d.trustLevel))))
+        if (venueFields.sale) {
+          // 售票階段寫入失敗不擋上架（例如 073 尚未套用），只記錯誤。
+          step = 'ticket_sale'
+          const sale = await safe(() => store.insertTicketSale({ ...venueFields.sale!, event_id: eventId! }))
+          if (failed(sale)) error(step, sale.error)
+        }
         if (!hasContent) {
           report.held.push({ candidateId: c.id, eventId, target: d.target })
           continue
@@ -193,6 +237,7 @@ export async function runAutoPublish(store: AutoPublishStore, input: { touched: 
         step = 'publish'
         if (!requireResult(await safe(() => store.publishEvent(eventId!, publishBase(d.trustLevel), {}))).updated) { error(step, 'event state changed'); continue }
         handledEventIds.add(eventId)
+        createdEventByCandidate.set(c.id, eventId)
         report.created.push({ candidateId: c.id, eventId, trustLevel: d.trustLevel, locationPending: !hasLocation && !c.location_name_zh?.trim(), typeRule: inferred.rule, cleanupRules: normalized.rules })
       } else {
         eventId = d.existingEventId

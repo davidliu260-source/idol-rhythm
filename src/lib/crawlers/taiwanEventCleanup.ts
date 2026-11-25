@@ -13,10 +13,11 @@ export function cleanCrawledTitle(rawTitle: string, { sourceName }: { sourceName
 }
 
 const TAIWAN_PLACES = [
-  ['新北', /Zepp\s+New\s+Taipei|林口體育館|Linkou\s+Arena|新莊體育館/i, /新北|\bNew\s+Taipei\b|신베이/i],
+  ['新北', /Zepp\s+New\s+Taipei|新莊體育館/i, /新北|\bNew\s+Taipei\b|신베이/i],
   ['台北', /(?<![舞後后平電擂])[台臺]北(?:小巨蛋|大巨蛋|流行音樂中心)|Taipei\s+(?:Arena|Dome|Music\s+Center)|Legacy\s+(?:Taipei|Max)|Clapper\s+Studio|南港展覽館|Nangang\s+Exhibition/i, /(?<![舞後后平電擂])[台臺]北|\bTaipei\b|타이베이|타이페이/i],
   ['高雄', /高雄(?:巨蛋|國家體育場|流行音樂中心)|世運主場館|Kaohsiung\s+(?:Arena|National\s+Stadium)|Kaoarena|衛武營/i, /高雄|\bKaohsiung\b|가오슝/i],
-  ['桃園', /桃園巨蛋|樂天桃園棒球場/i, /桃園|\bTaoyuan\b|타오위안/i],
+  // T35 B-5（Dave 11/25 同意）：林口體育館（國立體育大學綜合體育館）官方地址為桃園市龜山區文化一路 250 號。
+  ['桃園', /桃園巨蛋|樂天桃園棒球場|林口體育館|Linkou\s+Arena/i, /桃園|\bTaoyuan\b|타오위안/i],
   ['台中', /(?<![舞後后平電擂])[台臺]中洲際棒球場/i, /(?<![舞後后平電擂])[台臺]中|\bTaichung\b|타이중/i],
   ['台南', null, /(?<![舞後后平電擂])[台臺]南|\bTainan\b|타이난/i],
   ['新竹', null, /新竹|\bHsinchu\b|신주(?!쿠)/i],
