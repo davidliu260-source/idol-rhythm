@@ -129,6 +129,14 @@ export default async function AdminEventsPage() {
             <FilePlus className="h-4 w-4 text-violet-500 flex-shrink-0" />
             <span className="text-xs font-semibold text-violet-500">新增草稿活動</span>
           </Link>
+        ) : null}
+        {isAdmin ? (
+          <Link
+            href="/admin/events/duplicates"
+            className="flex items-center gap-2 rounded-xl bg-card border border-card-border px-3 py-2.5 hover:bg-card-border/40 transition-colors"
+          >
+            <span className="text-xs font-semibold text-text-base">可能重複的活動（只讀：同藝人＋同日＋同城）</span>
+          </Link>
         ) : (
           <div className="rounded-xl bg-violet-500/10 border border-violet-500/25 px-3 py-2.5">
             <p className="text-xs text-muted leading-snug">

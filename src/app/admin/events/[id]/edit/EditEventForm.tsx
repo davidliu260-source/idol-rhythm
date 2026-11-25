@@ -4,6 +4,9 @@ import { useRef, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { getReviewSourceInfo, inferTrustLevelFromSources, type DraftSourceFormRow } from '@/lib/admin/sourceReview'
 import { updateDraftEvent } from './actions'
+import TicketSalesEditor, { CountryCodeSelect, TimeStatusSelect, stripKeys, withKeys, type EditorRow } from '../../TicketSalesEditor'
+import { ticketSaleRowWarning, type TicketSaleFormRow } from '@/lib/admin/ticketSalesForm'
+import { regionByCode } from '@/lib/regions'
 
 // ── Option lists (same as NewEventForm) ──────────────────────────────────────
 
@@ -67,6 +70,11 @@ export interface EditEventFormProps {
     time: string
     country: string
     countryFlag: string
+    /** T35：'' = 其他（不設代碼） */
+    countryCode: string
+    timeStatus: string
+    /** null = 售票階段載入失敗，編輯器停用、存檔不動售票階段 */
+    ticketSales: TicketSaleFormRow[] | null
     location: string
     city: string
     venueName: string
@@ -110,6 +118,9 @@ export default function EditEventForm({ eventId, idols, initial }: EditEventForm
   const [time,         setTime]         = useState(initial.time)
   const [country,      setCountry]      = useState(initial.country)
   const [countryFlag,  setCountryFlag]  = useState(initial.countryFlag)
+  const [countryCode,  setCountryCode]  = useState(initial.countryCode)
+  const [timeStatus,   setTimeStatus]   = useState(initial.timeStatus)
+  const [ticketSales,  setTicketSales]  = useState<EditorRow[]>(() => withKeys(initial.ticketSales ?? []))
   const [location,     setLocation]     = useState(initial.location)
   const [city,         setCity]         = useState(initial.city)
   const [venueName,    setVenueName]    = useState(initial.venueName)
@@ -164,6 +175,9 @@ export default function EditEventForm({ eventId, idols, initial }: EditEventForm
       time,
       country,
       countryFlag,
+      countryCode,
+      timeStatus,
+      ticketSales: initial.ticketSales === null ? null : stripKeys(ticketSales),
       location,
       city,
       venueName,
@@ -328,6 +342,19 @@ export default function EditEventForm({ eventId, idols, initial }: EditEventForm
           />
         </Field>
 
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="國家代碼">
+            <CountryCodeSelect value={countryCode} onChange={(code) => {
+              setCountryCode(code)
+              const region = regionByCode(code)
+              if (region) { setCountry(region.name); setCountryFlag(region.flag) }
+            }} />
+          </Field>
+          <Field label="時間狀態">
+            <TimeStatusSelect value={timeStatus} onChange={setTimeStatus} />
+          </Field>
+        </div>
+
         <div className="grid grid-cols-3 gap-3">
           <Field label="國旗">
             <input
@@ -335,7 +362,8 @@ export default function EditEventForm({ eventId, idols, initial }: EditEventForm
               value={countryFlag}
               onChange={(e) => setCountryFlag(e.target.value)}
               placeholder="🇹🇼"
-              className={inputCls}
+              disabled={!!regionByCode(countryCode)}
+              className={inputCls + ' disabled:opacity-60'}
             />
           </Field>
 
@@ -347,11 +375,15 @@ export default function EditEventForm({ eventId, idols, initial }: EditEventForm
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
                 placeholder="台灣"
-                className={inputCls}
+                disabled={!!regionByCode(countryCode)}
+                className={inputCls + ' disabled:opacity-60'}
               />
             </Field>
           </div>
         </div>
+        {regionByCode(countryCode) && (
+          <p className="text-[10px] text-muted/60 leading-snug -mt-1">國家與國旗由國家代碼自動帶入；選「其他」才可手填。</p>
+        )}
 
         <Field label="地點">
           <input
@@ -460,6 +492,13 @@ export default function EditEventForm({ eventId, idols, initial }: EditEventForm
         </p>
       </Section>
 
+      {/* 售票階段（T35） */}
+      <Section title="售票階段">
+        {initial.ticketSales === null
+          ? <p className="text-xs text-amber-300">售票階段載入失敗，本次存檔不會變更售票階段。</p>
+          : <TicketSalesEditor rows={ticketSales} onChange={setTicketSales} />}
+      </Section>
+
       {/* 連結 / 標籤 / 說明 */}
       <Section title="連結 / 標籤 / 說明">
         <div className="grid grid-cols-2 gap-3">
@@ -471,6 +510,9 @@ export default function EditEventForm({ eventId, idols, initial }: EditEventForm
               placeholder="https://…"
               className={inputCls}
             />
+            {ticketSaleRowWarning({ url: ticketUrl }) && (
+              <p className="text-xs font-semibold text-red-400">⚠ {ticketSaleRowWarning({ url: ticketUrl })}（仍可存檔）</p>
+            )}
           </Field>
 
           <Field label="串流 URL">

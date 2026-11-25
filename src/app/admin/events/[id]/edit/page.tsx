@@ -6,6 +6,8 @@ import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import EditEventForm from './EditEventForm'
 import type { EditEventFormProps } from './EditEventForm'
+import { ticketSaleRowToForm } from '@/lib/admin/ticketSalesForm'
+import { regionByCountryName } from '@/lib/regions'
 
 // ── Data fetchers ─────────────────────────────────────────────────────────────
 
@@ -65,6 +67,9 @@ interface EventRow {
   translation_status: string | null
   country: string
   country_flag: string
+  /** T35（migration 073） */
+  country_code?: string | null
+  time_status?: string | null
   description: string | null
   tags: string[] | null
   ticket_url: string | null
@@ -94,6 +99,19 @@ async function getEventForEdit(id: string): Promise<EventRow | null> {
   return data as EventRow
 }
 
+/** T35：售票階段另外查（不嵌在活動查詢裡），讀取失敗時只停用編輯器、不影響其他欄位。 */
+async function getTicketSalesForEdit(id: string): Promise<{ rows: EditEventFormProps['initial']['ticketSales']; error: string | null }> {
+  const supabase = getSupabaseServerClient()
+  if (!supabase) return { rows: null, error: 'Supabase 環境變數未設定' }
+  const { data, error } = await supabase
+    .from('event_ticket_sales')
+    .select('id, stage, label, starts_at, ends_at, platform, url, eligibility, eligibility_note, requires_verification, source_url')
+    .eq('event_id', id)
+    .order('starts_at', { ascending: true, nullsFirst: false })
+  if (error) return { rows: null, error: `${error.code ? `[${error.code}] ` : ''}${error.message}` }
+  return { rows: (data ?? []).map(ticketSaleRowToForm), error: null }
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function AdminEditEventPage({
@@ -103,10 +121,11 @@ export default async function AdminEditEventPage({
 }) {
   const { id } = await params
 
-  const [{ isAdmin }, eventResult, { idols, idolsError }] = await Promise.all([
+  const [{ isAdmin }, eventResult, { idols, idolsError }, ticketSalesResult] = await Promise.all([
     getCurrentAdmin(),
     getEventForEdit(id),
     getIdolsForForm(),
+    getTicketSalesForEdit(id),
   ])
 
   // ── Guard: must be admin ───────────────────────────────────────────────────
@@ -204,6 +223,9 @@ export default async function AdminEditEventPage({
     time:        eventResult.time ?? '',
     country:     eventResult.country,
     countryFlag: eventResult.country_flag,
+    countryCode: eventResult.country_code ?? regionByCountryName(eventResult.country)?.code ?? '',
+    timeStatus:  eventResult.time_status ?? 'unknown',
+    ticketSales: ticketSalesResult.rows,
     location:    eventResult.location ?? '',
     city:        eventResult.city ?? '',
     venueName:   eventResult.venue_name ?? '',
@@ -255,6 +277,15 @@ export default async function AdminEditEventPage({
           <div className="rounded-xl bg-red-500/10 border border-red-500/25 px-3 py-3">
             <p className="text-xs font-semibold text-red-400 mb-1">偶像清單載入失敗</p>
             <p className="text-xs text-red-400/80 break-all leading-relaxed">{idolsError}</p>
+          </div>
+        </div>
+      )}
+
+      {ticketSalesResult.error && (
+        <div className="px-4 mb-4">
+          <div className="rounded-xl bg-amber-500/10 border border-amber-500/25 px-3 py-3">
+            <p className="text-xs font-semibold text-amber-300 mb-1">售票階段載入失敗（編輯器已停用，其他欄位仍可儲存）</p>
+            <p className="text-xs text-amber-300/80 break-all leading-relaxed">{ticketSalesResult.error}</p>
           </div>
         </div>
       )}
