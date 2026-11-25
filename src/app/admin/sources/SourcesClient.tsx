@@ -59,9 +59,9 @@ function matchTab(s: SourceRow, tab: FilterTab): boolean {
     case 'active':       return s.isActive
     case 'inactive':     return !s.isActive
     case 'failing':      return s.lastStatus !== null && FAILING_STATUSES.has(s.lastStatus)
-    case 'jyp':          return s.parserType === 'jyp_schedule'
+    case 'jyp':          return s.parserType === 'jyp_schedule' || s.parserType === 'jyp_notice'
     case 'aggregator':   return s.parserType === 'kpopofficial_concerts'
-    case 'other_parser': return s.parserType !== 'jyp_schedule' && s.parserType !== 'kpopofficial_concerts'
+    case 'other_parser': return s.parserType !== 'jyp_schedule' && s.parserType !== 'jyp_notice' && s.parserType !== 'kpopofficial_concerts'
     case 'all':          return true
   }
 }

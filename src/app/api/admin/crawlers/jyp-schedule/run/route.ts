@@ -24,12 +24,11 @@ function buildResponse(
 }
 
 /**
- * POST /api/admin/crawlers/jyp-schedule/run
+ * POST /api/admin/crawlers/jyp-schedule/run — 已停用（MUST #10）。
  *
- * Admin-only generic JYP schedule runner. Picks which JYP source to run by
- * `sourceKey` in the request body (e.g. 'twice-jyp-schedule'). Future JYP
- * artists (Stray Kids, ITZY, …) reuse this same route — only a new
- * crawler_sources row is required, no new code.
+ * JYP 藝人站 robots.txt 寫明 Disallow: /api/，runJypScheduleFetcher 已不發任何
+ * /api/schedules、/api/groups/ 請求，只把來源記成 error 並回 410。
+ * 改用 POST /api/admin/crawlers/jyp-notice/run（parser_type = jyp_notice）。
  *
  * Body: { sourceKey: string }
  *

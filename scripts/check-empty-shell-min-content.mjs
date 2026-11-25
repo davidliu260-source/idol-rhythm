@@ -192,6 +192,8 @@ test('069 grants only the reason column and protected paths match the branch poi
     'src/lib/reminderDispatch.ts', 'package.json', 'vercel.json',
     'supabase/migrations', `:(exclude)${migration}`,
     ':(exclude)supabase/migrations/070_event_translation_attempts.sql', ':(exclude)supabase/migrations/071_event_error_reports.sql', ':(exclude)src/app/api/cron/sync-candidates/route.ts',
+    // MUST #10（JYP 改用公告頁）只放行這幾支爬蟲檔
+    ':(exclude)src/lib/crawlers/jypNotice.ts', ':(exclude)src/lib/crawlers/runActiveCrawlerSources.ts', ':(exclude)src/lib/crawlers/runJypNoticeFetcher.ts', ':(exclude)src/lib/crawlers/runJypScheduleFetcher.ts',
   ]
   assert.equal(git('diff', '--name-only', base, '--', ...protectedPaths), '')
   assert.equal(git('ls-files', '--others', '--exclude-standard', '--', ...protectedPaths), '')

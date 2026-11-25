@@ -461,6 +461,9 @@ test('受保護路徑維持與 origin/main 的 merge base 一致', () => {
     ':(exclude)supabase/migrations/071_event_error_reports.sql',
     // MUST #10（YG／SMTOWN 公告只留事實）只放行這兩支：公告來源例外與不帶摘要
     ':(exclude)src/lib/autoPublish/minimumContent.ts', ':(exclude)src/lib/autoPublish/runAutoPublish.ts',
+    // MUST #10（JYP 改用公告頁）只放行這幾支：jyp_notice 爬蟲、停用 jyp_schedule、NULL_CONFIDENCE_OK_PARSERS 加 jyp_notice
+    ':(exclude)src/lib/crawlers/jypNotice.ts', ':(exclude)src/lib/crawlers/runActiveCrawlerSources.ts', ':(exclude)src/lib/crawlers/runJypNoticeFetcher.ts', ':(exclude)src/lib/crawlers/runJypScheduleFetcher.ts',
+    ':(exclude)src/lib/autoPublish/evaluateCandidate.ts',
   ]
   assert.equal(git('diff', '--name-only', base, '--', ...paths), '')
   assert.equal(git('ls-files', '--others', '--exclude-standard', '--', ...paths), '')
