@@ -478,6 +478,7 @@ export async function runGenericWebpagePreview(
     await updateRunStatus(supabase, source.id, {
       last_status: 'error' as RunStatus,
       last_error: fetched.error ?? `fetch failed (status ${fetched.status})`,
+      fetched: 0,
     })
     return base(sourceKey, {
       crawlerSourceId: source.id,
@@ -507,6 +508,7 @@ export async function runGenericWebpagePreview(
     await updateRunStatus(supabase, source.id, {
       last_status: 'error' as RunStatus,
       last_error: `HTML 清理失敗：${msg}`,
+      fetched: 0,
     })
     return base(sourceKey, {
       crawlerSourceId: source.id,
@@ -540,6 +542,7 @@ export async function runGenericWebpagePreview(
     await updateRunStatus(supabase, source.id, {
       last_status: 'error' as RunStatus,
       last_error: msg,
+      fetched: 0,
     })
     return base(sourceKey, {
       crawlerSourceId: source.id,
@@ -580,6 +583,7 @@ export async function runGenericWebpagePreview(
       await updateRunStatus(supabase, source.id, {
         last_status: 'error' as RunStatus,
         last_error: `idol matcher load failed: ${msg}`,
+        fetched: 0,
       })
       return base(sourceKey, {
         crawlerSourceId: source.id,
@@ -623,6 +627,7 @@ export async function runGenericWebpagePreview(
   await updateRunStatus(supabase, source.id, {
     last_status: 'success' as RunStatus,
     last_error: null,
+    fetched: parseResult.events.length,
   })
 
   return base(sourceKey, {
@@ -824,6 +829,7 @@ export async function runGenericWebpageCommit(
       await updateRunStatus(supabase, preview.crawlerSourceId, {
         last_status: 'error' as RunStatus,
         last_error: `commit failed: ${preview.errors.join(' | ').slice(0, 1500)}`,
+        fetched: 0,
       })
     }
     return failResult
@@ -856,6 +862,7 @@ export async function runGenericWebpageCommit(
     await updateRunStatus(supabase, source.id, {
       last_status: 'skipped' as RunStatus,
       last_error: `commit skipped (pageRelevance=none): candidates=${preview.events.length}`,
+      fetched: 0,
     })
     return commitBase(sourceKey, {
       crawlerSourceId: source.id,
@@ -886,6 +893,7 @@ export async function runGenericWebpageCommit(
       await updateRunStatus(supabase, source.id, {
         last_status: 'error' as RunStatus,
         last_error: `commit failed: idol matcher load error: ${msg}`,
+        fetched: 0,
       })
       return commitBase(sourceKey, {
         crawlerSourceId: source.id,
@@ -968,6 +976,7 @@ export async function runGenericWebpageCommit(
     await updateRunStatus(supabase, source.id, {
       last_status: 'skipped' as RunStatus,
       last_error: `commit refused (too many candidates: ${prepared.length}>${maxCandidates})`,
+      fetched: 0,
     })
     return commitBase(sourceKey, {
       crawlerSourceId: source.id,
@@ -997,6 +1006,7 @@ export async function runGenericWebpageCommit(
       await updateRunStatus(supabase, source.id, {
         last_status: 'error' as RunStatus,
         last_error: `commit failed: ${msg}`,
+        fetched: 0,
       })
       return commitBase(sourceKey, {
         crawlerSourceId: source.id,
@@ -1064,6 +1074,7 @@ export async function runGenericWebpageCommit(
   await updateRunStatus(supabase, source.id, {
     last_status: status,
     last_error: statusNote,
+    fetched: summary.candidatesFromClaude,
   })
 
   return commitBase(sourceKey, {

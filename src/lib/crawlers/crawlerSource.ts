@@ -10,6 +10,7 @@
 
 import { AsyncLocalStorage } from 'node:async_hooks'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { recordCrawlerRunHealth } from './crawlerSourceAlerts'
 
 export const LAST_ERROR_MAX_LEN = 2000
 export const STATUS_WRITE_ERROR_PREFIX = 'crawler_sources 狀態寫入失敗'
@@ -112,11 +113,15 @@ export async function getCrawlerSourceByKey(
  * The migration 020 column-level GRANT confines this to
  * (last_run_at, last_status, last_error, updated_at) so RLS / GRANT
  * collisions on content fields cannot happen.
+ *
+ * MUST #10：`fetched`（本輪抓到幾筆）不會進這一次 update。狀態寫入成功後，
+ * 另外「盡力」呼叫 recordCrawlerRunHealth 更新 migration 072 的健康欄並開單／結案；
+ * 那一步失敗（含 072 尚未套用）只 log，不影響這裡的回傳值。
  */
 export async function updateRunStatus(
   supabase: SupabaseClient,
   crawlerSourceId: string,
-  patch: { last_status: RunStatus; last_error: string | null },
+  patch: { last_status: RunStatus; last_error: string | null; fetched?: number },
 ): Promise<string | null> {
   const tracker = statusWriteTracker.getStore()
   if (tracker) tracker.calls += 1
@@ -164,6 +169,9 @@ export async function updateRunStatus(
     console.log('[crawler-status] write ok', JSON.stringify({
       id: crawlerSourceId, last_status: row.last_status, last_run_at: row.last_run_at,
     }))
+    await recordCrawlerRunHealth(supabase, crawlerSourceId, {
+      status: patch.last_status, fetched: patch.fetched, ranAt: now,
+    }).catch(() => {})
     return null
   } catch (error) {
     const detail = error && typeof error === 'object' && 'message' in error

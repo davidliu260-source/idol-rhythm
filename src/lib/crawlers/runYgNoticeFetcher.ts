@@ -144,7 +144,7 @@ export async function runYgNoticeFetcher(
   async function finish(status: RunStatus) {
     if (statusSourceId) {
       const statusError = await updateRunStatus(supabase, statusSourceId, {
-        last_status: status, last_error: result.errors.join('\n') || null,
+        last_status: status, last_error: result.errors.join('\n') || null, fetched: result.fetched,
       })
       if (statusError) result.errors.push(statusError)
     }

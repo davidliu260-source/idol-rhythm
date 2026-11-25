@@ -458,7 +458,7 @@ test('受保護路徑維持與 origin/main 的 merge base 一致', () => {
     'src/lib/autoPublish/minimumContent.ts', 'src/lib/autoPublish/evaluateCandidate.ts', 'src/lib/autoPublish/runAutoPublish.ts',
     'src/lib/ai/generateChineseDisplay.ts', 'src/lib/ai/parseCandidate.ts',
     `:(exclude)${routePath}`, `:(exclude)${migrationPath}`,
-    ':(exclude)supabase/migrations/071_event_error_reports.sql',
+    ':(exclude)supabase/migrations/071_event_error_reports.sql', ':(exclude)supabase/migrations/072_crawler_source_alerts.sql',
     // MUST #10（YG／SMTOWN 公告只留事實）只放行這兩支：公告來源例外與不帶摘要
     ':(exclude)src/lib/autoPublish/minimumContent.ts', ':(exclude)src/lib/autoPublish/runAutoPublish.ts',
     // MUST #10（JYP 改用公告頁）只放行這幾支：jyp_notice 爬蟲、停用 jyp_schedule、NULL_CONFIDENCE_OK_PARSERS 加 jyp_notice
@@ -466,6 +466,8 @@ test('受保護路徑維持與 origin/main 的 merge base 一致', () => {
     ':(exclude)src/lib/autoPublish/evaluateCandidate.ts',
     // T35（售票階段／國家代碼／時間狀態）只放行 migration 073 與林口→桃園
     ':(exclude)supabase/migrations/073_t35_ticket_sales_country_time_status.sql', ':(exclude)src/lib/crawlers/taiwanEventCleanup.ts',
+    // MUST #10（爬蟲故障提醒）只放行：健康模組、狀態寫入、各 fetcher 傳入本輪筆數
+    ':(exclude)src/lib/crawlers/crawlerSource.ts', ':(exclude)src/lib/crawlers/crawlerSourceAlerts.ts', ':(exclude)src/lib/crawlers/runBlackpinkFetcher.ts', ':(exclude)src/lib/crawlers/runGenericWebpageFetcher.ts', ':(exclude)src/lib/crawlers/runKpopofficialConcertsFetcher.ts', ':(exclude)src/lib/crawlers/runSmtownNoticeFetcher.ts', ':(exclude)src/lib/crawlers/runVenueCalendarFetcher.ts', ':(exclude)src/lib/crawlers/runWakeoneNoticeFetcher.ts', ':(exclude)src/lib/crawlers/runYgArtistScheduleFetcher.ts', ':(exclude)src/lib/crawlers/runYgNoticeFetcher.ts', ':(exclude)src/lib/crawlers/runYoutubeOfficialChannelFetcher.ts',
   ]
   assert.equal(git('diff', '--name-only', base, '--', ...paths), '')
   assert.equal(git('ls-files', '--others', '--exclude-standard', '--', ...paths), '')

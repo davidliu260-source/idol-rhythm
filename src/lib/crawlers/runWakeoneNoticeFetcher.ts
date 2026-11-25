@@ -133,7 +133,7 @@ export async function runWakeoneNoticeFetcher(
 
   if (source.parser_type !== EXPECTED_PARSER_TYPE) {
     const msg = `parser_type 不符：crawler_sources=${source.parser_type}，預期=${EXPECTED_PARSER_TYPE}`
-    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
+    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg, fetched: 0 })
     return base({
       errors: [msg],
       crawlerSourceId: source.id,
@@ -144,7 +144,7 @@ export async function runWakeoneNoticeFetcher(
 
   if (!source.is_active) {
     const msg = `來源已停用：${source.name}`
-    await updateRunStatus(supabase, source.id, { last_status: 'skipped', last_error: msg })
+    await updateRunStatus(supabase, source.id, { last_status: 'skipped', last_error: msg, fetched: 0 })
     return base({
       errors: [msg],
       crawlerSourceId: source.id,
@@ -155,7 +155,7 @@ export async function runWakeoneNoticeFetcher(
 
   if (!source.idol_id) {
     const msg = `crawler_sources 缺少 idol_id：${source.name}（wakeone_notice 必須設定對應 idol）`
-    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
+    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg, fetched: 0 })
     return base({
       errors: [msg],
       crawlerSourceId: source.id,
@@ -169,7 +169,7 @@ export async function runWakeoneNoticeFetcher(
     new URL(pageUrl)
   } catch {
     const msg = `source_url 不是合法 URL：${pageUrl}`
-    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
+    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg, fetched: 0 })
     return base({
       errors: [msg],
       crawlerSourceId: source.id,
@@ -188,7 +188,7 @@ export async function runWakeoneNoticeFetcher(
 
   if (idolError || !idolRow) {
     const msg = `找不到對應 idol（id: ${source.idol_id}）：${idolError?.message ?? '無資料'}`
-    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
+    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg, fetched: 0 })
     return base({
       errors: [msg],
       crawlerSourceId: source.id,
@@ -250,6 +250,7 @@ export async function runWakeoneNoticeFetcher(
     await updateRunStatus(supabase, source.id, {
       last_status: 'error',
       last_error: fetchErrors.join(' | '),
+      fetched: 0,
     })
     return base({
       errors: fetchErrors,
@@ -328,7 +329,7 @@ export async function runWakeoneNoticeFetcher(
     if (hashRes.error || urlRes.error) {
       const err = hashRes.error ?? urlRes.error
       const msg = `去重查詢失敗：${err?.code ? `[${err.code}] ` : ''}${err?.message ?? '未知錯誤'}`
-      await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
+      await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg, fetched: allEntries.length })
       return base({
         fetched: allEntries.length,
         eventFiltered,
@@ -442,6 +443,7 @@ export async function runWakeoneNoticeFetcher(
   await updateRunStatus(supabase, source.id, {
     last_status: lastStatus,
     last_error: errors.length > 0 ? errors.join('\n') : null,
+    fetched: allEntries.length,
   })
 
   return {

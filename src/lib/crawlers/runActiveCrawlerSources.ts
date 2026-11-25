@@ -1,4 +1,5 @@
 import { STATUS_WRITE_ERROR_PREFIX, updateRunStatus, withStatusWriteTracking, type RunStatus } from './crawlerSource'
+import { sweepStaleSuccessAlerts } from './crawlerSourceAlerts'
 import { runVenueCalendarFetcher } from './runVenueCalendarFetcher'
 import { runYgNoticeFetcher } from './runYgNoticeFetcher'
 import type { TouchedCandidate } from './touchedCandidate'
@@ -246,7 +247,7 @@ export async function runCrawlerSource(
       // 这是双重防线：cron guard + sync-all guard。专属 admin route
       // 完全绕开本 dispatch，因此 P1-B1 preview 仍可手动触发。
       const message = 'generic_webpage is dispatched only via /api/admin/crawlers/generic-webpage/run; cron and sync-all fan-out are intentionally disabled in P1-B1'
-      const statusError = await updateRunStatus(supabase, source.id, { last_status: 'skipped', last_error: message })
+      const statusError = await updateRunStatus(supabase, source.id, { last_status: 'skipped', last_error: message, fetched: 0 })
       return {
         touched: [],
         source: 'generic-webpage',
@@ -271,7 +272,7 @@ export async function runCrawlerSource(
       // 与配额策略（P2-A2）正式定案前意外消耗 YouTube quota。
       if (trigger === 'vercel-cron') {
         const message = 'youtube_official_channel is manual-only in P2-A1; cron is intentionally disabled until P2-A2'
-        const statusError = await updateRunStatus(supabase, source.id, { last_status: 'skipped', last_error: message })
+        const statusError = await updateRunStatus(supabase, source.id, { last_status: 'skipped', last_error: message, fetched: 0 })
         return {
           touched: [],
           source: 'youtube-official-channel',
@@ -310,7 +311,7 @@ export async function runCrawlerSource(
     }
     default: {
       const message = `未知 parser_type：${source.parser_type}（dispatch table 未註冊）`
-      const statusError = await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: message })
+      const statusError = await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: message, fetched: 0 })
       return {
         touched: [],
         source: 'unknown',
@@ -356,6 +357,10 @@ export async function runActiveCrawlerSources(
   }
 
   const sources = (rows ?? []) as ActiveSourceRow[]
+
+  // MUST #10：一進門先補看「已超過 48 小時沒有成功」的啟用中來源（含這輪可能派不到的）。
+  // 只開／更新提醒，不改任何活動；失敗（含 migration 072 尚未套用）只 log，不影響本輪結果。
+  await sweepStaleSuccessAlerts(supabase).catch(() => {})
   const results: SourceRunResult[] = []
   const touched: TouchedCandidate[] = []
 
@@ -363,7 +368,7 @@ export async function runActiveCrawlerSources(
     source: ActiveSourceRow, runStatus: RunStatus, message: string, errors: string[],
   ) {
     const statusError = await updateRunStatus(supabase, source.id, {
-      last_status: runStatus, last_error: message,
+      last_status: runStatus, last_error: message, fetched: 0,
     })
     if (statusError) errors.push(statusError)
     results.push({

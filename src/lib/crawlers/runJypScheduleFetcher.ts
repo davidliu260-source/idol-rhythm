@@ -53,6 +53,7 @@ export async function runJypScheduleFetcher(
     const statusError = await updateRunStatus(supabase, source.id, {
       last_status: 'error',
       last_error: JYP_SCHEDULE_DISABLED_MESSAGE,
+      fetched: 0,
     })
     if (statusError) errors.push(statusError)
   }

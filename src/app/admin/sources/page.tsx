@@ -5,14 +5,23 @@ import { ArrowLeft, Database } from 'lucide-react'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
 import SourcesClient, { type SourceRow } from './SourcesClient'
+import CrawlerAlertList from '@/components/admin/CrawlerAlertList'
+import {
+  buildAlertViews,
+  formatTaipeiDateTime,
+  isKpopOfficialSource,
+  loadCrawlerHealth,
+  type AlertView,
+} from '@/lib/crawlers/crawlerSourceAlerts'
 
 async function getSources(): Promise<{
   sources: SourceRow[]
+  alertViews: AlertView[]
   error: string | null
 }> {
   const supabase = getSupabaseServerClient()
   if (!supabase) {
-    return { sources: [], error: 'Supabase 環境變數未設定' }
+    return { sources: [], alertViews: [], error: 'Supabase 環境變數未設定' }
   }
 
   const { data, error } = await supabase
@@ -25,9 +34,16 @@ async function getSources(): Promise<{
   if (error) {
     return {
       sources: [],
+      alertViews: [],
       error: `查詢資料來源失敗：${error.code ? `[${error.code}] ` : ''}${error.message}`,
     }
   }
+
+  // MUST #10：健康欄與未解決提醒另外讀。migration 072 尚未套用時 available=false，
+  // 列表照常顯示，只是沒有健康資訊。
+  const health = await loadCrawlerHealth(supabase)
+  const healthById = new Map(health.sources.map((row) => [row.id, row]))
+  const alertViews = health.available ? buildAlertViews(health.sources, health.alerts) : []
 
   const sources: SourceRow[] = (data ?? []).map((row) => ({
     id: row.id as string,
@@ -39,13 +55,30 @@ async function getSources(): Promise<{
     isActive: row.is_active as boolean,
     lastRunAt: row.last_run_at as string | null,
     lastStatus: row.last_status as string | null,
+    isKpopOfficial: isKpopOfficialSource({
+      source_key: row.source_key as string,
+      parser_type: row.parser_type as string,
+    }),
+    health: (() => {
+      const h = healthById.get(row.id as string)
+      if (!h) return null
+      return {
+        consecutiveErrorCount: h.consecutive_error_count,
+        consecutiveZeroFetchCount: h.consecutive_zero_fetch_count,
+        lastSuccessLabel: h.last_success_at ? formatTaipeiDateTime(h.last_success_at) : null,
+        lastFetchedCount: h.last_fetched_count,
+      }
+    })(),
+    alerts: alertViews
+      .filter((view) => view.sourceId === row.id)
+      .map((view) => ({ kind: view.kind, severity: view.severity, status: view.status })),
   }))
 
-  return { sources, error: null }
+  return { sources, alertViews, error: null }
 }
 
 export default async function AdminSourcesPage() {
-  const [{ isAdmin }, { sources, error }] = await Promise.all([
+  const [{ isAdmin }, { sources, alertViews, error }] = await Promise.all([
     getCurrentAdmin(),
     getSources(),
   ])
@@ -97,6 +130,13 @@ export default async function AdminSourcesPage() {
               {error}
             </p>
           </div>
+        </div>
+      )}
+
+      {/* MUST #10：未解決的爬蟲故障／警告 */}
+      {isAdmin && alertViews.length > 0 && (
+        <div className="px-4 mb-4">
+          <CrawlerAlertList views={alertViews} />
         </div>
       )}
 

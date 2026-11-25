@@ -614,13 +614,30 @@ const JYP_NOTICE_CRAWLER_FILES = [
 // T35 只放行林口→桃園與 migration 073（其他爬蟲與 supabase 仍受保護）
 const T35_FILES = ['src/lib/crawlers/taiwanEventCleanup.ts', 'supabase/migrations/073_t35_ticket_sales_country_time_status.sql']
 
-test('範圍守門：不改爬蟲存檔格式、不新增 migration', () => {
+// 爬蟲故障提醒（需求單_爬蟲故障提醒_2026-11-24.md）只放行：健康模組、狀態寫入、各 fetcher 傳入本輪筆數，
+// 以及已核准的 migration 072。存檔格式（event_candidates payload）不變。
+const CRAWLER_ALERTS_FILES = [
+  'src/lib/crawlers/crawlerSource.ts',
+  'src/lib/crawlers/crawlerSourceAlerts.ts',
+  'src/lib/crawlers/runBlackpinkFetcher.ts',
+  'src/lib/crawlers/runGenericWebpageFetcher.ts',
+  'src/lib/crawlers/runKpopofficialConcertsFetcher.ts',
+  'src/lib/crawlers/runSmtownNoticeFetcher.ts',
+  'src/lib/crawlers/runVenueCalendarFetcher.ts',
+  'src/lib/crawlers/runWakeoneNoticeFetcher.ts',
+  'src/lib/crawlers/runYgArtistScheduleFetcher.ts',
+  'src/lib/crawlers/runYgNoticeFetcher.ts',
+  'src/lib/crawlers/runYoutubeOfficialChannelFetcher.ts',
+]
+const CRAWLER_ALERTS_MIGRATION = 'supabase/migrations/072_crawler_source_alerts.sql'
+
+test('範圍守門：不改爬蟲存檔格式、不新增 migration（072 爬蟲故障提醒除外）', () => {
   const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' })
   const base = git('merge-base', 'origin/main', 'HEAD').trim()
-  const outside = text => text.split('\n').filter(Boolean).filter(path => !JYP_NOTICE_CRAWLER_FILES.includes(path) && !T35_FILES.includes(path)).join('\n')
+  const outside = text => text.split('\n').filter(Boolean).filter(path => ![...JYP_NOTICE_CRAWLER_FILES, ...T35_FILES, ...CRAWLER_ALERTS_FILES, CRAWLER_ALERTS_MIGRATION].includes(path)).join('\n')
   assert.equal(outside(git('diff', '--name-only', base, '--', 'src/lib/crawlers', 'supabase')), '')
   assert.equal(outside(git('ls-files', '--others', '--exclude-standard', '--', 'src/lib/crawlers', 'supabase')), '')
   assert.equal(outside(git('diff', '--name-only', base, '--', 'supabase')), '')
   const numbers = readdirSync(new URL('supabase/migrations/', root)).map(name => Number(name.match(/^\d+/)?.[0] ?? 0))
-  assert.equal(Math.max(...numbers), 73) // T35：073（072 保留給爬蟲故障提醒，另一分支）
+  assert.equal(Math.max(...numbers), 73) // T35 073 已在 main；本張只新增 072
 })
