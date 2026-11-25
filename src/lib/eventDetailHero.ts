@@ -5,6 +5,8 @@ export interface DetailHeroEventLike {
   endDate?: string
   dateLabel?: string
   time?: string
+  /** T35：unknown（我們還沒查到）／announced（有明確時間）／tba（官方明說尚未公布）。舊資料沒有此欄視同 unknown。 */
+  timeStatus?: string | null
   venueName?: string
   location?: string
   city?: string
@@ -35,8 +37,15 @@ export function parseYmd(value?: string | null): { year: number; month: number; 
 export function getStartYmd(event: DetailHeroEventLike) {
   return parseYmd(event.startDate ?? event.date)
 }
-export function formatTimeLabel(time?: string | null): string {
-  return time?.trim() ? time : '時間未定'
+export const TIME_TBA_LABEL = '官方尚未公布'
+export const TIME_UNKNOWN_LABEL = '時間未定'
+/**
+ * T35：tba →「官方尚未公布」；unknown（或缺）→ 維持「時間未定」；announced → 顯示 time。
+ * 有填 time 時一律顯示 time（舊資料 time_status 預設是 unknown，但 time 可能已有值）。
+ */
+export function formatTimeLabel(time?: string | null, timeStatus?: string | null): string {
+  if (time?.trim()) return time
+  return timeStatus === 'tba' ? TIME_TBA_LABEL : TIME_UNKNOWN_LABEL
 }
 export function getRangeEndLabel(event: DetailHeroEventLike): string | null {
   const start = getStartYmd(event), end = parseYmd(event.endDate)
@@ -46,7 +55,7 @@ export function getRangeEndLabel(event: DetailHeroEventLike): string | null {
 export function getHeroDateParts(event: DetailHeroEventLike) {
   const start = getStartYmd(event)
   if (!start) return null
-  return { monthLabel: `${start.month}月`, dayLabel: `${start.day}`, metaLabel: [WEEKDAY_LABELS[start.weekday], formatTimeLabel(event.time), getRangeEndLabel(event)].filter(Boolean).join(' · ') }
+  return { monthLabel: `${start.month}月`, dayLabel: `${start.day}`, metaLabel: [WEEKDAY_LABELS[start.weekday], formatTimeLabel(event.time, event.timeStatus), getRangeEndLabel(event)].filter(Boolean).join(' · ') }
 }
 export function getInfoDateRow(event: DetailHeroEventLike): { key: '日期' | '期間'; main: string; sub: string } {
   const start = getStartYmd(event), end = parseYmd(event.endDate)
@@ -54,7 +63,7 @@ export function getInfoDateRow(event: DetailHeroEventLike): { key: '日期' | '�
   const main = !start ? event.dateLabel?.trim() || '日期未定' : range && end
     ? `${start.month} 月 ${start.day} 日 至 ${end.month} 月 ${end.day} 日`
     : `${start.month} 月 ${start.day} 日　${WEEKDAY_LABELS[start.weekday]}`
-  return { key: range ? '期間' : '日期', main, sub: formatTimeLabel(event.time) }
+  return { key: range ? '期間' : '日期', main, sub: formatTimeLabel(event.time, event.timeStatus) }
 }
 export function getTrustBadgeLabel(level?: string | null): '官方確認' | '媒體確認' | '非官方整理' | null {
   return level === 'official' ? '官方確認' : level === 'media' ? '媒體確認' : level === 'aggregator' ? '非官方整理' : null

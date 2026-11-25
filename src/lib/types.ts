@@ -118,6 +118,12 @@ export interface Event {
   mapUrl?: string
   country: string
   countryFlag: string
+  /** T35：ISO 兩碼（TW/HK/SG/MY…）；NULL／未套用 migration 073 時為 undefined。 */
+  countryCode?: string
+  /** T35：unknown／announced／tba；未套用 073 時為 undefined（視同 unknown）。 */
+  timeStatus?: 'unknown' | 'announced' | 'tba'
+  /** T35：未來的開賣時間（event_ticket_sales.starts_at），卡片徽章用；清單一次批次查詢帶入。 */
+  ticketSaleStartsAt?: string[]
   source: EventSource
   description: string
   displaySummaryZh?: string

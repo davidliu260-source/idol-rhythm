@@ -2,6 +2,7 @@ import { PUBLIC_TRUST_LEVELS } from '../trustLevels'
 import { findOfficialNoticeUrl } from '../officialNotice'
 import type { Event, EventType, EventSubType, EventStatus, EventSource, TrustLevel, SourceType, Idol, GenderType, IdolCategory, GroupOrSolo } from '../types'
 import { getSupabaseClient } from './client'
+import { rowToTicketSale, sortTicketSales, type TicketSale, type TicketSaleRow } from '../ticketSales'
 
 // ── Supabase row shapes (snake_case, mirrors the DB schema) ───────────────────
 
@@ -30,6 +31,9 @@ interface SupabaseEventRow {
   translation_status: string | null
   country: string
   country_flag: string
+  /** T35（migration 073）。用 select('*') 讀，073 未套用時欄位不存在 → undefined。 */
+  country_code?: string | null
+  time_status?: string | null
   description: string | null
   tags: string[] | null
   ticket_url: string | null
@@ -121,6 +125,8 @@ function rowToEvent(row: SupabaseEventRow): Event {
     mapUrl: row.map_url ?? undefined,
     country: row.country,
     countryFlag: row.country_flag,
+    ...(row.country_code ? { countryCode: row.country_code } : {}),
+    ...(row.time_status === 'unknown' || row.time_status === 'announced' || row.time_status === 'tba' ? { timeStatus: row.time_status } : {}),
     source,
     description: row.description ?? '',
     displaySummaryZh: row.display_summary_zh ?? undefined,
@@ -178,20 +184,71 @@ export async function getPublishedEvents({ throwOnError = false } = {}): Promise
     return []
   }
 
-  const { data, error } = await supabase
-    .from('events')
-    .select('*, idols!inner(slug, avatar_url, color), event_sources(id, event_id, level, label, type, url)')
-    .eq('is_published', true)
-    .in('trust_level', [...PUBLIC_TRUST_LEVELS])
-    .neq('status', 'cancelled')
-    .order('date', { ascending: true })
+  const [{ data, error }, saleStarts] = await Promise.all([
+    supabase
+      .from('events')
+      .select('*, idols!inner(slug, avatar_url, color), event_sources(id, event_id, level, label, type, url)')
+      .eq('is_published', true)
+      .in('trust_level', [...PUBLIC_TRUST_LEVELS])
+      .neq('status', 'cancelled')
+      .order('date', { ascending: true }),
+    getUpcomingTicketSaleStarts(),
+  ])
 
   if (error || !data) {
     if (throwOnError) throw new Error('Published events query failed')
     return []
   }
 
-  return (data as SupabaseEventRow[]).map(rowToEvent)
+  return (data as SupabaseEventRow[]).map((row) => {
+    const event = rowToEvent(row)
+    const starts = saleStarts.get(row.id)
+    return starts?.length ? { ...event, ticketSaleStartsAt: starts } : event
+  })
+}
+
+/**
+ * T35：一次批次讀所有「未來開賣」的售票階段開始時間（卡片徽章用，避免 N+1）。
+ * RLS 只放行已發布活動的列。表不存在（073 未套用）或任何錯誤 → 當作沒有，不影響清單。
+ */
+async function getUpcomingTicketSaleStarts(now: Date = new Date()): Promise<Map<string, string[]>> {
+  const result = new Map<string, string[]>()
+  const supabase = getSupabaseClient()
+  if (!supabase) return result
+  try {
+    const { data, error } = await supabase
+      .from('event_ticket_sales')
+      .select('event_id, starts_at')
+      .gt('starts_at', now.toISOString())
+      .order('starts_at', { ascending: true })
+    if (error || !data) return result
+    for (const row of data as Array<{ event_id: string; starts_at: string | null }>) {
+      if (!row.starts_at) continue
+      result.set(row.event_id, [...(result.get(row.event_id) ?? []), row.starts_at])
+    }
+  } catch {
+    // 讀不到售票階段不影響清單
+  }
+  return result
+}
+
+/**
+ * T35：單一活動的售票階段（詳情頁）。公開 client，RLS 擋未發布活動。
+ * 讀取失敗（含 073 未套用）一律回空陣列，前台退回單一購票連結。
+ */
+export async function getEventTicketSales(eventId: string): Promise<TicketSale[]> {
+  const supabase = getSupabaseClient()
+  if (!supabase) return []
+  try {
+    const { data, error } = await supabase
+      .from('event_ticket_sales')
+      .select('id, stage, label, starts_at, ends_at, platform, url, eligibility, eligibility_note, requires_verification, source_url, verified_at')
+      .eq('event_id', eventId)
+    if (error || !data) return []
+    return sortTicketSales((data as TicketSaleRow[]).map(rowToTicketSale))
+  } catch {
+    return []
+  }
 }
 
 /**

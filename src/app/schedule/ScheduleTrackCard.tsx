@@ -6,6 +6,7 @@ import clsx from 'clsx'
 import EventTypeBadge from '@/components/EventTypeBadge'
 import IdolAvatar from '@/components/IdolAvatar'
 import SourceBadge from '@/components/SourceBadge'
+import TicketSaleBadge from '@/components/TicketSaleBadge'
 import { useAppState } from '@/lib/appState'
 import { getEventDateLabel } from '@/lib/eventDisplay'
 import { getEventLocationLabel, hasAnyEventLocation } from '@/lib/eventLocation'
@@ -51,6 +52,7 @@ function ScheduleEventRow({ event }: { event: Event }) {
         <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1">
           <EventTypeBadge type={event.type} subType={event.subType} />
           <SourceBadge source={event.source.level} />
+          <TicketSaleBadge startsAt={event.ticketSaleStartsAt} />
         </div>
         <h4 className="break-words text-sm font-semibold leading-snug text-white">{event.title}</h4>
         {event.originalTitle && <p className="mt-0.5 truncate text-xs text-white/70">{event.originalTitle}</p>}
