@@ -11,6 +11,7 @@ import SourceBadge from './SourceBadge'
 import EventTypeBadge from './EventTypeBadge'
 import { getIdolMarkSrc, resolveIdolColor } from '@/lib/idolMarks'
 import IdolAvatar from './IdolAvatar'
+import TicketSaleBadge from './TicketSaleBadge'
 import clsx from 'clsx'
 
 interface EventCardProps {
@@ -95,6 +96,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
                   {event.time}
                 </span>
               )}
+              <TicketSaleBadge startsAt={event.ticketSaleStartsAt} />
               <span className="ml-auto">
                 <SourceBadge source={event.source.level} size="sm" />
               </span>
@@ -188,6 +190,7 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
           </span>
         )}
         <EventWantCount eventId={event.id} className="text-xs text-muted" />
+        <TicketSaleBadge startsAt={event.ticketSaleStartsAt} />
       </div>
 
       {/* Source */}

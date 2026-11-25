@@ -43,7 +43,7 @@ registerHooks({
       return { url: dataModule('export const getSupabaseClient = () => globalThis.__must10.publicClient'), shortCircuit: true }
     }
     if (specifier === './data' && parent.includes('/src/app/events/')) {
-      return { url: dataModule('export const getEventDetail = async () => globalThis.__must10.detail'), shortCircuit: true }
+      return { url: dataModule('export const getEventDetail = async () => globalThis.__must10.detail; export const getEventTicketSalesForDetail = async () => [] // T35'), shortCircuit: true }
     }
     if (specifier.startsWith('@/')) return nextResolve(withExtension(new URL(`src/${specifier.slice(2)}`, root).href), context)
     if (specifier.startsWith('.') && !/\.[a-z]+$/i.test(specifier) && /\.tsx?$/.test(parent)) {
@@ -611,14 +611,16 @@ const JYP_NOTICE_CRAWLER_FILES = [
   'src/lib/crawlers/runJypNoticeFetcher.ts',
   'src/lib/crawlers/runJypScheduleFetcher.ts',
 ]
+// T35 只放行林口→桃園與 migration 073（其他爬蟲與 supabase 仍受保護）
+const T35_FILES = ['src/lib/crawlers/taiwanEventCleanup.ts', 'supabase/migrations/073_t35_ticket_sales_country_time_status.sql']
 
 test('範圍守門：不改爬蟲存檔格式、不新增 migration', () => {
   const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' })
   const base = git('merge-base', 'origin/main', 'HEAD').trim()
-  const outside = text => text.split('\n').filter(Boolean).filter(path => !JYP_NOTICE_CRAWLER_FILES.includes(path)).join('\n')
+  const outside = text => text.split('\n').filter(Boolean).filter(path => !JYP_NOTICE_CRAWLER_FILES.includes(path) && !T35_FILES.includes(path)).join('\n')
   assert.equal(outside(git('diff', '--name-only', base, '--', 'src/lib/crawlers', 'supabase')), '')
   assert.equal(outside(git('ls-files', '--others', '--exclude-standard', '--', 'src/lib/crawlers', 'supabase')), '')
-  assert.equal(git('diff', '--name-only', base, '--', 'supabase'), '')
+  assert.equal(outside(git('diff', '--name-only', base, '--', 'supabase')), '')
   const numbers = readdirSync(new URL('supabase/migrations/', root)).map(name => Number(name.match(/^\d+/)?.[0] ?? 0))
-  assert.equal(Math.max(...numbers), 71)
+  assert.equal(Math.max(...numbers), 73) // T35：073（072 保留給爬蟲故障提醒，另一分支）
 })

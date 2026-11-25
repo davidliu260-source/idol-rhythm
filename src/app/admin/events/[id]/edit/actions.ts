@@ -5,6 +5,9 @@ import { redirect } from 'next/navigation'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
 import { planDraftSourceChanges, applyDraftSourcePlan, type DraftSourceFormRow } from '@/lib/admin/sourceReview'
+import { planTicketSaleChanges, validateTicketSaleRows, type TicketSaleFormRow } from '@/lib/admin/ticketSalesForm'
+import { resolveCountryFields } from '@/lib/regions'
+import { isHttpUrl } from '@/lib/ticketPlatforms'
 
 // ── Payload type ──────────────────────────────────────────────────────────────
 
@@ -22,6 +25,11 @@ export interface UpdateDraftPayload {
   time: string
   country: string
   countryFlag: string
+  /** T35：'' = 其他（country_code = NULL，保留手填的 country／country_flag） */
+  countryCode: string
+  timeStatus: string
+  /** T35：null = 編輯器未載入，本次不變更售票階段 */
+  ticketSales: TicketSaleFormRow[] | null
   location: string
   city: string
   venueName: string
@@ -66,6 +74,12 @@ export async function updateDraftEvent(
   if (payload.endDate && payload.endDate < startDate) {
     return { error: '結束日期不可早於開始日期' }
   }
+  if (!['unknown', 'announced', 'tba'].includes(payload.timeStatus)) return { error: '時間狀態不正確' }
+  if (payload.ticketUrl.trim() && !isHttpUrl(payload.ticketUrl)) return { error: '票務 URL 必須是 http(s) 網址' }
+  const countryFields = resolveCountryFields({ countryCode: payload.countryCode, country: payload.country, countryFlag: payload.countryFlag })
+  if (!countryFields.country) return { error: '國家 / 地區不可空白' }
+  const salesValidation = payload.ticketSales === null ? null : validateTicketSaleRows(payload.ticketSales)
+  if (salesValidation && !salesValidation.ok) return { error: salesValidation.error }
   // ── Verify event exists and is a draft ────────────────────────────────────
   const { data: existing, error: fetchError } = await supabase
     .from('events')
@@ -89,6 +103,19 @@ export async function updateDraftEvent(
   if (!planned.ok) return { error: planned.error }
   const { plan } = planned
 
+  // T35：售票階段存檔計畫（以 id 比對；(event_id, stage, label) 唯一鍵已在表單驗證擋重複）
+  let salesPlan: Extract<ReturnType<typeof planTicketSaleChanges>, { ok: true }> | null = null
+  if (salesValidation?.ok) {
+    const { data: existingSales, error: salesError } = await supabase
+      .from('event_ticket_sales').select('id').eq('event_id', eventId)
+    if (salesError) {
+      return { error: `讀取現有售票階段失敗：${salesError.code ? `[${salesError.code}] ` : ''}${salesError.message}（未做任何變更）` }
+    }
+    const p = planTicketSaleChanges((existingSales ?? []).map((r) => r.id as string), salesValidation.rows)
+    if (!p.ok) return { error: p.error }
+    salesPlan = p
+  }
+
   // ── Step A: UPDATE events content fields ──────────────────────────────────
   // updated_at is handled automatically by the trg_events_updated_at trigger.
   const { error: updateError } = await supabase
@@ -102,8 +129,10 @@ export async function updateDraftEvent(
       status:       payload.status,
       date:         startDate,
       time:         payload.time || null,
-      country:      payload.country.trim(),
-      country_flag: payload.countryFlag.trim(),
+      country:      countryFields.country,
+      country_flag: countryFields.country_flag,
+      country_code: countryFields.country_code,
+      time_status:  payload.timeStatus,
       location:     payload.location.trim() || null,
       description:  payload.description.trim() || null,
       display_title_zh:      payload.displayTitleZh.trim() || null,
@@ -153,6 +182,23 @@ export async function updateDraftEvent(
     },
   })
   if (!result.ok) return { error: `活動資訊已更新，但${result.error}` }
+
+  // Step B2（T35）：售票階段——先刪、再改、最後新增。
+  if (salesPlan) {
+    const fmt = (e: { code?: string; message: string }) => `${e.code ? `[${e.code}] ` : ''}${e.message}`
+    if (salesPlan.deleteIds.length) {
+      const { error } = await supabase.from('event_ticket_sales').delete().eq('event_id', eventId).in('id', salesPlan.deleteIds)
+      if (error) return { error: `活動資訊與來源已更新，但刪除售票階段失敗：${fmt(error)}。請重新整理後再存一次` }
+    }
+    for (const { id, ...row } of salesPlan.updates) {
+      const { error } = await supabase.from('event_ticket_sales').update(row).eq('event_id', eventId).eq('id', id)
+      if (error) return { error: `活動資訊與來源已更新，但更新售票階段「${row.label}」失敗：${fmt(error)}。請重新整理後再存一次` }
+    }
+    if (salesPlan.inserts.length) {
+      const { error } = await supabase.from('event_ticket_sales').insert(salesPlan.inserts.map((row) => ({ ...row, event_id: eventId })))
+      if (error) return { error: `活動資訊與來源已更新，但新增售票階段失敗：${fmt(error)}。請重新整理後再存一次` }
+    }
+  }
 
   // Step C: 即使來源未變動，也以全部來源校正可信度。
   const { error: trustError } = await supabase.from('events')

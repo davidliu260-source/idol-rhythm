@@ -1,6 +1,9 @@
 import { getReviewSourceInfo, matchesAggregatorPattern } from '../admin/sourceReview'
 import { isEventEnded, toDateKey } from '../taipeiDate'
 import { locationFromRawData, locationFromRawContent } from '../crawlers/candidateLocation'
+import { inferTaiwanCity } from '../crawlers/taiwanEventCleanup'
+import { isSameShow, showKind, type SameShowInput } from './sameShow'
+import { inferEventType } from './inferEventType'
 
 export const AUTO_PUBLISH_RULE_VERSION = 't34-v2'
 
@@ -11,12 +14,17 @@ export const LOW_CONFIDENCE_THRESHOLD = 0.65
 export const NULL_CONFIDENCE_OK_PARSERS = [
   'jyp_schedule', 'jyp_notice', 'yg_artist_schedule', 'smtown_notice', 'wakeone_notice',
   'blackpink_official_tour', 'kpopofficial_concerts', 'youtube_official_channel',
+  // T35 B-2：YG 公告與場館行事曆（不呼叫 AI）。只放行官方信任等級，見 OFFICIAL_TIER_ONLY_PARSERS。
+  'yg_notice', 'venue_calendar',
 ] as const
+
+/** T35 B-2：這些 parser 只有在來源判定為「官方」時才視為信心通過；其他等級照樣 park（unknown_parser）。 */
+export const OFFICIAL_TIER_ONLY_PARSERS = ['yg_notice', 'venue_calendar'] as const
 
 /** 允許自動上架的非官方整理站（以 parser_type 判斷）。 */
 export const AGGREGATOR_PARSER_ALLOWLIST = ['kpopofficial_concerts'] as const
 
-export type AutoPublishAction = 'publish_official' | 'publish_aggregator' | 'park' | 'skip'
+export type AutoPublishAction = 'publish_official' | 'publish_aggregator' | 'merge' | 'park' | 'skip'
 export type PublishTrustLevel = 'official' | 'media' | 'aggregator'
 export type LocationStatus = 'has_location' | 'location_pending'
 
@@ -86,6 +94,8 @@ export interface ExistingEventInput {
   id: string
   idol_id: string
   title: string
+  type?: string | null
+  sub_type?: string | null
   display_title_zh?: string | null
   date: string
   start_date?: string | null
@@ -140,6 +150,11 @@ export type AutoPublishDecision =
       rawLocationOrigin: 'raw_data' | 'raw_content' | null
       eventType: string | null                // detected_event_type；null 由 PR-3 決定預設，本票不臆造
     })
+  /**
+   * T35 B-4：同藝人＋同日＋同城（或同場館）命中已存在的活動 → 併入來源並連結候選，不建新列。
+   * existingEventId：命中 DB 既有的已發布活動；mergeWithCandidateId：命中同一批較早要建立的候選（建立後的活動 id 由執行端對應）。
+   */
+  | (DecisionBase & { action: 'merge'; trustLevel: PublishTrustLevel; existingEventId: string | null; mergeWithCandidateId: string | null })
   | (DecisionBase & { action: 'park'; parkReason: ParkReason; allReasons: ParkReason[] })
   | (DecisionBase & { action: 'skip'; skipReason: SkipReason; existingEventId: string | null })
 
@@ -166,6 +181,16 @@ export function normalizeTitleKey(value: string | null | undefined): string {
 }
 const titles = (c: CandidateInput) => [c.raw_title, text(raw(c).title), c.display_title_zh].map(normalizeTitleKey).filter(Boolean)
 const dateKey = (c: CandidateInput) => toDateKey(c.detected_start_date ?? c.detected_date)
+/** T35 B-4：候選的「同一場」比對資料（城市不論語言；缺城市時從場館／中文地點／標題推台灣城市）。 */
+export function candidateShow(c: CandidateInput, parserType: string | null = null): SameShowInput {
+  const rawLoc = locationFromRawData(c.raw_data)
+  const venue = text(c.detected_venue_name) ?? rawLoc?.detected_venue_name ?? null
+  const city = text(c.detected_city) ?? rawLoc?.detected_city
+    ?? inferTaiwanCity({ title: c.raw_title ?? '', venueName: venue, locationText: c.location_name_zh })
+  const inferred = inferEventType({ raw_title: c.raw_title, detected_event_type: c.detected_event_type, detected_event_sub_type: (c as { detected_event_sub_type?: string | null }).detected_event_sub_type }, parserType)
+  return { idolId: c.detected_idol_id, date: c.detected_start_date ?? c.detected_date, city, venue, kind: showKind({ title: c.raw_title, type: inferred.type, subType: inferred.subType }) }
+}
+const eventShow = (e: ExistingEventInput): SameShowInput => ({ idolId: e.idol_id, date: e.start_date ?? e.date, city: e.city, venue: e.venue_name, kind: showKind({ title: e.title, type: e.type, subType: e.sub_type }) })
 const visible = (e: ExistingEventInput) => e.is_published === true && ['official', 'media', 'aggregator'].includes(e.trust_level) && e.status !== 'cancelled'
 export function evaluateCandidate(c: CandidateInput, ctx: EvaluationContext): AutoPublishDecision {
   const { crawlerSourceId, parserType } = source(c, ctx)
@@ -198,6 +223,18 @@ export function evaluateCandidate(c: CandidateInput, ctx: EvaluationContext): Au
   const n = c.ai_confidence === null ? NaN : Number(c.ai_confidence)
   if (Number.isFinite(n)) { if (n < LOW_CONFIDENCE_THRESHOLD) reasons.add('low_confidence') }
   else if (!NULL_CONFIDENCE_OK_PARSERS.some(p => p === parserType)) reasons.add('unknown_parser')
+  else if (OFFICIAL_TIER_ONLY_PARSERS.some(p => p === parserType) && !('tier' in tier && tier.tier === 'official')) reasons.add('unknown_parser')
+  // T35 B-4：同藝人＋同日＋同城（或同場館）→ 視為同一場，不論標題語言或來源。
+  if (!reasons.size && !linked && !urlDuplicate && 'tier' in tier) {
+    const show = candidateShow(c, parserType)
+    const same = ctx.events.filter(e => e.status !== 'cancelled' && isSameShow(show, eventShow(e)))
+    const blocked = same.find(e => e.auto_publish_blocked)
+    if (blocked) return skip('auto_publish_blocked', blocked.id)
+    const published = same.filter(visible)
+    if (published.length === 1) return { ...base, action: 'merge', trustLevel: tier.tier, existingEventId: published[0].id, mergeWithCandidateId: null }
+    // 命中多列已發布、或只命中草稿：不建新列也不自動併（交給人工），以 duplicate 擱置。
+    if (same.length) reasons.add('duplicate')
+  }
   if (!reasons.size && (urlDuplicate || ctx.events.some(e => e.id !== linked?.id && e.idol_id === c.detected_idol_id && toDateKey(e.start_date ?? e.date) === dateKey(c) && [e.title, e.display_title_zh].map(normalizeTitleKey).some(t => t && titles(c).includes(t))))) reasons.add('duplicate')
   const allReasons = PARK_REASONS.filter(r => reasons.has(r))
   if (allReasons.length) return { ...base, action: 'park', parkReason: allReasons[0], allReasons }
@@ -214,8 +251,17 @@ export function evaluateCandidates(candidates: ReadonlyArray<CandidateInput>, ct
   const published: CandidateInput[] = []
   for (const c of [...candidates].sort((a, b) => lexical(a.created_at ?? '', b.created_at ?? '') || lexical(a.id, b.id))) {
     let d = evaluateCandidate(c, ctx)
-    if (d.action.startsWith('publish')) {
-      if (published.some(p => p.detected_idol_id === c.detected_idol_id && dateKey(p) === dateKey(c) && titles(p).some(t => titles(c).includes(t)))) d = { ruleVersion: d.ruleVersion, candidateId: d.candidateId, crawlerSourceId: d.crawlerSourceId, parserType: d.parserType, action: 'park', parkReason: 'duplicate', allReasons: ['duplicate'] }
+    if (d.action === 'publish_official' || d.action === 'publish_aggregator') {
+      // T35 B-4：同一批裡較早、要上架的同一場 → 併入那一場。
+      // 已連結草稿的候選（publish_existing_event）維持原流程，不被併走。
+      const sameShow = d.target === 'create_event' ? published.find(p => isSameShow(candidateShow(p, results.get(p)?.parserType ?? null), candidateShow(c, d.parserType))) : undefined
+      if (sameShow) {
+        const earlier = results.get(sameShow)
+        // T35 審查 S1：較早那一筆是「發布既有草稿」→ 不併進草稿（草稿可能不會被發布），改 park duplicate，與 DB 那條路一致。
+        d = earlier && 'target' in earlier && earlier.target === 'publish_existing_event'
+          ? { ruleVersion: d.ruleVersion, candidateId: d.candidateId, crawlerSourceId: d.crawlerSourceId, parserType: d.parserType, action: 'park', parkReason: 'duplicate', allReasons: ['duplicate'] }
+          : { ruleVersion: d.ruleVersion, candidateId: d.candidateId, crawlerSourceId: d.crawlerSourceId, parserType: d.parserType, action: 'merge', trustLevel: d.trustLevel, existingEventId: null, mergeWithCandidateId: sameShow.id }
+      } else if (published.some(p => p.detected_idol_id === c.detected_idol_id && dateKey(p) === dateKey(c) && titles(p).some(t => titles(c).includes(t)))) d = { ruleVersion: d.ruleVersion, candidateId: d.candidateId, crawlerSourceId: d.crawlerSourceId, parserType: d.parserType, action: 'park', parkReason: 'duplicate', allReasons: ['duplicate'] }
       else published.push(c)
     }
     results.set(c, d)

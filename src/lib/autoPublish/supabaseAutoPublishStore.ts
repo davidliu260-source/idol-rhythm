@@ -4,7 +4,7 @@ import type { AutoPublishStore, CandidateRow, EventRow } from './runAutoPublish'
 import type { CrawlerSourceInput, IdolInput, EventSourceInput } from './evaluateCandidate'
 
 const CANDIDATE_COLUMNS = 'id,review_status,raw_title,raw_content,raw_data,detected_idol_id,detected_event_type,detected_event_sub_type,detected_date,detected_start_date,detected_end_date,detected_city,detected_venue_name,detected_address,location_name_zh,display_title_zh,display_summary_zh,translation_status,translation_source,translation_updated_at,detected_date_label,detected_map_url,source_url,source_name,source_type,source_hash,ai_confidence,approved_event_id,created_at'
-const EVENT_COLUMNS = 'id,idol_id,title,display_title_zh,date,start_date,end_date,is_published,trust_level,status,auto_publish_blocked,city,venue_name,address,location_name_zh,location,location_autofill_meta,time,description,display_summary_zh,ticket_url,stream_url,auto_publish_blocked_reason'
+const EVENT_COLUMNS = 'id,idol_id,title,type,sub_type,display_title_zh,date,start_date,end_date,is_published,trust_level,status,auto_publish_blocked,city,venue_name,address,location_name_zh,location,location_autofill_meta,time,description,display_summary_zh,ticket_url,stream_url,auto_publish_blocked_reason'
 const chunks = <T>(items: T[]): T[][] => Array.from({ length: Math.ceil(items.length / 100) }, (_, i) => items.slice(i * 100, i * 100 + 100))
 const distinct = (values: (string | null | undefined)[]) => Array.from(new Set(values.filter((v): v is string => !!v)))
 export function createSupabaseAutoPublishStore(supabase: SupabaseClient): AutoPublishStore {
@@ -63,6 +63,10 @@ export function createSupabaseAutoPublishStore(supabase: SupabaseClient): AutoPu
     },
     async insertEventSource(row) {
       const { error } = await supabase.from('event_sources').insert(row)
+      return error ? { error: error.message } : { ok: true }
+    },
+    async insertTicketSale(row) {
+      const { error } = await supabase.from('event_ticket_sales').insert(row)
       return error ? { error: error.message } : { ok: true }
     },
     async publishEvent(id, patch, guards) {

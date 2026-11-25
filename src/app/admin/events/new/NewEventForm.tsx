@@ -5,6 +5,10 @@ import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { getBrowserSupabaseClient } from '@/lib/supabase/browserClient'
 import { getReviewSourceInfo, inferTrustLevelFromSource } from '@/lib/admin/sourceReview'
+import TicketSalesEditor, { CountryCodeSelect, TimeStatusSelect, stripKeys, type EditorRow } from '../TicketSalesEditor'
+import { ticketSaleRowWarning, validateTicketSaleRows, withoutId } from '@/lib/admin/ticketSalesForm'
+import { regionByCode, resolveCountryFields } from '@/lib/regions'
+import { isHttpUrl } from '@/lib/ticketPlatforms'
 
 const EVENT_TYPE_OPTIONS = [
   { value: 'concert', label: '演唱會 / 見面會' },
@@ -65,6 +69,9 @@ export default function NewEventForm({
   const [time, setTime] = useState('')
   const [country, setCountry] = useState('台灣')
   const [countryFlag, setCountryFlag] = useState('🇹🇼')
+  const [countryCode, setCountryCode] = useState('TW')
+  const [timeStatus, setTimeStatus] = useState('unknown')
+  const [ticketSales, setTicketSales] = useState<EditorRow[]>([])
   const [location, setLocation] = useState('')
   const [description, setDescription] = useState('')
   const [tags, setTags] = useState('')
@@ -96,6 +103,24 @@ export default function NewEventForm({
     const tagArray = tags
       ? tags.split(',').map((t) => t.trim()).filter(Boolean)
       : []
+    // T35：國家由代碼補齊；售票階段先驗證，避免活動建好才發現階段錯誤。
+    const countryFields = resolveCountryFields({ countryCode, country, countryFlag })
+    if (!countryFields.country) {
+      setError('國家 / 地區不可空白')
+      setSubmitting(false)
+      return
+    }
+    if (ticketUrl.trim() && !isHttpUrl(ticketUrl)) {
+      setError('票務 URL 必須是 http(s) 網址')
+      setSubmitting(false)
+      return
+    }
+    const salesValidation = validateTicketSaleRows(stripKeys(ticketSales))
+    if (!salesValidation.ok) {
+      setError(salesValidation.error)
+      setSubmitting(false)
+      return
+    }
     const trustLevel = inferTrustLevelFromSource({
       sourceName: sourceLabel,
       sourceType,
@@ -116,8 +141,10 @@ export default function NewEventForm({
         date,
         start_date: date,
         time: time || null,
-        country: country.trim(),
-        country_flag: countryFlag.trim() || null,
+        country: countryFields.country,
+        country_flag: countryFields.country_flag,
+        country_code: countryFields.country_code,
+        time_status: timeStatus,
         location: location.trim() || null,
         description: description.trim() || null,
         tags: tagArray,
@@ -155,6 +182,20 @@ export default function NewEventForm({
       )
       setSubmitting(false)
       return
+    }
+
+    // Step 3（T35）：售票階段（與 event_sources 相同，走瀏覽器 client＋admin RLS）
+    if (salesValidation.rows.length) {
+      const { error: salesError } = await supabase
+        .from('event_ticket_sales')
+        .insert(salesValidation.rows.map((row) => ({ ...withoutId(row), event_id: eventData.id })))
+      if (salesError) {
+        setError(
+          `活動與來源已建立（ID: ${eventData.id}），但售票階段寫入失敗：${salesError.code ? `[${salesError.code}] ` : ''}${salesError.message}。請至編輯頁補上。`,
+        )
+        setSubmitting(false)
+        return
+      }
     }
 
     router.push(`/admin/events/${eventData.id}`)
@@ -249,9 +290,26 @@ export default function NewEventForm({
             <input
               type="time"
               value={time}
-              onChange={(e) => setTime(e.target.value)}
+              onChange={(e) => {
+                setTime(e.target.value)
+                // T35：填了開演時間就自動切成「已公布」（之後仍可手動改）
+                if (e.target.value) setTimeStatus('announced')
+              }}
               className={inputCls}
             />
+          </Field>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="國家代碼">
+            <CountryCodeSelect value={countryCode} onChange={(code) => {
+              setCountryCode(code)
+              const region = regionByCode(code)
+              if (region) { setCountry(region.name); setCountryFlag(region.flag) }
+            }} />
+          </Field>
+          <Field label="時間狀態">
+            <TimeStatusSelect value={timeStatus} onChange={setTimeStatus} />
           </Field>
         </div>
 
@@ -262,7 +320,8 @@ export default function NewEventForm({
               value={countryFlag}
               onChange={(e) => setCountryFlag(e.target.value)}
               placeholder="🇹🇼"
-              className={inputCls}
+              disabled={!!regionByCode(countryCode)}
+              className={inputCls + ' disabled:opacity-60'}
             />
           </Field>
 
@@ -274,7 +333,8 @@ export default function NewEventForm({
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
                 placeholder="台灣"
-                className={inputCls}
+                disabled={!!regionByCode(countryCode)}
+                className={inputCls + ' disabled:opacity-60'}
               />
             </Field>
           </div>
@@ -334,6 +394,11 @@ export default function NewEventForm({
         />
       </Section>
 
+      {/* 售票階段（T35） */}
+      <Section title="售票階段">
+        <TicketSalesEditor rows={ticketSales} onChange={setTicketSales} />
+      </Section>
+
       {/* 其他連結 */}
       <Section title="連結 / 標籤 / 說明">
         <div className="grid grid-cols-2 gap-3">
@@ -345,6 +410,9 @@ export default function NewEventForm({
               placeholder="https://…"
               className={inputCls}
             />
+            {ticketSaleRowWarning({ url: ticketUrl }) && (
+              <p className="text-xs font-semibold text-red-400">⚠ {ticketSaleRowWarning({ url: ticketUrl })}（仍可存檔）</p>
+            )}
           </Field>
 
           <Field label="串流 URL">

@@ -25,7 +25,7 @@ test('infer a single Taiwanese city from a venue or a city name', () => {
   for (const [title, city] of [
     ['WORLD TOUR IN TAIPEI', '台北'], ['NEW TAIPEI', '新北'], ['KAOHSIUNG', '高雄'],
     ['高雄巨蛋', '高雄'], ['Kaohsiung Arena', '高雄'], ['臺北小巨蛋', '台北'],
-    ['台北大巨蛋', '台北'], ['Taipei Dome', '台北'], ['林口體育館', '新北'],
+    ['台北大巨蛋', '台北'], ['Taipei Dome', '台北'], ['林口體育館', '桃園'], ['Linkou Arena', '桃園'],
     ['Legacy Taipei', '台北'], ['타이베이', '台北'], ['Clapper Studio', '台北'],
     ['TAIPEI / KAOHSIUNG', null], ['Legacy Max / 衛武營', null],
     ['首爾／東京', null], ['TAIPEIX', null],

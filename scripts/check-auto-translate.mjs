@@ -464,6 +464,8 @@ test('受保護路徑維持與 origin/main 的 merge base 一致', () => {
     // MUST #10（JYP 改用公告頁）只放行這幾支：jyp_notice 爬蟲、停用 jyp_schedule、NULL_CONFIDENCE_OK_PARSERS 加 jyp_notice
     ':(exclude)src/lib/crawlers/jypNotice.ts', ':(exclude)src/lib/crawlers/runActiveCrawlerSources.ts', ':(exclude)src/lib/crawlers/runJypNoticeFetcher.ts', ':(exclude)src/lib/crawlers/runJypScheduleFetcher.ts',
     ':(exclude)src/lib/autoPublish/evaluateCandidate.ts',
+    // T35（售票階段／國家代碼／時間狀態）只放行 migration 073 與林口→桃園
+    ':(exclude)supabase/migrations/073_t35_ticket_sales_country_time_status.sql', ':(exclude)src/lib/crawlers/taiwanEventCleanup.ts',
   ]
   assert.equal(git('diff', '--name-only', base, '--', ...paths), '')
   assert.equal(git('ls-files', '--others', '--exclude-standard', '--', ...paths), '')
