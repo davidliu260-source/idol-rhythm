@@ -3,7 +3,8 @@
  * 只用於程式去重與後台「可能重複」清單；**不加 DB 唯一索引**（多藝人同台、同日雙場會誤傷）。
  */
 import { toDateKey } from '../taipeiDate'
-import { inferTaiwanCity } from '../crawlers/taiwanEventCleanup'
+import { inferTaiwanCity, refineEventCategory } from '../crawlers/taiwanEventCleanup'
+import type { EventSubType, EventType } from '../types'
 
 /** 港星馬與常見海外城市的跨語言別名 → 統一鍵。台灣城市由 inferTaiwanCity 處理。 */
 const CITY_ALIASES: ReadonlyArray<readonly [string, RegExp]> = [
@@ -35,16 +36,30 @@ export function canonicalVenueKey(venue: string | null | undefined): string | nu
   return text ? squash(text) || null : null
 }
 
+/**
+ * 明確不同種類的活動（同日同場館的簽名會與演唱會不是同一場）。演唱會以外的 type 或未分類 → null（視為可比）。
+ * 先用建活動時同一套 refineEventCategory 正規化，避免「官方公告（official）」與已建成 concert 的同一場被誤判成不同。
+ */
+const DISTINCT_SUBTYPES = new Set(['fanmeet', 'fansign', 'popup_store', 'exhibition', 'birthday_cafe', 'award', 'musicshow', 'variety', 'interview', 'release', 'magazine', 'brand_event'])
+export function showKind(input: { title?: string | null; type?: string | null; subType?: string | null }): string | null {
+  const refined = refineEventCategory({ title: input.title ?? '', type: (input.type ?? null) as EventType | null, subType: (input.subType ?? null) as EventSubType | null })
+  if (refined.subType && DISTINCT_SUBTYPES.has(refined.subType)) return refined.subType
+  return refined.type === 'concert' ? 'concert' : null
+}
+
 export interface SameShowInput {
   idolId: string | null | undefined
   date: string | null | undefined
   city?: string | null
   venue?: string | null
+  /** T35 審查 S2：showKind() 的結果；兩邊都有值且不同 → 不是同一場 */
+  kind?: string | null
 }
 
-/** 同藝人、同日，且城市鍵相同或場館鍵相同 → 視為同一場。缺藝人／日期／地點任一 → false。 */
+/** 同藝人、同日、種類不衝突，且城市鍵相同或場館鍵相同 → 視為同一場。缺藝人／日期／地點任一 → false。 */
 export function isSameShow(a: SameShowInput, b: SameShowInput): boolean {
   if (!a.idolId || a.idolId !== b.idolId) return false
+  if (a.kind && b.kind && a.kind !== b.kind) return false
   const da = toDateKey(a.date), db = toDateKey(b.date)
   if (!da || da !== db) return false
   const ca = canonicalCityKey(a.city), cb = canonicalCityKey(b.city)

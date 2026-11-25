@@ -114,12 +114,15 @@ export default async function EventDetailPage({ params }: EventPageProps) {
         </section>
 
         <section className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <ActionLink
-            icon={<Ticket className="h-4 w-4" />}
-            label="票務 & 購票"
-            subLabel={event.ticketUrl ? '前往連結' : '連結待補'}
-            href={event.ticketUrl}
-          />
+          {/* T35：有售票階段時，上方「票務 & 購票」區已列出各階段連結，這裡不再重複；沒有時維持原樣（回歸不變）。 */}
+          {ticketSales.length === 0 && (
+            <ActionLink
+              icon={<Ticket className="h-4 w-4" />}
+              label="票務 & 購票"
+              subLabel={event.ticketUrl ? '前往連結' : '連結待補'}
+              href={event.ticketUrl}
+            />
+          )}
           <ActionLink
             icon={<Tv className="h-4 w-4" />}
             label="官方 & 更多"

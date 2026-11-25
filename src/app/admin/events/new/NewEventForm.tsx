@@ -290,7 +290,11 @@ export default function NewEventForm({
             <input
               type="time"
               value={time}
-              onChange={(e) => setTime(e.target.value)}
+              onChange={(e) => {
+                setTime(e.target.value)
+                // T35：填了開演時間就自動切成「已公布」（之後仍可手動改）
+                if (e.target.value) setTimeStatus('announced')
+              }}
               className={inputCls}
             />
           </Field>

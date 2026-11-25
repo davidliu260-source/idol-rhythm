@@ -15,7 +15,7 @@ const form = await import('../src/lib/admin/ticketSalesForm.ts')
 const { evaluateCandidate, evaluateCandidates, NULL_CONFIDENCE_OK_PARSERS } = await import('../src/lib/autoPublish/evaluateCandidate.ts')
 const { runAutoPublish } = await import('../src/lib/autoPublish/runAutoPublish.ts')
 const { venueCalendarFields } = await import('../src/lib/autoPublish/venueCalendarFields.ts')
-const { isSameShow, canonicalCityKey, groupPossibleDuplicates } = await import('../src/lib/autoPublish/sameShow.ts')
+const { isSameShow, showKind, canonicalCityKey, groupPossibleDuplicates } = await import('../src/lib/autoPublish/sameShow.ts')
 const { inferTaiwanCity } = await import('../src/lib/crawlers/taiwanEventCleanup.ts')
 const { touchedFromPayload } = await import('../src/lib/crawlers/touchedCandidate.ts')
 const { TICKET_SAFETY_NOTICE } = await import('../src/lib/ticketSafetyCopy.ts')
@@ -106,6 +106,16 @@ test('A-3 售票狀態以台北時間計算：未開賣＋距離／進行中／�
   assert.equal(view.stageLabel, '預購'); assert.equal(view.eligibilityLabel, '官方會員'); assert.equal(view.platformName, '拓元售票')
   assert.equal(view.timeLabel, '11/28（六）12:00'); assert.equal(view.unknownPlatformWarning, null)
   assert.equal(ts.toTicketSaleView(sale({ url: 'https://evil-tixcraft.com/a' }), now).unknownPlatformWarning, '非已知官方售票平台')
+  // 審查 S4：非 http(s) 不給連結
+  for (const url of ['javascript:alert(1)', 'data:text/html,x', 'tixcraft.com/a', '  ']) assert.equal(ts.toTicketSaleView(sale({ url }), now).href, null, url)
+  assert.equal(ts.toTicketSaleView(sale({ url: ' https://tixcraft.com/a ' }), now).href, 'https://tixcraft.com/a')
+  // 審查 S5：非 general、沒有 ends_at、已開始 → 中性「已開始」；general 仍為進行中；未開始／已結束不受影響
+  assert.deepEqual(ts.ticketSaleStatus(sale({ stage: 'presale', startsAt: '2026-11-25T12:00:00+08:00' }), now), { status: 'started', label: '已開始' })
+  assert.equal(ts.ticketSaleStatus(sale({ stage: 'added', startsAt: '2026-11-25T12:00:00+08:00' }), now).label, '已開始')
+  assert.equal(ts.ticketSaleStatus(sale({ stage: 'general', startsAt: '2026-11-25T12:00:00+08:00' }), now).label, '進行中')
+  assert.equal(ts.ticketSaleStatus(sale({ stage: 'presale', startsAt: '2026-11-25T12:00:00+08:00', endsAt: '2026-11-25T23:59:00+08:00' }), now).label, '進行中')
+  assert.equal(ts.ticketSaleStatus(sale({ stage: 'presale', startsAt: '2026-11-26T12:00:00+08:00' }), now).status, 'upcoming')
+  assert.equal(ts.toTicketSaleView(sale({ stage: 'presale', label: 'NCTzen 127 會員預購', startsAt: '2026-11-26T12:00:00+08:00' }), new Date('2026-11-29T00:00:00Z')).status.label, '已開始')
   assert.deepEqual(Object.values(ts.ELIGIBILITY_LABELS).sort(), ['信用卡', '公開', '合作平台', '主辦會員', '官方會員', '抽選', '須先登記', '電信會員'].sort())
   // 排序：依開賣時間，無時間放最後
   assert.deepEqual(ts.sortTicketSales([sale({ label: 'b' }), sale({ label: 'late', startsAt: '2026-12-01T00:00:00Z' }), sale({ label: 'early', startsAt: '2026-11-01T00:00:00Z' })]).map(s => s.label), ['early', 'late', 'b'])
@@ -189,6 +199,12 @@ test('B-4 同藝人＋同日＋同城：不論標題語言，命中已發布活�
   assert.ok(!isSameShow({ idolId: 'i', date: '2026-12-19', city: '高雄' }, { idolId: 'j', date: '2026-12-19', city: '高雄' }))
   assert.ok(!isSameShow({ idolId: 'i', date: '2026-12-19', city: '高雄' }, { idolId: 'i', date: '2026-12-20', city: '高雄' }))
   assert.ok(!isSameShow({ idolId: 'i', date: '2026-12-19' }, { idolId: 'i', date: '2026-12-19' }))
+  // 審查 S2：種類都有值且不同 → 不是同一場；一邊沒有 → 可比
+  assert.ok(!isSameShow({ idolId: 'i', date: '2026-12-19', venue: 'Olympic Hall', kind: 'fansign' }, { idolId: 'i', date: '2026-12-19', venue: 'Olympic Hall', kind: 'concert' }))
+  assert.ok(isSameShow({ idolId: 'i', date: '2026-12-19', venue: 'Olympic Hall', kind: null }, { idolId: 'i', date: '2026-12-19', venue: 'Olympic Hall', kind: 'concert' }))
+  assert.equal(showKind({ title: 'BABYMONSTER WORLD TOUR IN SINGAPORE', type: 'official' }), 'concert') // 官方公告與已建成 concert 的同一場仍可比
+  assert.equal(showKind({ title: 'ITZY 簽名會', type: 'official', subType: 'fansign' }), 'fansign')
+  assert.equal(showKind({ title: '官方公告', type: 'official' }), null)
   const ev = (over) => ({ id: 'e1', idol_id: 'i', title: 'TWICE WORLD TOUR IN KAOHSIUNG', date: '2026-12-19', is_published: true, trust_level: 'aggregator', status: 'confirmed', auto_publish_blocked: false, city: 'Kaohsiung', venue_name: null, ...over })
   const c = cand(CS_JYP, { raw_title: 'TWICE 高雄演唱會' })
   assert.deepEqual(evaluateCandidate(c, ctxWith([ev()])), { ruleVersion: 't34-v2', candidateId: 'c1', crawlerSourceId: 'cs-jyp', parserType: 'jyp_notice', action: 'merge', trustLevel: 'official', existingEventId: 'e1', mergeWithCandidateId: null })
@@ -197,6 +213,11 @@ test('B-4 同藝人＋同日＋同城：不論標題語言，命中已發布活�
   assert.equal(evaluateCandidate(c, ctxWith([ev({ status: 'cancelled' })])).action, 'publish_official')
   assert.equal(evaluateCandidate(c, ctxWith([ev({ city: 'Taipei' })])).action, 'publish_official')
   assert.equal(evaluateCandidate(c, ctxWith([ev(), ev({ id: 'e2' })])).parkReason, 'duplicate')
+  // 審查 S2：同日同場館的簽名會候選不會被併進演唱會
+  const venueEv = ev({ city: null, venue_name: 'KSPO DOME', type: 'concert', sub_type: null })
+  const fansign = cand(CS_JYP, { raw_title: 'TWICE 簽名會', detected_event_type: 'official', detected_event_sub_type: 'fansign', detected_city: null, detected_venue_name: 'KSPO DOME' })
+  assert.equal(evaluateCandidate(fansign, ctxWith([venueEv])).action, 'publish_official')
+  assert.equal(evaluateCandidate(cand(CS_JYP, { raw_title: 'TWICE 演唱會', detected_city: null, detected_venue_name: 'KSPO DOME' }), ctxWith([venueEv])).action, 'merge')
   // 可能重複清單：同藝人同日同城（跨語言）
   const groups = groupPossibleDuplicates([ev(), ev({ id: 'e2', city: '高雄' }), ev({ id: 'e3', city: 'Taipei' }), ev({ id: 'e4', idol_id: 'j' })])
   assert.deepEqual(groups.map(g => g.map(e => e.id)), [['e1', 'e2']])
@@ -235,6 +256,23 @@ test('B-4 同批兩個候選（英文／中文標題、Taipei／台北）只產�
   // 同批較早那一場沒有上架（寫入失敗）→ 後一個 park duplicate，不另建
   const h = fixture([b, a], [], { insertDraftEvent: async () => ({ error: 'denied' }) }); const r3 = await h.run()
   assert.equal(h.args('insertDraftEvent').length, 1); assert.equal(r3.parked.duplicate, 1)
+})
+
+test('審查 S1：同批較早那筆連到草稿 → 較晚同場的被 park，不併進草稿；merge 前目標已非發布 → park', async () => {
+  const draft = { id: 'd1', idol_id: 'i', title: 'TWICE 草稿（城市與 B 對不上）', date: '2026-12-19', is_published: false, trust_level: 'pending', status: 'confirmed', auto_publish_blocked: false, city: 'Kaohsiung', venue_name: null }
+  const a = cand(CS_JYP, { id: 'c-a', approved_event_id: 'd1', review_status: 'approved', raw_title: 'TWICE WORLD TOUR IN TAIPEI', detected_city: 'Taipei', created_at: '2026-11-20T00:00:00Z', source_url: 'https://twice.jype.com/notice/a' })
+  const b = cand(CS_YG, { id: 'c-b', raw_title: 'TWICE 台北演唱會', detected_city: '台北', created_at: '2026-11-21T00:00:00Z', source_url: 'https://www.ygfamily.com/notice/b' })
+  const d = evaluateCandidates([a, b], ctxWith([draft]))
+  assert.equal(d[0].target, 'publish_existing_event')
+  assert.equal(d[1].action, 'park'); assert.equal(d[1].parkReason, 'duplicate')
+  const f = fixture([a, b], [draft]); await f.run()
+  assert.ok(!f.args('linkCandidate').some(([id]) => id === 'c-b'), 'c-b 不可連到草稿')
+  assert.ok(!f.args('insertEventSource').some(([row]) => row.url === 'https://www.ygfamily.com/notice/b'))
+  // DB 既有已發布活動在執行前被下架：merge 不連結，改 park duplicate
+  const published = { id: 'e1', idol_id: 'i', title: 'TWICE 台北場', date: '2026-12-19', is_published: true, trust_level: 'official', status: 'confirmed', auto_publish_blocked: false, city: '台北', venue_name: null }
+  const c = cand(CS_JYP, { id: 'c-c', raw_title: 'TWICE WORLD TOUR IN TAIPEI', detected_city: 'Taipei' })
+  const g = fixture([c], [published], { getEvent: async () => ({ ...published, is_published: false }) }); const r = await g.run()
+  assert.equal(g.args('linkCandidate').length, 0); assert.equal(g.args('insertEventSource').length, 0); assert.equal(r.parked.duplicate, 1)
 })
 
 // ── B-1／B-3 建活動帶入國家、時間、售票 ─────────────────────────────────────
@@ -288,6 +326,15 @@ test('migration 073 靜態檢查', () => {
   has(/DROP CONSTRAINT IF EXISTS events_time_status_chk[\s\S]*CHECK \(time_status IN \('unknown', 'announced', 'tba'\)\)/)
   for (const [zh, code] of [['台灣', 'TW'], ['香港', 'HK'], ['新加坡', 'SG'], ['馬來西亞', 'MY'], ['日本', 'JP'], ['韓國', 'KR']]) has(new RegExp(`WHEN '${zh}'\\s+THEN '${code}'`))
   has(/WHERE country_code IS NULL/)
+  // 審查 MUST-FIX 1：回填前後暫停／恢復 updated_at trigger，且都在 COMMIT 前；「臺」異體字一併回填
+  const disable = body.indexOf('ALTER TABLE public.events DISABLE TRIGGER trg_events_updated_at;')
+  const backfill = body.indexOf('SET country_code = CASE')
+  const enable = body.indexOf('ALTER TABLE public.events ENABLE TRIGGER trg_events_updated_at;')
+  const commit = body.indexOf('COMMIT;')
+  assert.ok(disable > body.indexOf('BEGIN;') && disable < backfill && backfill < enable && enable < commit, 'DISABLE → 回填 → ENABLE → COMMIT')
+  has(/CASE replace\(btrim\(country\), '臺', '台'\)/)
+  has(/AND replace\(btrim\(country\), '臺', '台'\) IN \('台灣'/)
+  assert.doesNotMatch(sql, /updated_at 會變成/)
   has(/GRANT UPDATE \(country_code, time_status\) ON public\.events TO authenticated/)
   const table = body.match(/CREATE TABLE IF NOT EXISTS public\.event_ticket_sales \(([\s\S]*?)\n\);/)[1]
   for (const col of ['id', 'event_id', 'stage', 'label', 'starts_at', 'ends_at', 'platform', 'url', 'eligibility', 'eligibility_note', 'requires_verification', 'source_url', 'verified_at', 'created_at', 'updated_at']) {
@@ -318,7 +365,13 @@ test('migration 073 靜態檢查', () => {
   assert.match(artists, /PRIMARY KEY \(event_id, idol_id\)/)
   has(/ON public\.event_artists \(idol_id, event_id\)/)
   has(/INSERT INTO public\.event_artists \(event_id, idol_id, role, sort_order\)\s+SELECT id, idol_id, 'headliner', 0\s+FROM public\.events\s+WHERE idol_id IS NOT NULL\s+ON CONFLICT DO NOTHING/)
-  has(/SECURITY DEFINER\s+SET search_path = public/)
+  has(/SECURITY DEFINER\s+SET search_path = pg_catalog, public/)
+  // 審查 S4：連結只接受 http(s)（具名 constraint，可重跑）
+  for (const [name, col] of [['event_ticket_sales_url_http_chk', 'url'], ['event_ticket_sales_source_url_http_chk', 'source_url']]) {
+    has(new RegExp(`DROP CONSTRAINT IF EXISTS ${name};\\s+ALTER TABLE public\\.event_ticket_sales\\s+ADD CONSTRAINT ${name}\\s+CHECK \\(${col} IS NULL OR ${col} ~\\* '\\^https\\?://'\\)`))
+  }
+  // 審查 S6：檔頭說明重跑會重設權限
+  assert.match(sql, /重跑會把兩張新表[\s\S]*T35b 之後[\s\S]*請勿單獨重跑本檔/)
   has(/DELETE FROM public\.event_artists\s+WHERE event_id = NEW\.id AND idol_id = OLD\.idol_id AND role = 'headliner'/)
   has(/DROP TRIGGER IF EXISTS trg_events_sync_headliner_artist ON public\.events;\s+CREATE TRIGGER trg_events_sync_headliner_artist\s+AFTER INSERT OR UPDATE OF idol_id ON public\.events/)
   // 不自動從 ticket_url 產生 sales；不加同場唯一索引

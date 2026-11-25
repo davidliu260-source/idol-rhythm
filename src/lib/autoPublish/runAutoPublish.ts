@@ -156,6 +156,13 @@ export async function runAutoPublish(store: AutoPublishStore, input: { touched: 
       }
       if (d.action === 'merge') {
         eventId = d.existingEventId ?? (d.mergeWithCandidateId ? createdEventByCandidate.get(d.mergeWithCandidateId) ?? null : null)
+        // T35 審查 S1：只併進已發布的活動。本批剛建立並發布成功的（createdEventByCandidate）已確認；
+        // 其他（DB 既有）連結前重新讀一次，狀態變了（下架、封鎖、取消）就不併。
+        if (eventId && !(d.mergeWithCandidateId && createdEventByCandidate.get(d.mergeWithCandidateId) === eventId)) {
+          step = 'get_event'
+          const target = requireResult(await safe(() => store.getEvent(eventId!)))
+          if (!target || !visible(target) || target.auto_publish_blocked) eventId = null
+        }
         if (!eventId) {
           // 同批較早的那一場沒有成功上架（被擋、空殼或寫入失敗）：不建新列，交給人工。
           if (c.review_status !== 'pending') { skip('approved_not_parked'); continue }

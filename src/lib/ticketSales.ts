@@ -3,7 +3,7 @@
  * 純函式、不碰 Supabase；所有時間一律以台北時間（Asia/Taipei）顯示與判斷。
  */
 import { TAIPEI_TIME_ZONE } from './taipeiDate'
-import { platformByCode, platformForUrl, unknownTicketPlatformWarning, type TicketPlatform } from './ticketPlatforms'
+import { isHttpUrl, platformByCode, platformForUrl, unknownTicketPlatformWarning, type TicketPlatform } from './ticketPlatforms'
 
 export const TICKET_SALE_STAGES = ['presale', 'general', 'added', 'apply', 'other'] as const
 export type TicketSaleStage = (typeof TICKET_SALE_STAGES)[number]
@@ -136,7 +136,7 @@ export function formatTaipeiShortTime(iso: string | null | undefined): string | 
   return p ? `${p.month}/${p.day} ${p.hour}:${p.minute}` : null
 }
 
-export type TicketSaleStatus = 'upcoming' | 'open' | 'ended' | 'unknown'
+export type TicketSaleStatus = 'upcoming' | 'open' | 'started' | 'ended' | 'unknown'
 export interface TicketSaleStatusInfo { status: TicketSaleStatus; label: string }
 
 function distanceLabel(diffMs: number): string {
@@ -151,13 +151,15 @@ function distanceLabel(diffMs: number): string {
 /**
  * 狀態：未開賣（顯示距離）／進行中／已結束。
  * - 沒有開賣時間 → unknown（「開賣時間未公布」）。
- * - 已開賣且沒有結束時間 → 進行中（一般開賣通常沒有結束時間）。
+ * - 一般開賣已開始且沒有結束時間 → 進行中（一般開賣通常沒有結束時間）。
+ * - 其他階段（預購、加場、報名…）已開始但沒有結束時間 → 中性的「已開始」（不知道是否已截止，不說「進行中」）。
  */
-export function ticketSaleStatus(sale: Pick<TicketSale, 'startsAt' | 'endsAt'>, now: Date = new Date()): TicketSaleStatusInfo {
+export function ticketSaleStatus(sale: Pick<TicketSale, 'startsAt' | 'endsAt'> & { stage?: TicketSaleStage }, now: Date = new Date()): TicketSaleStatusInfo {
   const start = ms(sale.startsAt), end = ms(sale.endsAt), t = now.getTime()
   if (end !== null && t >= end) return { status: 'ended', label: '已結束' }
   if (start === null) return { status: 'unknown', label: '開賣時間未公布' }
   if (t < start) return { status: 'upcoming', label: `未開賣・還有 ${distanceLabel(start - t)}` }
+  if (end === null && sale.stage !== undefined && sale.stage !== 'general') return { status: 'started', label: '已開始' }
   return { status: 'open', label: '進行中' }
 }
 
@@ -191,7 +193,8 @@ export interface TicketSaleView {
 
 export function toTicketSaleView(sale: TicketSale, now: Date = new Date()): TicketSaleView {
   const platform = resolveSalePlatform(sale)
-  const href = sale.url?.trim() || null
+  // 只有 http(s) 才給連結（擋 javascript: 等；DB 也有 CHECK）
+  const href = sale.url?.trim() && isHttpUrl(sale.url) ? sale.url.trim() : null
   return {
     id: sale.id,
     stageLabel: STAGE_LABELS[sale.stage],

@@ -30,8 +30,10 @@
 --   - 不動 event_sources、event_candidates、通知、ICS 相關的表與權限。
 --
 -- 副作用（請知悉）
---   - 回填 country_code 會觸發 trg_events_updated_at，被回填的活動 updated_at 會變成
---     執行當下；前台「資料最後更新」會顯示執行日。
+--   - 回填 country_code 期間會在同一交易內暫停 trg_events_updated_at（回填前 DISABLE、
+--     回填後 ENABLE），所以被回填的活動 updated_at 不變，前台「資料最後更新」不受影響。
+--     中途失敗整筆 ROLLBACK，trigger 狀態也一併還原。回填期間 events 已被 ADD CONSTRAINT
+--     鎖住（ACCESS EXCLUSIVE），不會有其他寫入漏掉 updated_at。
 --
 -- 前置條件
 --   - 001（events、idols、set_updated_at()）、002（admin_users）、062（公開信任等級含
@@ -44,6 +46,9 @@
 --   ADD COLUMN IF NOT EXISTS、DROP CONSTRAINT IF EXISTS 後再 ADD、CREATE TABLE／INDEX
 --   IF NOT EXISTS、DROP POLICY／TRIGGER IF EXISTS 後再建、回填用 IS NULL 條件與
 --   ON CONFLICT DO NOTHING。
+--   ⚠ 重跑會把兩張新表（event_ticket_sales、event_artists）的 GRANT／policy 重設成本檔版本
+--     （先 REVOKE ALL 再 GRANT、policy 先 DROP 再建）。T35b 之後若改過這兩張表的權限或
+--     policy，請勿單獨重跑本檔，否則會把 T35b 的權限收回。
 --
 -- 回滾 SQL（會刪掉所有售票階段與多藝人關聯資料；程式需先退回 T35 之前的版本）
 --   BEGIN;
@@ -84,7 +89,10 @@
 --
 -- 執行後核對
 --   SELECT country, country_code, count(*) FROM public.events GROUP BY 1, 2 ORDER BY 3 DESC;
---   -- 預期：country = '台灣' 的列 country_code 全為 'TW'
+--   -- 預期：country = '台灣'／'臺灣' 的列 country_code 全為 'TW'
+--   SELECT tgenabled FROM pg_trigger
+--   WHERE tgname = 'trg_events_updated_at' AND tgrelid = 'public.events'::regclass;
+--   -- 預期：'O'（updated_at trigger 已恢復啟用）
 --   SELECT count(*) FROM public.events e
 --   WHERE NOT EXISTS (SELECT 1 FROM public.event_artists a
 --                     WHERE a.event_id = e.id AND a.idol_id = e.idol_id AND a.role = 'headliner');
@@ -115,9 +123,12 @@ COMMENT ON COLUMN public.events.country_code IS
 COMMENT ON COLUMN public.events.time_status IS
   'T35: unknown = 我們還沒查到開演時間；announced = 有明確開演時間（見 time）；tba = 官方明說尚未公布。';
 
--- 回填：只填還沒有代碼的列，對不到的國家名留 NULL（不猜）。
+-- 回填：只填還沒有代碼的列，對不到的國家名留 NULL（不猜）。「臺灣」等異體字一併處理。
+-- 回填只是把既有國家名稱轉成代碼，內容沒變，暫停 updated_at trigger（同一交易內）。
+ALTER TABLE public.events DISABLE TRIGGER trg_events_updated_at;
+
 UPDATE public.events
-SET country_code = CASE country
+SET country_code = CASE replace(btrim(country), '臺', '台')
   WHEN '台灣'     THEN 'TW'
   WHEN '香港'     THEN 'HK'
   WHEN '新加坡'   THEN 'SG'
@@ -126,7 +137,9 @@ SET country_code = CASE country
   WHEN '韓國'     THEN 'KR'
 END
 WHERE country_code IS NULL
-  AND country IN ('台灣', '香港', '新加坡', '馬來西亞', '日本', '韓國');
+  AND replace(btrim(country), '臺', '台') IN ('台灣', '香港', '新加坡', '馬來西亞', '日本', '韓國');
+
+ALTER TABLE public.events ENABLE TRIGGER trg_events_updated_at;
 
 -- 後台編輯草稿要能寫這兩欄（events 的 UPDATE 是逐欄授權）。
 GRANT UPDATE (country_code, time_status) ON public.events TO authenticated;
@@ -168,6 +181,16 @@ COMMENT ON COLUMN public.event_ticket_sales.requires_verification IS
   '買票前要先做的事：phone_sms 手機驗證｜real_name 實名制｜member_login 會員登入｜other。只在來源明講時才填。';
 COMMENT ON COLUMN public.event_ticket_sales.verified_at IS
   '最後一次人工或程式核對時間。';
+
+-- 連結只接受 http(s)（擋 javascript: 等；貼上單或之後的程式寫入也一樣受限）。
+ALTER TABLE public.event_ticket_sales DROP CONSTRAINT IF EXISTS event_ticket_sales_url_http_chk;
+ALTER TABLE public.event_ticket_sales
+  ADD CONSTRAINT event_ticket_sales_url_http_chk
+  CHECK (url IS NULL OR url ~* '^https?://');
+ALTER TABLE public.event_ticket_sales DROP CONSTRAINT IF EXISTS event_ticket_sales_source_url_http_chk;
+ALTER TABLE public.event_ticket_sales
+  ADD CONSTRAINT event_ticket_sales_source_url_http_chk
+  CHECK (source_url IS NULL OR source_url ~* '^https?://');
 
 CREATE INDEX IF NOT EXISTS event_ticket_sales_event_id_idx
   ON public.event_ticket_sales (event_id);
@@ -290,7 +313,7 @@ CREATE OR REPLACE FUNCTION public.t35_sync_event_headliner_artist()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = pg_catalog, public
 AS $fn$
 BEGIN
   -- 主秀換人：只刪舊主秀那一列（participant 列不動）。

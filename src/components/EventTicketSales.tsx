@@ -6,6 +6,7 @@ import { unknownTicketPlatformWarning } from '@/lib/ticketPlatforms'
 const STATUS_CLASS: Record<TicketSaleStatus, string> = {
   upcoming: 'border-amber-300/30 bg-amber-300/10 text-amber-100',
   open: 'border-emerald-300/30 bg-emerald-300/10 text-emerald-200',
+  started: 'border-sky-300/25 bg-sky-300/10 text-sky-100',
   ended: 'border-white/10 bg-white/[0.04] text-white/55',
   unknown: 'border-white/10 bg-white/[0.04] text-white/65',
 }

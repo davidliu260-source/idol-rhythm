@@ -188,15 +188,15 @@ export async function updateDraftEvent(
     const fmt = (e: { code?: string; message: string }) => `${e.code ? `[${e.code}] ` : ''}${e.message}`
     if (salesPlan.deleteIds.length) {
       const { error } = await supabase.from('event_ticket_sales').delete().eq('event_id', eventId).in('id', salesPlan.deleteIds)
-      if (error) return { error: `活動資訊與來源已更新，但刪除售票階段失敗：${fmt(error)}` }
+      if (error) return { error: `活動資訊與來源已更新，但刪除售票階段失敗：${fmt(error)}。請重新整理後再存一次` }
     }
     for (const { id, ...row } of salesPlan.updates) {
       const { error } = await supabase.from('event_ticket_sales').update(row).eq('event_id', eventId).eq('id', id)
-      if (error) return { error: `活動資訊與來源已更新，但更新售票階段「${row.label}」失敗：${fmt(error)}` }
+      if (error) return { error: `活動資訊與來源已更新，但更新售票階段「${row.label}」失敗：${fmt(error)}。請重新整理後再存一次` }
     }
     if (salesPlan.inserts.length) {
       const { error } = await supabase.from('event_ticket_sales').insert(salesPlan.inserts.map((row) => ({ ...row, event_id: eventId })))
-      if (error) return { error: `活動資訊與來源已更新，但新增售票階段失敗：${fmt(error)}` }
+      if (error) return { error: `活動資訊與來源已更新，但新增售票階段失敗：${fmt(error)}。請重新整理後再存一次` }
     }
   }
 
