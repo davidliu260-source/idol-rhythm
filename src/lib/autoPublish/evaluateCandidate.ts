@@ -9,7 +9,7 @@ export const LOW_CONFIDENCE_THRESHOLD = 0.65
 
 /** ai_confidence 為 null 時視為信心通過的已知 parser（現況爬蟲不呼叫 AI）。 */
 export const NULL_CONFIDENCE_OK_PARSERS = [
-  'jyp_schedule', 'yg_artist_schedule', 'smtown_notice', 'wakeone_notice',
+  'jyp_schedule', 'jyp_notice', 'yg_artist_schedule', 'smtown_notice', 'wakeone_notice',
   'blackpink_official_tour', 'kpopofficial_concerts', 'youtube_official_channel',
 ] as const
 

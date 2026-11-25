@@ -5,6 +5,7 @@ import type { TouchedCandidate } from './touchedCandidate'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { runBlackpinkFetcher } from './runBlackpinkFetcher'
 import { runJypScheduleFetcher } from './runJypScheduleFetcher'
+import { runJypNoticeFetcher } from './runJypNoticeFetcher'
 import { runKpopofficialConcertsFetcher } from './runKpopofficialConcertsFetcher'
 import { runYgArtistScheduleFetcher } from './runYgArtistScheduleFetcher'
 import { runWakeoneNoticeFetcher } from './runWakeoneNoticeFetcher'
@@ -99,7 +100,28 @@ export async function runCrawlerSource(
       }
     }
     case 'jyp_schedule': {
-      const r = await runJypScheduleFetcher(supabase, {
+      // MUST #10：robots.txt 禁止 /api/。runJypScheduleFetcher 已不發任何 HTTP 請求，
+      // 只把來源記成 error（訊息見 JYP_SCHEDULE_DISABLED_MESSAGE）。改走 jyp_notice；
+      // 8 關 8 開見部署後的 M080。不碰已上架活動。
+      const r = await runJypScheduleFetcher(supabase, { sourceKey: source.source_key, dryRun })
+      return {
+        touched: [],
+        source: r.source,
+        sourceKey: r.sourceKey,
+        sourceName: r.sourceName ?? source.name,
+        parserType: source.parser_type,
+        mode: r.mode,
+        fetched: 0,
+        inserted: 0,
+        wouldInsert: 0,
+        skipped: 0,
+        recheck: 0,
+        errors: r.errors,
+        status: r.status,
+      }
+    }
+    case 'jyp_notice': {
+      const r = await runJypNoticeFetcher(supabase, {
         sourceKey: source.source_key,
         dryRun,
       })

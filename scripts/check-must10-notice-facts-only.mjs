@@ -1,5 +1,5 @@
 // 執行方式：node scripts/check-must10-notice-facts-only.mjs
-// MUST #10：YG 公告（yg_notice）與 SMTOWN 公告（smtown_notice）前台只留事實。
+// MUST #10：YG 公告（yg_notice）、SMTOWN 公告（smtown_notice）與 JYP 藝人站公告（jyp_notice）前台只留事實。
 // 只用假資料與假 Supabase，不連任何資料庫，不讀 .env。
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
@@ -81,16 +81,19 @@ const YG_PAGE = 'https://ygfamily.com/ko/news/notice/1234'
 const YG_URL = `${YG_PAGE}#2027-01-10`
 const SMTOWN_URL = 'https://www.smtown.com/notice#smtown-777-aespa'
 const YG_SCHEDULE_URL = 'https://ygfamily.com/ko/artists/blackpink/schedule'
+const JYP_URL = 'https://jyp.jype.com/notice/7fl2r8yw?NoticeNumber=149'
 const TICKET = 'https://tickets.example.com/yg-tour'
 
 const ygRaw = { source: 'yg-notice', parser_type: 'yg_notice', crawler_source_id: 'cs-yg', notice_id: '1234', page_url: YG_PAGE, ticket_url: TICKET }
 const smRaw = { source: 'smtown-notice', parser_type: 'smtown_notice', crawler_source_id: 'cs-sm', page_url: 'https://www.smtown.com/notice' }
+const jypRaw = { source: 'jyp-notice', parser_type: 'jyp_notice', crawler_source_id: 'cs-jypn', notice_number: '149', notice_date: '2026-10-06', page_url: 'https://jyp.jype.com/notice' }
 const schedRaw = { source: 'yg-artist-schedule', parser_type: 'yg_artist_schedule', crawler_source_id: 'cs-sched', ticket_url: TICKET }
 
 const crawlerSources = [
   { id: 'cs-yg', source_key: 'generic-yg-notice', name: 'YG 官方公告', parser_type: 'yg_notice', source_type: 'official_website', source_url: 'https://ygfamily.com/ko/news/notice' },
   { id: 'cs-sm', source_key: 'smtown-aespa', name: 'SMTOWN 公告', parser_type: 'smtown_notice', source_type: 'official_website', source_url: 'https://www.smtown.com/notice' },
   { id: 'cs-sched', source_key: 'yg-schedule', name: 'YG 官方行程', parser_type: 'yg_artist_schedule', source_type: 'official_website', source_url: YG_SCHEDULE_URL },
+  { id: 'cs-jypn', source_key: 'jy-park-jyp-notice', name: 'J.Y. Park 官網公告', parser_type: 'jyp_notice', source_type: 'official_website', source_url: 'https://jyp.jype.com/notice' },
   { id: 'cs-jyp', source_key: 'jyp', name: 'JYP Schedule', parser_type: 'jyp_schedule', source_type: 'official_website', source_url: 'https://twice.jype.com' },
 ]
 
@@ -98,12 +101,15 @@ const crawlerSources = [
 
 test('識別：parser_type／raw_data.source 為準，網址只認公告頁路徑', () => {
   for (const url of [YG_URL, YG_PAGE, 'https://www.ygfamily.com/en/news/notice/9', 'https://ygfamily.com/ko/news/notice',
-    'https://ygfamily.com/news/notice/5', SMTOWN_URL, 'https://smtown.com/notice', 'http://www.smtown.com/notice?page=2']) {
+    'https://ygfamily.com/news/notice/5', SMTOWN_URL, 'https://smtown.com/notice', 'http://www.smtown.com/notice?page=2',
+    JYP_URL, 'https://twice.jype.com/notice', 'https://xdinaryheroes.jype.com/notice?PgIndex=2']) {
     assert.equal(notice.isOfficialNoticeUrl(url), true, url)
   }
   for (const url of [YG_SCHEDULE_URL, 'https://ygfamily.com/ko/artists/treasure/schedule#2027-01-01', 'https://ygfamily.com/',
     'https://ygfamily.com/ko/news/noticeboard', 'https://www.smtown.com/artist/aespa', 'https://www.smtown.com/notices',
-    'https://evil.example.com/ygfamily.com/ko/news/notice', 'https://twice.jype.com/a', '', null, undefined]) {
+    'https://evil.example.com/ygfamily.com/ko/news/notice', 'https://twice.jype.com/a', 'https://twice.jype.com/schedule',
+    'https://twice.jype.com/Mobile/Schedule', 'https://twice.jype.com/api/schedules?groupId=1', 'https://twice.jype.com/noticeboard',
+    'https://evil.example.com/twice.jype.com/notice', '', null, undefined]) {
     assert.equal(notice.isOfficialNoticeUrl(url), false, String(url))
   }
 
@@ -112,6 +118,10 @@ test('識別：parser_type／raw_data.source 為準，網址只認公告頁路�
   assert.equal(notice.isFactsOnlyNoticeCandidate({ raw_data: { source: 'smtown-notice' } }), true)
   assert.equal(notice.isFactsOnlyNoticeCandidate({ raw_data: { parser_type: 'yg_notice' } }), true)
   assert.equal(notice.isFactsOnlyNoticeCandidate({ raw_data: {} }, 'smtown_notice'), true)
+  assert.equal(notice.isFactsOnlyNoticeCandidate({ raw_data: jypRaw }), true)
+  assert.equal(notice.isFactsOnlyNoticeCandidate({ raw_data: { source: 'jyp-notice' } }), true)
+  assert.equal(notice.isFactsOnlyNoticeCandidate({ raw_data: {} }, 'jyp_notice'), true)
+  assert.equal(notice.factsOnlyNoticeTicketUrl({ raw_data: { ...jypRaw, ticket_url: TICKET } }), null)
   assert.equal(notice.isFactsOnlyNoticeCandidate({ raw_data: schedRaw }), false)
   assert.equal(notice.isFactsOnlyNoticeCandidate({ raw_data: schedRaw }, 'yg_artist_schedule'), false)
   for (const raw_data of [null, undefined, 'yg-notice', [], { source: 'wakeone-notice', parser_type: 'wakeone_notice' }, { parser_type: 'jyp_schedule' }, { parser_type: 'kpopofficial_concerts' }]) {
@@ -129,15 +139,20 @@ test('識別：parser_type／raw_data.source 為準，網址只認公告頁路�
   assert.equal(notice.findOfficialNoticeUrl([{ url: YG_SCHEDULE_URL }, { url: null }]), undefined)
   assert.equal(notice.getEventOfficialNoticeUrl({ source: { url: YG_URL } }), YG_URL)
   assert.equal(notice.getEventOfficialNoticeUrl({ source: { url: YG_SCHEDULE_URL } }), undefined)
+  assert.equal(notice.getEventOfficialNoticeUrl({ source: { url: JYP_URL } }), JYP_URL)
+  assert.equal(notice.getEventOfficialNoticeUrl({ source: { url: 'https://twice.jype.com/Mobile/Schedule' } }), undefined)
   assert.equal(notice.getEventOfficialNoticeUrl({ officialNoticeUrl: SMTOWN_URL, source: { url: 'https://kpopofficial.com/x' } }), SMTOWN_URL)
 })
 
 // ── 2. 空殼規則 ───────────────────────────────────────────────────────────────
 
-test('空殼：官方公告連結只對這兩個來源算最低內容，其他來源規則不變', () => {
+test('空殼：官方公告連結只對這些公告來源算最低內容，其他來源規則不變', () => {
   const ok = (row, factsOnlyNotice, officialNoticeUrl) => hasMinimumContentOrOfficialNotice(row, { factsOnlyNotice, officialNoticeUrl })
   assert.equal(ok({}, true, SMTOWN_URL), true)
   assert.equal(ok({}, true, YG_URL), true)
+  assert.equal(ok({}, true, JYP_URL), true)
+  assert.equal(ok({}, true, 'https://twice.jype.com/Mobile/Schedule'), false)
+  assert.equal(ok({}, false, JYP_URL), false)
   assert.equal(ok({}, true, YG_SCHEDULE_URL), false)
   assert.equal(ok({}, true, null), false)
   assert.equal(ok({}, false, SMTOWN_URL), false)
@@ -212,6 +227,25 @@ test('自動上架：沒有地點的 SMTOWN 公告靠官方連結上架，摘要
   const strange = await autoPublish({ candidate: { raw_data: smRaw, source_url: 'https://www.smtown.com/artist/aespa' } })
   assert.equal(strange.args('insertDraftEvent')[0].auto_publish_blocked_reason, 'empty_shell')
   assert.equal(strange.report.held.length, 1)
+})
+
+test('自動上架：JYP 公告沒有地點也靠官方連結上架，正文／摘要不帶走；沒活動日停在 missing_date', async () => {
+  const { report, args } = await autoPublish({ candidate: { raw_data: jypRaw, source_url: JYP_URL } })
+  const [row] = args('insertDraftEvent')
+  assert.equal(row.description, null)
+  assert.equal(row.display_summary_zh, null)
+  assert.equal(row.ticket_url, null)
+  assert.equal(row.auto_publish_blocked_reason, null)
+  assert.equal(args('publishEvent')[1].is_published, true)
+  assert.equal(report.created.length, 1)
+  assert.ok(!JSON.stringify(row).includes(SECRET))
+  // 沒有活動日（只有公告發布日）：不上架
+  const noDate = await autoPublish({ candidate: { raw_data: jypRaw, source_url: JYP_URL, detected_date: null } })
+  assert.deepEqual(noDate.calls.filter(name => name === 'insertDraftEvent' || name === 'publishEvent'), [])
+  assert.equal(noDate.args('parkCandidate')?.[1], 'missing_date')
+  // 標成 JYP 公告、但網址是舊行程頁：仍是空殼
+  const strange = await autoPublish({ candidate: { raw_data: jypRaw, source_url: 'https://jyp.jype.com/Mobile/Schedule' } })
+  assert.equal(strange.args('insertDraftEvent')[0].auto_publish_blocked_reason, 'empty_shell')
 })
 
 test('自動上架：其他來源的空殼規則與摘要行為不變', async () => {
@@ -297,6 +331,12 @@ test('單筆／批次核准：YG／SMTOWN 公告 description、摘要為空，YG
     assert.equal(sm.description, null)
     assert.equal(sm.display_summary_zh, null)
     assert.equal(sm.ticket_url, null)
+
+    const jy = await approve(candidateRow({ raw_data: jypRaw, source_url: JYP_URL }))
+    assert.equal(jy.description, null)
+    assert.equal(jy.display_summary_zh, null)
+    assert.equal(jy.ticket_url, null)
+    assert.ok(!JSON.stringify(jy).includes(SECRET))
   }
 })
 
@@ -312,7 +352,7 @@ test('單筆／批次核准：yg_artist_schedule 等其他來源行為不變', a
 })
 
 test('重審同步：公告來源不把摘要同步到活動，其他來源照舊', async () => {
-  for (const [raw_data, expectSummary] of [[smRaw, false], [ygRaw, false], [schedRaw, true]]) {
+  for (const [raw_data, expectSummary] of [[smRaw, false], [ygRaw, false], [jypRaw, false], [schedRaw, true]]) {
     const client = m.serverClient = fakeServerClient({
       review_status: 'approved', approved_event_id: 'ev', display_title_zh: '中文標題', display_summary_zh: '候選摘要',
       location_name_zh: null, translation_status: 'machine', translation_source: 'ai', raw_data,
@@ -325,7 +365,7 @@ test('重審同步：公告來源不把摘要同步到活動，其他來源照�
 })
 
 test('批次重審同步：公告來源不把摘要同步到活動，其他來源照舊', async () => {
-  for (const [raw_data, expectSummary] of [[smRaw, false], [ygRaw, false], [schedRaw, true], [undefined, true]]) {
+  for (const [raw_data, expectSummary] of [[smRaw, false], [ygRaw, false], [jypRaw, false], [schedRaw, true], [undefined, true]]) {
     const client = m.serverClient = fakeServerClient({
       review_status: 'approved', approved_event_id: 'ev', display_title_zh: '中文標題', display_summary_zh: '候選摘要',
       location_name_zh: null, translation_status: 'machine', translation_source: 'ai', raw_data,
@@ -347,7 +387,7 @@ test('後台產生中文：公告不送正文、不寫摘要；有名稱或地�
   m.generate = async input => { inputs.push(input); return m.generated }
 
   m.generated = { displayTitleZh: '中文標題', displaySummaryZh: '模型摘要', locationNameZh: '首爾 KSPO DOME', notes: '', model: 'test' }
-  for (const raw_data of [ygRaw, smRaw]) {
+  for (const raw_data of [ygRaw, smRaw, jypRaw]) {
     const client = m.serverClient = fakeServerClient(candidateRow({ raw_data, display_summary_zh: null, translation_status: 'none', detected_venue_name: 'KSPO DOME' }))
     assert.deepEqual(await candidateActions.generateCandidateChineseDisplay('cand'), { ok: true })
     assert.equal(inputs.at(-1).content, null)
@@ -401,7 +441,7 @@ async function translate(event, generated) {
 
 test('自動翻譯：公告活動只翻名稱與地點，不送正文，摘要寫 null', async () => {
   const full = { displayTitleZh: '中文標題', displaySummaryZh: '模型摘要', locationNameZh: '首爾 KSPO DOME' }
-  for (const url of [YG_URL, SMTOWN_URL]) {
+  for (const url of [YG_URL, SMTOWN_URL, JYP_URL]) {
     const { result, inputs, writes } = await translate(translationEvent(url), full)
     assert.deepEqual(result, { outcome: 'translated' })
     assert.equal(inputs[0].content, null)
@@ -421,7 +461,7 @@ test('自動翻譯：公告活動只翻名稱與地點，不送正文，摘要�
 })
 
 test('自動翻譯：yg_artist_schedule 等其他來源照舊送正文、可寫摘要', async () => {
-  for (const url of [YG_SCHEDULE_URL, 'https://twice.jype.com/a', null]) {
+  for (const url of [YG_SCHEDULE_URL, 'https://twice.jype.com/a', 'https://twice.jype.com/Mobile/Schedule', null]) {
     const { result, inputs, writes } = await translate(translationEvent(url), { displayTitleZh: '中文標題', displaySummaryZh: '模型摘要', locationNameZh: null })
     assert.deepEqual(result, { outcome: 'translated' })
     assert.equal(inputs[0].content, SECRET)
@@ -478,7 +518,7 @@ test('活動資料：任一來源是公告頁就帶 officialNoticeUrl，其他�
 })
 
 test('詳情頁：公告活動即使留著正文／摘要也不渲染摘要區塊，有「看官方公告」', async () => {
-  for (const url of [YG_URL, SMTOWN_URL]) {
+  for (const url of [YG_URL, SMTOWN_URL, JYP_URL]) {
     const event = await loadEvent(eventRow([url]))
     const { all, text, meta } = await renderDetail(event)
     assert.ok(!text.includes(SECRET), url)
@@ -513,7 +553,7 @@ test('詳情頁：其他來源照舊顯示摘要與「查看來源」', async ()
 
 test('buildEventMeta：公告活動不帶正文／摘要，只留名稱、日期、地點與主辦公告提示', async () => {
   const base = { id: 'ev-1', idolName: 'Idol', title: 'Notice Tour', date: '2027-01-10', city: 'Seoul', description: SECRET, displaySummaryZh: '殘留摘要' }
-  for (const event of [{ ...base, officialNoticeUrl: YG_URL }, { ...base, source: { level: 'official', label: 'YG', url: SMTOWN_URL } }]) {
+  for (const event of [{ ...base, officialNoticeUrl: YG_URL }, { ...base, source: { level: 'official', label: 'YG', url: SMTOWN_URL } }, { ...base, source: { level: 'official', label: 'JYP', url: JYP_URL } }]) {
     const meta = buildEventMeta(event)
     const text = JSON.stringify(meta)
     assert.ok(!text.includes(SECRET) && !text.includes('殘留摘要'))
@@ -533,13 +573,15 @@ test('sitemap：公告活動把官方連結算進最低內容，其他來源不�
     loadEvent(eventRow([YG_URL], { id: 'yg' })),
     loadEvent(eventRow(['https://twice.jype.com/a'], { id: 'shell', description: null, display_summary_zh: null })),
     loadEvent(eventRow([YG_SCHEDULE_URL], { id: 'sched' })),
+    loadEvent(eventRow([JYP_URL], { id: 'jyp', description: null, display_summary_zh: null })),
   ])
-  events.forEach((event, index) => { event.id = ['sm', 'yg', 'shell', 'sched'][index] })
+  events.forEach((event, index) => { event.id = ['sm', 'yg', 'shell', 'sched', 'jyp'][index] })
   const urls = buildSitemapEntries({ idols: [], events, now: sitemapNow }).map(entry => entry.url)
   assert.ok(urls.some(url => url.endsWith('/events/sm')))
   assert.ok(urls.some(url => url.endsWith('/events/yg')))
   assert.ok(!urls.some(url => url.endsWith('/events/shell')))
   assert.ok(urls.some(url => url.endsWith('/events/sched')))
+  assert.ok(urls.some(url => url.endsWith('/events/jyp')))
 })
 
 test('站內搜尋：公告活動的 haystack 不放正文，其他活動照舊', () => {
@@ -562,11 +604,21 @@ test('ICS、OG／Twitter 圖不含公告正文或摘要（回歸）', async () =
   assert.doesNotMatch(read('src/lib/ics/buildIcs.ts'), /event\.description|displaySummaryZh/)
 })
 
+// JYP 改用公告頁（需求單_JYP改用公告頁_2026-11-24.md）只允許動這幾支爬蟲檔；其他爬蟲與 supabase 仍須與 merge-base 相同。
+const JYP_NOTICE_CRAWLER_FILES = [
+  'src/lib/crawlers/jypNotice.ts',
+  'src/lib/crawlers/runActiveCrawlerSources.ts',
+  'src/lib/crawlers/runJypNoticeFetcher.ts',
+  'src/lib/crawlers/runJypScheduleFetcher.ts',
+]
+
 test('範圍守門：不改爬蟲存檔格式、不新增 migration', () => {
   const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' })
   const base = git('merge-base', 'origin/main', 'HEAD').trim()
-  assert.equal(git('diff', '--name-only', base, '--', 'src/lib/crawlers', 'supabase'), '')
-  assert.equal(git('ls-files', '--others', '--exclude-standard', '--', 'src/lib/crawlers', 'supabase'), '')
+  const outside = text => text.split('\n').filter(Boolean).filter(path => !JYP_NOTICE_CRAWLER_FILES.includes(path)).join('\n')
+  assert.equal(outside(git('diff', '--name-only', base, '--', 'src/lib/crawlers', 'supabase')), '')
+  assert.equal(outside(git('ls-files', '--others', '--exclude-standard', '--', 'src/lib/crawlers', 'supabase')), '')
+  assert.equal(git('diff', '--name-only', base, '--', 'supabase'), '')
   const numbers = readdirSync(new URL('supabase/migrations/', root)).map(name => Number(name.match(/^\d+/)?.[0] ?? 0))
   assert.equal(Math.max(...numbers), 71)
 })

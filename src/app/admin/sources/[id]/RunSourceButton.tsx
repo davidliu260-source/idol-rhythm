@@ -46,7 +46,7 @@ interface RunPlan {
 /**
  * Maps a source row to the API endpoint + body used to run it.
  *
- * Platform-level parsers (jyp_schedule, …) share one route and pass the
+ * Platform-level parsers (jyp_notice, …) share one route and pass the
  * source_key in the body — adding a new artist on an existing platform
  * never needs a new endpoint. Artist-specific parsers
  * (blackpink_official_tour, …) still have their own route until they get
@@ -59,9 +59,10 @@ function planForSource(
   sourceKey: string,
 ): RunPlan | null {
   switch (parserType) {
-    case 'jyp_schedule':
+    // jyp_schedule 已停用（robots 禁止 /api/，MUST #10）：不顯示執行按鈕。
+    case 'jyp_notice':
       return {
-        endpoint: '/api/admin/crawlers/jyp-schedule/run',
+        endpoint: '/api/admin/crawlers/jyp-notice/run',
         body: { sourceKey },
       }
     case 'blackpink_official_tour':

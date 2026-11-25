@@ -15,7 +15,7 @@ export function hasMinimumContent(row: Partial<Record<(typeof MIN_CONTENT_FIELDS
 export const EMPTY_SHELL_REASON = 'empty_shell' as const
 
 /**
- * MUST #10 來源例外：YG／SMTOWN 公告只留事實（不寫正文、摘要），
+ * MUST #10 來源例外：YG／SMTOWN／JYP 公告只留事實（不寫正文、摘要），
  * 所以正文與摘要不算內容，改把官方公告連結算進最低內容。
  * 只有 factsOnlyNotice 為 true 且網址真的是公告頁時才放行；其他來源與 hasMinimumContent 完全相同。
  */
