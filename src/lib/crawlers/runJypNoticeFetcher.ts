@@ -126,7 +126,7 @@ export async function runJypNoticeFetcher(
   if (!source) return base({ errors: [sourceError ?? '找不到 crawler_sources'], status: 500 })
 
   const fail = async (msg: string, status: number, extra: Partial<FetcherResult> = {}) => {
-    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
+    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg, fetched: 0 })
     return base({ errors: [msg], crawlerSourceId: source.id, sourceName: source.name, status, ...extra })
   }
 
@@ -135,7 +135,7 @@ export async function runJypNoticeFetcher(
   }
   if (!source.is_active) {
     const msg = `來源已停用：${source.name}`
-    await updateRunStatus(supabase, source.id, { last_status: 'skipped', last_error: msg })
+    await updateRunStatus(supabase, source.id, { last_status: 'skipped', last_error: msg, fetched: 0 })
     return base({ errors: [msg], crawlerSourceId: source.id, sourceName: source.name, status: 200 })
   }
   if (!source.idol_id) return fail(`crawler_sources 缺少 idol_id：${source.name}（jyp_notice 必須設定對應 idol）`, 500)
@@ -358,6 +358,7 @@ export async function runJypNoticeFetcher(
   await updateRunStatus(supabase, source.id, {
     last_status: lastStatus,
     last_error: errors.length > 0 ? errors.join('\n') : null,
+    fetched: entries.length,
   })
 
   return {

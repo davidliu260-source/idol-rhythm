@@ -106,6 +106,7 @@ export async function runBlackpinkFetcher(
     await updateRunStatus(supabase, source.id, {
       last_status: 'error',
       last_error: msg,
+      fetched: 0,
     })
     return {
       touched: [],
@@ -128,6 +129,7 @@ export async function runBlackpinkFetcher(
     await updateRunStatus(supabase, source.id, {
       last_status: 'skipped',
       last_error: msg,
+      fetched: 0,
     })
     return {
       touched: [],
@@ -167,6 +169,7 @@ export async function runBlackpinkFetcher(
         await updateRunStatus(supabase, source.id, {
           last_status: 'error',
           last_error: msg,
+          fetched: 0,
         })
         return {
           touched: [],
@@ -192,6 +195,7 @@ export async function runBlackpinkFetcher(
     await updateRunStatus(supabase, source.id, {
       last_status: 'error',
       last_error: msg,
+      fetched: 0,
     })
     return {
       touched: [],
@@ -218,6 +222,7 @@ export async function runBlackpinkFetcher(
     await updateRunStatus(supabase, source.id, {
       last_status: 'error',
       last_error: msg,
+      fetched: 0,
     })
     return {
       touched: [],
@@ -240,6 +245,7 @@ export async function runBlackpinkFetcher(
     await updateRunStatus(supabase, source.id, {
       last_status: 'error',
       last_error: msg,
+      fetched: 0,
     })
     return {
       touched: [],
@@ -325,6 +331,7 @@ export async function runBlackpinkFetcher(
       await updateRunStatus(supabase, source.id, {
         last_status: 'error',
         last_error: msg,
+        fetched: limited.length,
       })
       return {
         touched: [],
@@ -448,6 +455,7 @@ export async function runBlackpinkFetcher(
   await updateRunStatus(supabase, source.id, {
     last_status: lastStatus,
     last_error: errors.length > 0 ? errors.join('\n') : null,
+    fetched: limited.length,
   })
 
   return {

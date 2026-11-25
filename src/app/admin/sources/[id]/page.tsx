@@ -6,6 +6,16 @@ import { ArrowLeft, Database, ExternalLink } from 'lucide-react'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
 import RunSourceButton from './RunSourceButton'
+import CrawlerAlertList from '@/components/admin/CrawlerAlertList'
+import {
+  KPOPOFFICIAL_LABEL,
+  buildAlertViews,
+  formatTaipeiDateTime,
+  isKpopOfficialSource,
+  loadCrawlerHealth,
+  type AlertView,
+  type SourceHealthRow,
+} from '@/lib/crawlers/crawlerSourceAlerts'
 
 interface SourceDetail {
   id: string
@@ -60,15 +70,30 @@ async function getSource(id: string): Promise<SourceDetail | null> {
   }
 }
 
+/** MUST #10：健康欄與未解決提醒。migration 072 尚未套用或讀取失敗時回 null，頁面照常顯示。 */
+async function getSourceHealth(
+  id: string,
+): Promise<{ row: SourceHealthRow | null; views: AlertView[] } | null> {
+  const supabase = getSupabaseServerClient()
+  if (!supabase) return null
+  const health = await loadCrawlerHealth(supabase, { sourceId: id })
+  if (!health.available) return null
+  return {
+    row: health.sources.find((row) => row.id === id) ?? null,
+    views: buildAlertViews(health.sources, health.alerts),
+  }
+}
+
 export default async function AdminSourceDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const [{ isAdmin }, source] = await Promise.all([
+  const [{ isAdmin }, source, health] = await Promise.all([
     getCurrentAdmin(),
     getSource(id),
+    getSourceHealth(id),
   ])
 
   if (!source) notFound()
@@ -88,7 +113,18 @@ export default async function AdminSourceDetailPage({
           <h1 className="text-xl font-bold text-text-base">{source.name}</h1>
         </div>
         <p className="text-xs text-muted mt-1 font-mono">{source.sourceKey}</p>
+        {isKpopOfficialSource({ source_key: source.sourceKey, parser_type: source.parserType }) && (
+          <span className="inline-block mt-2 text-[10px] font-bold px-1.5 py-0.5 rounded border bg-fuchsia-500/15 border-fuchsia-500/40 text-fuchsia-300">
+            {KPOPOFFICIAL_LABEL}
+          </span>
+        )}
       </div>
+
+      {isAdmin && health && health.views.length > 0 && (
+        <div className="px-4 mb-4">
+          <CrawlerAlertList views={health.views} linkToSource={false} title="這個來源的故障提醒" />
+        </div>
+      )}
 
       {!isAdmin && (
         <div className="px-4 mb-4">
@@ -135,6 +171,31 @@ export default async function AdminSourceDetailPage({
             value={source.lastRunAt ? formatDateTime(source.lastRunAt) : '尚未執行'}
           />
           <Row label="上次狀態" value={formatLastStatus(source.lastStatus)} />
+          {health?.row && (
+            <>
+              <Row
+                label="連續失敗"
+                value={
+                  <span className={health.row.consecutive_error_count > 0 ? 'text-amber-400' : undefined}>
+                    {health.row.consecutive_error_count} 次
+                  </span>
+                }
+              />
+              <Row
+                label="上次成功"
+                value={
+                  health.row.last_success_at
+                    ? `${formatTaipeiDateTime(health.row.last_success_at)}（台北時間）`
+                    : '尚無紀錄'
+                }
+              />
+              <Row
+                label="上次抓到"
+                value={health.row.last_fetched_count === null ? '尚無紀錄' : `${health.row.last_fetched_count} 筆`}
+              />
+              <Row label="連續 0 筆" value={`${health.row.consecutive_zero_fetch_count} 次`} />
+            </>
+          )}
           {source.lastError && (
             <Row
               label="上次錯誤"

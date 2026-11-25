@@ -16,6 +16,37 @@ export interface SourceRow {
   isActive: boolean
   lastRunAt: string | null
   lastStatus: string | null
+  /** MUST #10：KpopOfficial 主力來源，列表要醒目標示並排前面。 */
+  isKpopOfficial?: boolean
+  /** MUST #10：健康計數。null／未提供＝migration 072 尚未套用。 */
+  health?: {
+    consecutiveErrorCount: number
+    consecutiveZeroFetchCount: number
+    /** 台北時間 `YYYY-MM-DD HH:mm`；null＝尚未成功過。 */
+    lastSuccessLabel: string | null
+    lastFetchedCount: number | null
+  } | null
+  /** MUST #10：未解決的故障／警告（含由計數即時算出的）。 */
+  alerts?: {
+    kind: 'error_streak' | 'stale_success' | 'zero_fetch'
+    severity: 'fault' | 'warning'
+    status: 'open' | 'acknowledged'
+  }[]
+}
+
+const ALERT_KIND_LABELS = {
+  error_streak: '連續失敗',
+  stale_success: '長時間沒有成功',
+  zero_fetch: '成功但 0 筆',
+} as const
+
+/** 排序：KpopOfficial 與有未解決故障的來源排前面；其餘維持原順序。 */
+function attentionRank(s: SourceRow): number {
+  const alerts = s.alerts ?? []
+  if (alerts.some((a) => a.severity === 'fault' && a.status === 'open')) return s.isKpopOfficial ? 0 : 1
+  if (s.isKpopOfficial) return 2
+  if (alerts.length > 0) return 3
+  return 4
 }
 
 interface Props {
@@ -58,7 +89,7 @@ function matchTab(s: SourceRow, tab: FilterTab): boolean {
   switch (tab) {
     case 'active':       return s.isActive
     case 'inactive':     return !s.isActive
-    case 'failing':      return s.lastStatus !== null && FAILING_STATUSES.has(s.lastStatus)
+    case 'failing':      return (s.lastStatus !== null && FAILING_STATUSES.has(s.lastStatus)) || (s.alerts?.length ?? 0) > 0
     case 'jyp':          return s.parserType === 'jyp_schedule' || s.parserType === 'jyp_notice'
     case 'aggregator':   return s.parserType === 'kpopofficial_concerts'
     case 'other_parser': return s.parserType !== 'jyp_schedule' && s.parserType !== 'jyp_notice' && s.parserType !== 'kpopofficial_concerts'
@@ -94,7 +125,11 @@ export default function SourcesClient({ sources }: Props) {
   }, [sources])
 
   const filtered = useMemo(
-    () => sources.filter((s) => matchTab(s, tab) && matchSearch(s, query)),
+    () => sources
+      .filter((s) => matchTab(s, tab) && matchSearch(s, query))
+      .map((s, index) => ({ s, index }))
+      .sort((a, b) => attentionRank(a.s) - attentionRank(b.s) || a.index - b.index)
+      .map(({ s }) => s),
     [sources, tab, query],
   )
 
@@ -187,6 +222,7 @@ function SourceRowItem({ source }: { source: SourceRow }) {
 
   return (
     <Link
+      id={`source-${source.id}`}
       href={`/admin/sources/${source.id}`}
       className="rounded-xl bg-card border border-card-border px-4 py-3 flex flex-col gap-1.5 active:opacity-70 transition-opacity"
     >
@@ -205,6 +241,26 @@ function SourceRowItem({ source }: { source: SourceRow }) {
             {source.lastStatus === 'partial_error' ? '部分失敗' : '失敗'}
           </span>
         )}
+        {source.isKpopOfficial && (
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border bg-fuchsia-500/15 border-fuchsia-500/40 text-fuchsia-300">
+            主力來源
+          </span>
+        )}
+        {(source.alerts ?? []).map((alert) => (
+          <span
+            key={alert.kind}
+            className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${
+              alert.status === 'acknowledged'
+                ? 'bg-card border-card-border text-muted'
+                : alert.severity === 'fault'
+                  ? 'bg-red-500/15 border-red-500/30 text-red-300'
+                  : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+            }`}
+          >
+            {alert.severity === 'fault' ? '故障' : '警告'}：{ALERT_KIND_LABELS[alert.kind]}
+            {alert.status === 'acknowledged' ? '（已看過）' : ''}
+          </span>
+        ))}
         <span className="text-[10px] text-muted ml-auto font-mono">
           {source.parserType}
         </span>
@@ -227,6 +283,26 @@ function SourceRowItem({ source }: { source: SourceRow }) {
           </span>
         )}
       </div>
+
+      {source.health && (
+        <div className="flex items-center gap-1.5 text-[10px] text-muted flex-wrap">
+          <span className={source.health.consecutiveErrorCount > 0 ? 'text-amber-400' : undefined}>
+            連續失敗 {source.health.consecutiveErrorCount} 次
+          </span>
+          <span>·</span>
+          <span>上次成功：{source.health.lastSuccessLabel ?? '尚無紀錄'}</span>
+          <span>·</span>
+          <span>
+            上次抓到：{source.health.lastFetchedCount === null ? '尚無紀錄' : `${source.health.lastFetchedCount} 筆`}
+          </span>
+          {source.health.consecutiveZeroFetchCount > 0 && (
+            <>
+              <span>·</span>
+              <span className="text-amber-400">連續 0 筆 {source.health.consecutiveZeroFetchCount} 次</span>
+            </>
+          )}
+        </div>
+      )}
     </Link>
   )
 }

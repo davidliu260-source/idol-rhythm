@@ -216,7 +216,7 @@ export async function runYoutubeOfficialChannelFetcher(
 
   if (source.parser_type !== EXPECTED_PARSER_TYPE) {
     const msg = `parser_type 不符：crawler_sources=${source.parser_type}，預期=${EXPECTED_PARSER_TYPE}`
-    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
+    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg, fetched: 0 })
     return base({
       errors: [msg],
       crawlerSourceId: source.id,
@@ -227,7 +227,7 @@ export async function runYoutubeOfficialChannelFetcher(
 
   if (!source.is_active) {
     const msg = `來源已停用：${source.name}`
-    await updateRunStatus(supabase, source.id, { last_status: 'skipped', last_error: msg })
+    await updateRunStatus(supabase, source.id, { last_status: 'skipped', last_error: msg, fetched: 0 })
     return base({
       errors: [msg],
       crawlerSourceId: source.id,
@@ -238,7 +238,7 @@ export async function runYoutubeOfficialChannelFetcher(
 
   if (!source.idol_id) {
     const msg = `crawler_sources 缺少 idol_id：${source.name}（youtube_official_channel 必須對應一個 idol）`
-    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
+    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg, fetched: 0 })
     return base({
       errors: [msg],
       crawlerSourceId: source.id,
@@ -251,7 +251,7 @@ export async function runYoutubeOfficialChannelFetcher(
   const { config, error: cfgError } = parseYoutubeChannelConfig(source.config)
   if (!config) {
     const msg = cfgError ?? 'config 解析失敗'
-    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
+    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg, fetched: 0 })
     return base({
       errors: [msg],
       crawlerSourceId: source.id,
@@ -264,7 +264,7 @@ export async function runYoutubeOfficialChannelFetcher(
   const apiKey = process.env.YOUTUBE_API_KEY?.trim() || ''
   if (!apiKey) {
     const msg = '缺少 YOUTUBE_API_KEY 環境變數；請在 .env.local 或 Vercel 設定後重試'
-    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
+    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg, fetched: 0 })
     return base({
       errors: [msg],
       crawlerSourceId: source.id,
@@ -283,7 +283,7 @@ export async function runYoutubeOfficialChannelFetcher(
 
   if (idolError || !idolRow) {
     const msg = `找不到對應 idol（id: ${source.idol_id}）：${idolError?.message ?? '無資料'}`
-    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
+    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg, fetched: 0 })
     return base({
       errors: [msg],
       crawlerSourceId: source.id,
@@ -503,7 +503,7 @@ export async function runYoutubeOfficialChannelFetcher(
       const err = hashRes.error ?? urlRes.error
       const msg = `去重查詢失敗：${err?.code ? `[${err.code}] ` : ''}${err?.message ?? '未知錯誤'}`
       errors.push(msg)
-      await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
+      await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg, fetched: entries.length })
       return base({
         fetched: entries.length,
         classifiedA,
@@ -621,7 +621,7 @@ export async function runYoutubeOfficialChannelFetcher(
         ? warnings.join('\n')
         : null
       : [...errors, ...(warnings.length > 0 ? warnings : [])].join('\n')
-  await updateRunStatus(supabase, source.id, { last_status: lastStatus, last_error: lastError })
+  await updateRunStatus(supabase, source.id, { last_status: lastStatus, last_error: lastError, fetched: entries.length })
 
   return {
     touched,
@@ -658,7 +658,7 @@ export async function runYoutubeOfficialChannelFetcher(
           ? warnings.join('\n')
           : null
         : [...errors, ...(warnings.length > 0 ? warnings : [])].join('\n')
-    await updateRunStatus(supabase, source!.id, { last_status, last_error })
+    await updateRunStatus(supabase, source!.id, { last_status, last_error, fetched: entries.length })
     return {
       touched: [],
       source: 'youtube-official-channel',

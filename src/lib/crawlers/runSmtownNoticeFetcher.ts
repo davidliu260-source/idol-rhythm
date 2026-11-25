@@ -163,6 +163,7 @@ export async function runSmtownNoticeFetcher(
     await updateRunStatus(supabase, source.id, {
       last_status: 'error',
       last_error: msg,
+      fetched: 0,
     })
     return base({
       errors: [msg],
@@ -177,6 +178,7 @@ export async function runSmtownNoticeFetcher(
     await updateRunStatus(supabase, source.id, {
       last_status: 'skipped',
       last_error: msg,
+      fetched: 0,
     })
     return base({
       errors: [msg],
@@ -191,6 +193,7 @@ export async function runSmtownNoticeFetcher(
     await updateRunStatus(supabase, source.id, {
       last_status: 'error',
       last_error: msg,
+      fetched: 0,
     })
     return base({
       errors: [msg],
@@ -208,6 +211,7 @@ export async function runSmtownNoticeFetcher(
     await updateRunStatus(supabase, source.id, {
       last_status: 'error',
       last_error: msg,
+      fetched: 0,
     })
     return base({
       errors: [msg],
@@ -230,6 +234,7 @@ export async function runSmtownNoticeFetcher(
     await updateRunStatus(supabase, source.id, {
       last_status: 'error',
       last_error: msg,
+      fetched: 0,
     })
     return base({
       errors: [msg],
@@ -298,6 +303,7 @@ export async function runSmtownNoticeFetcher(
     await updateRunStatus(supabase, source.id, {
       last_status: 'error',
       last_error: fetchErrors.join(' | '),
+      fetched: 0,
     })
     return base({
       errors: fetchErrors,
@@ -385,6 +391,7 @@ export async function runSmtownNoticeFetcher(
       await updateRunStatus(supabase, source.id, {
         last_status: 'error',
         last_error: msg,
+        fetched: allEntries.length,
       })
       return base({
         fetched: allEntries.length,
@@ -500,6 +507,7 @@ export async function runSmtownNoticeFetcher(
   await updateRunStatus(supabase, source.id, {
     last_status: lastStatus,
     last_error: errors.length > 0 ? errors.join('\n') : null,
+    fetched: allEntries.length,
   })
 
   return {

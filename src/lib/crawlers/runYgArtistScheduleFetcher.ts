@@ -101,7 +101,7 @@ export async function runYgArtistScheduleFetcher(
 
   if (source.parser_type !== EXPECTED_PARSER_TYPE) {
     const msg = `parser_type 不符：crawler_sources=${source.parser_type}，預期=${EXPECTED_PARSER_TYPE}`
-    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
+    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg, fetched: 0 })
     return base({
       errors: [msg],
       crawlerSourceId: source.id,
@@ -112,7 +112,7 @@ export async function runYgArtistScheduleFetcher(
 
   if (!source.is_active) {
     const msg = `來源已停用：${source.name}`
-    await updateRunStatus(supabase, source.id, { last_status: 'skipped', last_error: msg })
+    await updateRunStatus(supabase, source.id, { last_status: 'skipped', last_error: msg, fetched: 0 })
     return base({
       errors: [msg],
       crawlerSourceId: source.id,
@@ -135,7 +135,7 @@ export async function runYgArtistScheduleFetcher(
 
   if (artistId === null) {
     const msg = `來源 config 缺少 artistId：${source.name}`
-    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
+    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg, fetched: 0 })
     return base({
       errors: [msg],
       crawlerSourceId: source.id,
@@ -148,7 +148,7 @@ export async function runYgArtistScheduleFetcher(
   const apiBase = apiBaseOf(pageUrl)
   if (!apiBase) {
     const msg = `source_url 不是合法 URL：${pageUrl}`
-    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
+    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg, fetched: 0 })
     return base({
       errors: [msg],
       crawlerSourceId: source.id,
@@ -185,6 +185,7 @@ export async function runYgArtistScheduleFetcher(
     await updateRunStatus(supabase, source.id, {
       last_status: 'error',
       last_error: fetchErrors.join(' | '),
+      fetched: 0,
     })
     return base({
       errors: fetchErrors,
@@ -260,7 +261,7 @@ export async function runYgArtistScheduleFetcher(
     if (hashRes.error || urlRes.error) {
       const err = hashRes.error ?? urlRes.error
       const msg = `去重查詢失敗：${err?.code ? `[${err.code}] ` : ''}${err?.message ?? '未知錯誤'}`
-      await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
+      await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg, fetched: limited.length })
       return base({
         fetched: limited.length,
         errors: [msg, ...fetchErrors],
@@ -367,6 +368,7 @@ export async function runYgArtistScheduleFetcher(
   await updateRunStatus(supabase, source.id, {
     last_status: lastStatus,
     last_error: errors.length > 0 ? errors.join('\n') : null,
+    fetched: limited.length,
   })
 
   return {

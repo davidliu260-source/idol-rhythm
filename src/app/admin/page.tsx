@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { LayoutDashboard, Users, CalendarCheck, Clock, FileSearch, ChevronRight, Lock, ShieldCheck, Inbox, Database } from 'lucide-react'
 import { getAdminStats } from '@/lib/supabase/adminStats'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
+import CrawlerAlertsBanner from '@/components/admin/CrawlerAlertsBanner'
 
 export default async function AdminPage() {
   const [{ isAdmin, user, diag }, stats] = await Promise.all([
@@ -23,6 +24,9 @@ export default async function AdminPage() {
         </div>
         <p className="text-xs text-muted mt-1">Idol Rhythm 後台概覽</p>
       </div>
+
+      {/* MUST #10：爬蟲故障提醒（只有管理員看得到；072 未套用時不顯示） */}
+      {isAdmin && <CrawlerAlertsBanner />}
 
       {/* Admin guard notice — shown when not logged in or not admin */}
       {!isAdmin && (

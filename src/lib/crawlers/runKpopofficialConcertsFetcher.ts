@@ -111,7 +111,7 @@ export async function runKpopofficialConcertsFetcher(
 
   if (source.parser_type !== EXPECTED_PARSER_TYPE) {
     const msg = `parser_type 不符：crawler_sources=${source.parser_type}，預期=${EXPECTED_PARSER_TYPE}`
-    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
+    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg, fetched: 0 })
     return base({
       errors: [msg],
       crawlerSourceId: source.id,
@@ -122,7 +122,7 @@ export async function runKpopofficialConcertsFetcher(
 
   if (!source.is_active) {
     const msg = `來源已停用：${source.name}`
-    await updateRunStatus(supabase, source.id, { last_status: 'skipped', last_error: msg })
+    await updateRunStatus(supabase, source.id, { last_status: 'skipped', last_error: msg, fetched: 0 })
     return base({
       errors: [msg],
       crawlerSourceId: source.id,
@@ -136,7 +136,7 @@ export async function runKpopofficialConcertsFetcher(
     new URL(pageUrl)
   } catch {
     const msg = `source_url 不是合法 URL：${pageUrl}`
-    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
+    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg, fetched: 0 })
     return base({
       errors: [msg],
       crawlerSourceId: source.id,
@@ -160,7 +160,7 @@ export async function runKpopofficialConcertsFetcher(
   } catch (e) {
     clearTimeout(timeout)
     const msg = `抓取頁面失敗：${e instanceof Error ? e.message : String(e)}`
-    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
+    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg, fetched: 0 })
     return base({
       errors: [msg],
       crawlerSourceId: source.id,
@@ -181,7 +181,7 @@ export async function runKpopofficialConcertsFetcher(
     .eq('is_active', true)
   if (idolError) {
     const msg = `讀取 idols 失敗 [${idolError.code ?? '?'}] ${idolError.message}`
-    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
+    await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg, fetched: 0 })
     return base({
       errors: [msg],
       crawlerSourceId: source.id,
@@ -267,7 +267,7 @@ export async function runKpopofficialConcertsFetcher(
     if (hashRes.error || urlRes.error) {
       const err = hashRes.error ?? urlRes.error
       const msg = `去重查詢失敗：${err?.code ? `[${err.code}] ` : ''}${err?.message ?? '未知錯誤'}`
-      await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg })
+      await updateRunStatus(supabase, source.id, { last_status: 'error', last_error: msg, fetched: allEntries.length })
       return base({
         fetched: allEntries.length,
         matched,
@@ -379,6 +379,7 @@ export async function runKpopofficialConcertsFetcher(
   await updateRunStatus(supabase, source.id, {
     last_status: lastStatus,
     last_error: errors.length > 0 ? errors.join('\n') : null,
+    fetched: allEntries.length,
   })
 
   return {
