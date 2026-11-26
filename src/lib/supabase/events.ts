@@ -187,7 +187,7 @@ export async function getPublishedEvents({ throwOnError = false } = {}): Promise
   const [{ data, error }, saleStarts] = await Promise.all([
     supabase
       .from('events')
-      .select('*, idols!inner(slug, avatar_url, color), event_sources(id, event_id, level, label, type, url)')
+      .select('*, idols!events_idol_id_fkey!inner(slug, avatar_url, color), event_sources(id, event_id, level, label, type, url)')
       .eq('is_published', true)
       .in('trust_level', [...PUBLIC_TRUST_LEVELS])
       .neq('status', 'cancelled')
@@ -196,6 +196,14 @@ export async function getPublishedEvents({ throwOnError = false } = {}): Promise
   ])
 
   if (error || !data) {
+    if (error) {
+      console.error('[getPublishedEvents] events query failed', {
+        code: error.code ?? null,
+        message: error.message ?? null,
+        details: error.details ?? null,
+        hint: error.hint ?? null,
+      })
+    }
     if (throwOnError) throw new Error('Published events query failed')
     return []
   }
@@ -308,14 +316,24 @@ export async function getEventById(id: string): Promise<Event | null> {
 
   const { data, error } = await supabase
     .from('events')
-    .select('*, idols!inner(slug, avatar_url, color), event_sources(id, event_id, level, label, type, url)')
+    .select('*, idols!events_idol_id_fkey!inner(slug, avatar_url, color), event_sources(id, event_id, level, label, type, url)')
     .eq('id', id)
     .eq('is_published', true)
     .in('trust_level', [...PUBLIC_TRUST_LEVELS])
     .neq('status', 'cancelled')
     .single()
 
-  if (error || !data) return null
+  if (error || !data) {
+    if (error) {
+      console.error('[getEventById] events query failed', {
+        code: error.code ?? null,
+        message: error.message ?? null,
+        details: error.details ?? null,
+        hint: error.hint ?? null,
+      })
+    }
+    return null
+  }
 
   return rowToEvent(data as SupabaseEventRow)
 }
