@@ -1,8 +1,10 @@
 // 檢查 T30f 詳情頁頂部日期、標籤、場館、售票與白字對比：node scripts/check-event-detail-hero.mjs
 // 另跑 TZ=America/Los_Angeles node scripts/check-event-detail-hero.mjs 驗證時區不漂移。
 import assert from 'node:assert/strict'
-import * as h from '../src/lib/eventDetailHero.ts'
-import { HERO_SCRIM_ALPHA, EVENT_CATEGORY_ORDER, EVENT_CATEGORIES, mixHex, contrastRatio, getCategoryTokens, CATEGORY_NEUTRALS } from '../src/lib/eventCategory.ts'
+import { registerHooks } from 'node:module'
+registerHooks({ resolve(s, c, n) { return n(s.startsWith('.') && !c.parentURL?.includes('/node_modules/') && !/\.[a-z]+$/i.test(s) ? s + '.ts' : s, c) } })
+const h = await import('../src/lib/eventDetailHero.ts')
+const { HERO_SCRIM_ALPHA, EVENT_CATEGORY_ORDER, EVENT_CATEGORIES, mixHex, contrastRatio, getCategoryTokens, CATEGORY_NEUTRALS } = await import('../src/lib/eventCategory.ts')
 const inputs = []
 function frozen(value) {
   if (value && typeof value === 'object') { Object.values(value).forEach(frozen); Object.freeze(value) }
