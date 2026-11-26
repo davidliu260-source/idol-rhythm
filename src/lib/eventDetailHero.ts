@@ -1,3 +1,4 @@
+import { ticketSalesHeadline, type TicketSale } from './ticketSales'
 export interface DetailHeroEventLike {
   title: string
   date: string
@@ -73,7 +74,13 @@ export function getVenueRow(event: DetailHeroEventLike): { main: string; sub: st
   const area = Array.from(new Set([event.country?.trim(), event.city?.trim()].filter(Boolean))).join('・')
   return venue ? { main: venue, sub: area || null } : area ? { main: area, sub: null } : null
 }
-export function getTicketRow(ticketUrl?: string | null): { main: string; sub: string; href: string | null } {
-  const url = ticketUrl?.trim()
+export function getTicketRow(
+  ticketUrl?: string | null,
+  sales?: ReadonlyArray<Pick<TicketSale, 'stage' | 'startsAt' | 'endsAt'>> | null,
+  now: Date = new Date(),
+): { main: string; sub: string; href: string | null } {
+  const url = ticketUrl?.trim() || null
+  const headline = sales?.length ? ticketSalesHeadline(sales, now) : null
+  if (headline) return { main: headline, sub: '以官方連結為準', href: url }
   return url ? { main: '官方售票中', sub: '以官方連結為準', href: url } : { main: '連結待補', sub: '尚未取得官方售票連結', href: null }
 }

@@ -51,7 +51,7 @@ export default async function EventDetailPage({ params }: EventPageProps) {
           </div>
         )}
 
-        <EventDetailInfoRows event={event} />
+        <EventDetailInfoRows event={event} sales={ticketSales} />
         <EventTicketSales sales={ticketSales} ticketUrl={event.ticketUrl} />
         {!isDemoEvent && <EventWantButton eventId={event.id} />}
 

@@ -4,12 +4,13 @@ import type { Event } from '@/lib/types'
 import { CalendarDays, MapPin, Ticket, ExternalLink } from 'lucide-react'
 import { getCategoryTokens, getEventCategory } from '@/lib/eventCategory'
 import { getInfoDateRow, getVenueRow, getTicketRow } from '@/lib/eventDetailHero'
+import type { TicketSale } from '@/lib/ticketSales'
 
-export default function EventDetailInfoRows({ event }: { event: Event }) {
+export default function EventDetailInfoRows({ event, sales, now }: { event: Event; sales?: TicketSale[]; now?: Date }) {
   const tokens = getCategoryTokens(getEventCategory(event))
   const date = getInfoDateRow(event)
   const venue = hasAnyEventLocation(event) ? getVenueRow(event) ?? { main: getEventLocationLabel(event), sub: null } : { main: getEventLocationLabel(event), sub: null }
-  const ticket = getTicketRow(event.ticketUrl)
+  const ticket = getTicketRow(event.ticketUrl, sales, now)
   const rowClass = 'flex items-center gap-4 border-b border-white/[0.07] py-[18px]'
   function content(icon: ReactNode, label: string, main: string, sub: string | null, unavailable = false) {
     return <>
@@ -26,7 +27,7 @@ export default function EventDetailInfoRows({ event }: { event: Event }) {
   return <section aria-label="活動資訊" className="flex flex-col">
     <div className={rowClass}>{content(<CalendarDays className="h-[22px] w-[22px]" strokeWidth={1.8} />, date.key, date.main, date.sub)}</div>
     {venue && <div className={rowClass}>{content(<MapPin className="h-[22px] w-[22px]" strokeWidth={1.8} />, '地點', venue.main, venue.sub)}</div>}
-    {ticket.href ? <a href={ticket.href} target="_blank" rel="noopener noreferrer" aria-label="官方售票：以官方連結為準（另開新分頁）"
+    {ticket.href ? <a href={ticket.href} target="_blank" rel="noopener noreferrer" aria-label={`${ticket.main}：${ticket.sub}（另開新分頁）`}
       className={`${rowClass} hover:bg-white/[0.03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white`}>
       {ticketContent}<ExternalLink aria-hidden="true" className="ml-auto h-4 w-4 flex-none text-white/40" />
     </a> : <div className={rowClass}>{ticketContent}</div>}

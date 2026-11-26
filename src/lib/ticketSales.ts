@@ -163,6 +163,47 @@ export function ticketSaleStatus(sale: Pick<TicketSale, 'startsAt' | 'endsAt'> &
   return { status: 'open', label: '進行中' }
 }
 
+/** 前台列表狀態順序：進行中／未開賣／已開始／未公布 在前，已結束在後。後台仍用 sortTicketSales。 */
+const DISPLAY_STATUS_ORDER: TicketSaleStatus[] = ['open', 'upcoming', 'started', 'unknown', 'ended']
+
+/** 前台顯示排序：先依狀態分組，同一狀態內再依開賣時間（同 sortTicketSales）。 */
+export function sortTicketSalesForDisplay<T extends Pick<TicketSale, 'startsAt' | 'endsAt' | 'stage' | 'label'>>(
+  sales: readonly T[],
+  now: Date = new Date(),
+): T[] {
+  const byStatus: Record<TicketSaleStatus, T[]> = { open: [], upcoming: [], started: [], unknown: [], ended: [] }
+  for (const sale of sales) byStatus[ticketSaleStatus(sale, now).status].push(sale)
+  return DISPLAY_STATUS_ORDER.flatMap((status) => sortTicketSales(byStatus[status]))
+}
+
+/** 把已結束的列分開，方便前台把進行中／未開賣先列出、已結束預設收合。 */
+export function partitionTicketSalesForDisplay<T extends Pick<TicketSale, 'startsAt' | 'endsAt' | 'stage' | 'label'>>(
+  sales: readonly T[],
+  now: Date = new Date(),
+): { active: T[]; ended: T[] } {
+  const sorted = sortTicketSalesForDisplay(sales, now)
+  return {
+    active: sorted.filter((sale) => ticketSaleStatus(sale, now).status !== 'ended'),
+    ended: sorted.filter((sale) => ticketSaleStatus(sale, now).status === 'ended'),
+  }
+}
+
+/** 已結束區塊收合標題。全是預購時用「已結束的優先購（N）」；否則用「已結束的售票階段（N）」。 */
+export function endedTicketSalesToggleLabel(ended: ReadonlyArray<Pick<TicketSale, 'stage'>>): string | null {
+  if (ended.length === 0) return null
+  const title = ended.every((sale) => sale.stage === 'presale') ? '已結束的優先購' : '已結束的售票階段'
+  return `${title}（${ended.length}）`
+}
+
+/** 活動層售票摘要：有進行中的一般購票時回「一般購票進行中」；不要因預購已結束就把整場寫成已結束。 */
+export function ticketSalesHeadline(
+  sales: ReadonlyArray<Pick<TicketSale, 'stage' | 'startsAt' | 'endsAt'>>,
+  now: Date = new Date(),
+): string | null {
+  const hasOpenGeneral = sales.some((sale) => sale.stage === 'general' && ticketSaleStatus(sale, now).status === 'open')
+  return hasOpenGeneral ? '一般購票進行中' : null
+}
+
 /** 卡片徽章：取「開賣時間在未來」中最近的一列；沒有就回 null（不顯示空徽章）。 */
 export function nextTicketSaleBadge(startsAt: ReadonlyArray<string | null | undefined> | null | undefined, now: Date = new Date()): string | null {
   const t = now.getTime()
