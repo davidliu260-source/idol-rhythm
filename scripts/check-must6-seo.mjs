@@ -147,7 +147,7 @@ test('公開與帳號頁接上 metadata，示範活動設為 noindex', () => {
 })
 
 test('分享圖路由提供 1200×630 PNG，使用本地授權字型與幾何圖形', () => {
-  assert.equal(new URL('/opengraph-image', SITE_URL).href, 'https://idol-rhythm.vercel.app/opengraph-image')
+  assert.equal(new URL('/opengraph-image', SITE_URL).href, `${SITE_URL}/opengraph-image`)
   for (const route of ['', 'idols/[slug]/', 'events/[id]/']) {
     const og = read(`src/app/${route}opengraph-image.tsx`)
     assert.match(og, /size = \{ width: 1200, height: 630 \}/)

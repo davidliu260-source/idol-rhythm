@@ -3,8 +3,33 @@ import { getEventOfficialNoticeUrl } from '../officialNotice'
 import { formatTaipeiDateLabel, toDateKey } from '../taipeiDate'
 import type { Event, Idol } from '../types'
 
-// 更換正式網域時，只要修改這一行。
-export const SITE_URL = 'https://idol-rhythm.vercel.app'
+// 正式站公開網址。未設 NEXT_PUBLIC_SITE_URL 時預設 https://idolrhythm.com。
+// 預覽部署若未另設此變數，canonical、og:url、sitemap、robots 會指向正式網域，這是刻意的。
+// 分享圖（og:image／twitter:image）在 Vercel 預覽部署時，Next.js 仍可能改用預覽主機，這是框架行為。
+// 不要把這個變數設成預覽主機：預覽網址不該寫進 canonical 與搜尋結果。
+export const DEFAULT_SITE_URL = 'https://idolrhythm.com'
+
+function isAllowedHostname(hostname: string): boolean {
+  if (hostname === 'localhost' || hostname.endsWith('.localhost')) return true
+  return /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/i.test(hostname)
+}
+
+export function getSiteUrl(raw: string | undefined = process.env.NEXT_PUBLIC_SITE_URL): string {
+  const trimmed = raw?.trim() ?? ''
+  if (!trimmed) return DEFAULT_SITE_URL
+  const hasScheme = /^https?:\/\//i.test(trimmed)
+  if (!hasScheme && /[@$\\]/.test(trimmed)) return DEFAULT_SITE_URL
+  try {
+    const url = new URL(hasScheme ? trimmed : `https://${trimmed}`)
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return DEFAULT_SITE_URL
+    if (!isAllowedHostname(url.hostname)) return DEFAULT_SITE_URL
+    return url.origin
+  } catch {
+    return DEFAULT_SITE_URL
+  }
+}
+
+export const SITE_URL = getSiteUrl()
 export const SITE_NAME = '星動時刻 Idol Rhythm'
 export const DEFAULT_TITLE = `${SITE_NAME}｜韓流偶像台灣行程`
 export const DEFAULT_DESCRIPTION = '整理韓流偶像在台灣的演唱會、見面會、售票與官方活動行程，方便查閱近期公開場次。資料來自官方與可信媒體等公開資訊，活動日期、場地及入場資訊以主辦公告為準。'
