@@ -71,11 +71,21 @@ async function getAdminEvent(id: string): Promise<AdminEventDetail | null> {
 
   const { data, error } = await supabase
     .from('events')
-    .select('*, idols(slug), event_sources(id, event_id, level, label, type, url, created_at)')
+    .select('*, idols!events_idol_id_fkey(slug), event_sources(id, event_id, level, label, type, url, created_at)')
     .eq('id', id)
     .single()
 
-  if (error || !data) return null
+  if (error || !data) {
+    if (error) {
+      console.error('[admin/events/detail] events query failed', {
+        code: error.code ?? null,
+        message: error.message ?? null,
+        details: error.details ?? null,
+        hint: error.hint ?? null,
+      })
+    }
+    return null
+  }
 
   const row = data as {
     id: string; idol_id: string; idol_name: string; title: string

@@ -91,11 +91,21 @@ async function getEventForEdit(id: string): Promise<EventRow | null> {
 
   const { data, error } = await supabase
     .from('events')
-    .select('*, idols(id), event_sources(id, label, type, url, created_at)')
+    .select('*, idols!events_idol_id_fkey(id), event_sources(id, label, type, url, created_at)')
     .eq('id', id)
     .single()
 
-  if (error || !data) return null
+  if (error || !data) {
+    if (error) {
+      console.error('[admin/events/edit] events query failed', {
+        code: error.code ?? null,
+        message: error.message ?? null,
+        details: error.details ?? null,
+        hint: error.hint ?? null,
+      })
+    }
+    return null
+  }
   return data as EventRow
 }
 

@@ -114,7 +114,7 @@ check('活動按鈕點擊範圍、分開的連結及時間軸選項對比', () =
 
 check('行程查詢帶入原始團色，前台原始碼無舊取色函式或固定紫色回退', () => {
   const query = read('src/lib/supabase/events.ts')
-  const joins = [...query.matchAll(/idols(?:!inner)?\(([^)]*)\)/g)]
+  const joins = [...query.matchAll(/idols(?:!(?:[A-Za-z0-9_]+))*\(([^)]*)\)/g)]
   assert.equal(joins.length, 2)
   for (const [, select] of joins) {
     assert.deepEqual(select.split(',').map(s => s.trim()), ['slug', 'avatar_url', 'color'])
