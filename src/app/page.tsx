@@ -13,6 +13,7 @@ import { countTomorrowTickets, getDaysUntil, getHomeSubtitleClauses, selectNextE
 import HomeDateLabel from '@/components/HomeDateLabel'
 import StaleDayGuard from '@/components/StaleDayGuard'
 import HomeNotificationBell from '@/components/HomeNotificationBell'
+import HomeAccountButton from '@/components/HomeAccountButton'
 import HomePersonalized from '@/components/HomePersonalized'
 import HomeFollowedIdols from '@/components/HomeFollowedIdols'
 import HomeUpcomingList from '@/components/HomeUpcomingList'
@@ -58,10 +59,13 @@ export default async function HomePage() {
         <StaleDayGuard generatedDayKey={taipeiToday(now)} />
         <header>
           <div className="flex items-center justify-between gap-4">
-            <p className="text-[11px] font-extrabold uppercase tracking-[0.32em] text-white/60">
+            <p className="min-w-0 text-[11px] font-extrabold uppercase tracking-[0.32em] text-white/60">
               IDOL <span className="text-[#ff2d95]">·</span> RHYTHM
             </p>
-            <HomeNotificationBell />
+            <div className="flex flex-shrink-0 items-center gap-2">
+              <HomeNotificationBell />
+              <HomeAccountButton />
+            </div>
           </div>
           <div className="mt-6">
             <HomeDateLabel initialLabel={dateStr} />

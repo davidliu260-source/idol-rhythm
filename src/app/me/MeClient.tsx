@@ -169,13 +169,14 @@ export default function MeClient({
 
           <div className="mt-5 rounded-[22px] border border-white/8 bg-white/[0.035] px-4 py-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full border border-white/8 bg-[linear-gradient(135deg,rgba(255,105,180,0.38),rgba(124,58,237,0.42))] text-xl font-black text-white">
+              <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full border border-white/8 bg-[linear-gradient(135deg,rgba(255,105,180,0.38),rgba(124,58,237,0.42))] text-xl font-black text-white">
                 {(user.email ?? 'I').slice(0, 1).toUpperCase()}
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-white">帳號</p>
                 <p className="mt-1 break-all text-xs text-white/56">{user.email ?? '—'}</p>
               </div>
+              <SignOutButton compact />
             </div>
           </div>
         </div>
@@ -534,7 +535,7 @@ function MenuRow({
   )
 }
 
-function SignOutButton() {
+function SignOutButton({ compact = false }: { compact?: boolean }) {
   const [submitting, setSubmitting] = useState(false)
 
   async function handleSignOut() {
@@ -551,7 +552,11 @@ function SignOutButton() {
       type="button"
       onClick={handleSignOut}
       disabled={submitting}
-      className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.045] px-4 py-3 text-sm font-medium text-white/70 transition-colors hover:text-white disabled:opacity-60"
+      className={
+        compact
+          ? 'inline-flex min-h-11 flex-shrink-0 items-center justify-center gap-1.5 rounded-full border border-white/10 bg-white/[0.045] px-3 text-sm font-medium text-white/70 transition-colors hover:text-white disabled:opacity-60'
+          : 'inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.045] px-4 py-3 text-sm font-medium text-white/70 transition-colors hover:text-white disabled:opacity-60'
+      }
     >
       {submitting ? (
         <Loader2 className="h-4 w-4 animate-spin" />
