@@ -196,8 +196,8 @@ test('069 grants only the reason column and protected paths match the branch poi
     ':(exclude)src/lib/crawlers/jypNotice.ts', ':(exclude)src/lib/crawlers/runActiveCrawlerSources.ts', ':(exclude)src/lib/crawlers/runJypNoticeFetcher.ts', ':(exclude)src/lib/crawlers/runJypScheduleFetcher.ts',
     // T35 只放行 migration 073 與林口→桃園
     ':(exclude)supabase/migrations/073_t35_ticket_sales_country_time_status.sql', ':(exclude)src/lib/crawlers/taiwanEventCleanup.ts',
-    // Must #12：公開 ICS 快取標頭（私人／token ICS 不放行）
-    ':(exclude)src/app/api/ics/idols', ':(exclude)src/lib/ics/publicIcsCache.ts',
+    // Must #12：公開 ICS 快取標頭、ICS 往前讀 31 天（日期下限）（私人／token ICS 不放行）
+    ':(exclude)src/app/api/ics/idols', ':(exclude)src/lib/ics/publicIcsCache.ts', ':(exclude)src/lib/ics/feedLookback.ts', ':(exclude)src/lib/ics/supabaseFeedStore.ts',
     // MUST #10（爬蟲故障提醒）只放行：健康模組、狀態寫入、各 fetcher 傳入本輪筆數
     ':(exclude)src/lib/crawlers/crawlerSource.ts', ':(exclude)src/lib/crawlers/crawlerSourceAlerts.ts', ':(exclude)src/lib/crawlers/runBlackpinkFetcher.ts', ':(exclude)src/lib/crawlers/runGenericWebpageFetcher.ts', ':(exclude)src/lib/crawlers/runKpopofficialConcertsFetcher.ts', ':(exclude)src/lib/crawlers/runSmtownNoticeFetcher.ts', ':(exclude)src/lib/crawlers/runVenueCalendarFetcher.ts', ':(exclude)src/lib/crawlers/runWakeoneNoticeFetcher.ts', ':(exclude)src/lib/crawlers/runYgArtistScheduleFetcher.ts', ':(exclude)src/lib/crawlers/runYgNoticeFetcher.ts', ':(exclude)src/lib/crawlers/runYoutubeOfficialChannelFetcher.ts',
   ]

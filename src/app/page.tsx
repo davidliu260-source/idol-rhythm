@@ -1,12 +1,17 @@
-export const dynamic = 'force-dynamic'
+// Must #12：ISR，最多 5 分鐘重新產生一次。這頁不可以用 cookies()／headers()／
+// searchParams 或任何登入資料；個人化內容（通知鈴、我追蹤的、我的星動時刻）
+// 全部在 client 元件裡用瀏覽器的登入狀態取得。
+export const revalidate = 300
 
-import { formatTaipeiDateLabel, isEventOngoing } from '@/lib/taipeiDate'
+import { formatTaipeiDateLabel, isEventOngoing, taipeiToday } from '@/lib/taipeiDate'
 import { countUpcomingByCategory } from '@/lib/upcomingFilters'
 import { HomeCategoryFilterProvider, HomeCategoryFilterBar, HomeCategoryLegend } from '@/components/HomeCategoryFilter'
 import { Fragment } from 'react'
 import { getPublishedEvents, getActiveIdols } from '@/lib/supabase/events'
 import { EVENT_CATEGORY_ORDER, getEventCategory } from '@/lib/eventCategory'
 import { countTomorrowTickets, getDaysUntil, getHomeSubtitleClauses, selectNextEvent } from '@/lib/nextEventHero'
+import HomeDateLabel from '@/components/HomeDateLabel'
+import StaleDayGuard from '@/components/StaleDayGuard'
 import HomeNotificationBell from '@/components/HomeNotificationBell'
 import HomePersonalized from '@/components/HomePersonalized'
 import HomeFollowedIdols from '@/components/HomeFollowedIdols'
@@ -23,8 +28,8 @@ export const metadata = { alternates: { canonical: '/' } }
 
 export default async function HomePage() {
   const [publishedEvents, idols] = await Promise.all([
-    getPublishedEvents(),
-    getActiveIdols(),
+    getPublishedEvents({ throwOnQueryError: true }),
+    getActiveIdols({ throwOnQueryError: true }),
   ])
   const now = new Date()
   const events = listCurrentEvents(publishedEvents, now)
@@ -50,6 +55,7 @@ export default async function HomePage() {
 
       <div className="relative mx-auto flex w-full max-w-[520px] flex-col gap-5 px-4 pt-[18px]">
         <HomeCategoryFilterProvider>
+        <StaleDayGuard generatedDayKey={taipeiToday(now)} />
         <header>
           <div className="flex items-center justify-between gap-4">
             <p className="text-[11px] font-extrabold uppercase tracking-[0.32em] text-white/60">
@@ -58,7 +64,7 @@ export default async function HomePage() {
             <HomeNotificationBell />
           </div>
           <div className="mt-6">
-            <p className="text-[14px] leading-[1.5] text-[#a09db4]">{dateStr}</p>
+            <HomeDateLabel initialLabel={dateStr} />
             <h1 className="mt-1 text-[44px] font-black leading-[1.1] tracking-[-0.01em] text-white">
               今日活動
             </h1>

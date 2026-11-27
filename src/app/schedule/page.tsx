@@ -1,20 +1,24 @@
 import { pageMetadata } from '@/lib/seo/metadata'
 
-export const dynamic = 'force-dynamic'
+// Must #12：ISR，最多 5 分鐘重新產生一次；不可使用 cookies()／headers()／登入資料。
+export const revalidate = 300
 
 import { Calendar } from 'lucide-react'
 import { getPublishedEvents } from '@/lib/supabase/events'
 import { listCurrentEvents } from '@/lib/upcomingEvents'
+import StaleDayGuard from '@/components/StaleDayGuard'
+import { taipeiToday } from '@/lib/taipeiDate'
 import ScheduleClient from './ScheduleClient'
 import { PAGE_HERO_SHELL } from './scheduleTheme'
 
 export const metadata = pageMetadata('/schedule', '偶像活動行事曆', '查看近期在台灣與線上的偶像演唱會、見面會、售票及直播行程。活動資訊整理自官方與可信媒體等公開來源，場次日期、開始時間、地點及售票方式以主辦公告為準。')
 
 export default async function SchedulePage() {
-  const events = listCurrentEvents(await getPublishedEvents())
+  const events = listCurrentEvents(await getPublishedEvents({ throwOnQueryError: true }))
 
   return (
     <div className="relative flex flex-col gap-0 overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(255,92,178,0.12),transparent_24%),linear-gradient(180deg,#140f18_0%,#0a0910_100%)] pt-8 pb-6">
+      <StaleDayGuard generatedDayKey={taipeiToday()} />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_9%,rgba(255,95,177,0.1),transparent_18%)]" />
 
       <div className="px-3">

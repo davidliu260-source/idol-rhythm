@@ -133,7 +133,7 @@ check('公開 ICS 拿掉 force-dynamic，活動網址用 SITE_URL，並宣告 1 
   assert.doesNotMatch(code, /force-static/)
   assert.match(code, /SITE_URL/)
   assert.doesNotMatch(code, /request\.url/)
-  assert.match(code, /getPublishedEvents\(\{\s*throwOnError:\s*true\s*\}\)/)
+  assert.match(code, /getPublishedEvents\(\{\s*throwOnError:\s*true,\s*lookbackDays:\s*ICS_FEED_LOOKBACK_DAYS\s*\}\)/)
   assert.equal(PUBLIC_ICS_REVALIDATE_SECONDS, 3600)
   assert.equal(PUBLIC_ICS_STALE_WHILE_REVALIDATE_SECONDS, 86400)
 })

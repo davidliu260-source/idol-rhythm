@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { isFeedAlarm, type FeedStore } from './followsFeed'
+import { ICS_FEED_LOOKBACK_DAYS } from './feedLookback'
 
 export function createSupabaseFeedStore({
   client, now, token, getPublishedEvents,
@@ -7,7 +8,7 @@ export function createSupabaseFeedStore({
   client: SupabaseClient
   now: Date
   token: string
-  getPublishedEvents: (options: { throwOnError: boolean }) => ReturnType<FeedStore['publishedEvents']>
+  getPublishedEvents: (options: { throwOnError: boolean; lookbackDays: number | null }) => ReturnType<FeedStore['publishedEvents']>
 }): FeedStore {
   return {
     async findByToken(token) {
@@ -38,7 +39,7 @@ export function createSupabaseFeedStore({
       if (idolError || !idols) throw new Error('Idols lookup failed')
       return idols.map(({ slug }) => slug)
     },
-    publishedEvents: () => getPublishedEvents({ throwOnError: true }),
+    publishedEvents: () => getPublishedEvents({ throwOnError: true, lookbackDays: ICS_FEED_LOOKBACK_DAYS }),
     async touch(userId) {
       const { error } = await client
         .from('calendar_feed_tokens')

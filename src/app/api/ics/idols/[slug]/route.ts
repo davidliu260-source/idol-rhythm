@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 import { buildIcs } from '@/lib/ics/buildIcs'
 import { PUBLIC_ICS_UNCACHEABLE_HEADERS, publicIdolIcsHeaders } from '@/lib/ics/publicIcsCache'
 import { SITE_URL } from '@/lib/seo/metadata'
+import { ICS_FEED_LOOKBACK_DAYS } from '@/lib/ics/feedLookback'
 import { getIdolBySlug, getPublishedEvents } from '@/lib/supabase/events'
 
 // 1 hour CDN cache via Cache-Control + CDN-Cache-Control (Must #12).
@@ -23,7 +24,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
 
   try {
     const cutoffDate = addDaysToKey(taipeiToday(), -30)
-    const events = (await getPublishedEvents({ throwOnError: true })).filter(
+    const events = (await getPublishedEvents({ throwOnError: true, lookbackDays: ICS_FEED_LOOKBACK_DAYS })).filter(
       (event) =>
         event.idolId === slug &&
         CALENDAR_NOTIFY_TRUST_LEVELS.some(level => level === event.source.level) &&
