@@ -145,8 +145,10 @@ check('核對受保護路徑與分支起點，以及 migration 編號（067 之�
   autoTranslateAllowed.push(':(exclude)src/lib/crawlers/crawlerSource.ts', ':(exclude)src/lib/crawlers/crawlerSourceAlerts.ts', ':(exclude)src/lib/crawlers/runBlackpinkFetcher.ts', ':(exclude)src/lib/crawlers/runGenericWebpageFetcher.ts', ':(exclude)src/lib/crawlers/runKpopofficialConcertsFetcher.ts', ':(exclude)src/lib/crawlers/runSmtownNoticeFetcher.ts', ':(exclude)src/lib/crawlers/runVenueCalendarFetcher.ts', ':(exclude)src/lib/crawlers/runWakeoneNoticeFetcher.ts', ':(exclude)src/lib/crawlers/runYgArtistScheduleFetcher.ts', ':(exclude)src/lib/crawlers/runYgNoticeFetcher.ts', ':(exclude)src/lib/crawlers/runYoutubeOfficialChannelFetcher.ts', ':(exclude)src/app/api/admin/crawler-alerts/route.ts')
   // Must #12：公開 ICS 快取標頭、ICS 往前讀 31 天（日期下限）與 helper（私人／token ICS 不放行）
   const must12Allowed = [':(exclude)src/app/atlas/page.tsx', ':(exclude)src/app/api/ics/idols', ':(exclude)src/lib/ics/publicIcsCache.ts', ':(exclude)src/lib/ics/feedLookback.ts', ':(exclude)src/lib/ics/supabaseFeedStore.ts']
-  execFileSync('git', ['diff', '--quiet', base, '--', ...protectedPaths, ...must3Allowed, b2v2Allowed, emptyShellAllowed, ...autoTranslateAllowed, ...t35Allowed, ...must12Allowed], { cwd })
-  const untracked = execFileSync('git', ['ls-files', '--others', '--exclude-standard', '--', ...protectedPaths, ...must3Allowed, emptyShellAllowed, ...autoTranslateAllowed, ...t35Allowed, ...must12Allowed], { cwd, encoding: 'utf8' })
+  // 函式區域改 syd1：只放行 vercel.json（crons 不變，由 check-vercel-region-syd1.mjs 鎖住）
+  const syd1Allowed = ':(exclude)vercel.json'
+  execFileSync('git', ['diff', '--quiet', base, '--', ...protectedPaths, ...must3Allowed, b2v2Allowed, emptyShellAllowed, ...autoTranslateAllowed, ...t35Allowed, ...must12Allowed, syd1Allowed], { cwd })
+  const untracked = execFileSync('git', ['ls-files', '--others', '--exclude-standard', '--', ...protectedPaths, ...must3Allowed, emptyShellAllowed, ...autoTranslateAllowed, ...t35Allowed, ...must12Allowed, syd1Allowed], { cwd, encoding: 'utf8' })
   assert.equal(untracked, '', '受保護路徑出現未追蹤檔案')
   for (const file of readdirSync(new URL('supabase/migrations/', root), { withFileTypes: true })) {
     const number = file.name.match(/^\d+/)?.[0]

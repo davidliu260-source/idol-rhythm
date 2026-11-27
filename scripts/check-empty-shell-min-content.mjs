@@ -190,6 +190,8 @@ test('069 grants only the reason column and protected paths match the branch poi
   const protectedPaths = [
     'src/lib/crawlers', 'src/app/api/cron', 'src/app/api/ics', 'src/lib/ics',
     'src/lib/reminderDispatch.ts', 'package.json', 'vercel.json',
+    // 函式區域改 syd1：只放行 vercel.json（crons 不變，由 check-vercel-region-syd1.mjs 鎖住）
+    ':(exclude)vercel.json',
     'supabase/migrations', `:(exclude)${migration}`,
     ':(exclude)supabase/migrations/070_event_translation_attempts.sql', ':(exclude)supabase/migrations/071_event_error_reports.sql', ':(exclude)supabase/migrations/072_crawler_source_alerts.sql', ':(exclude)src/app/api/cron/sync-candidates/route.ts',
     // MUST #10（JYP 改用公告頁）只放行這幾支爬蟲檔
