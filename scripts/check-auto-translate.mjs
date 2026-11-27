@@ -455,6 +455,8 @@ test('受保護路徑維持與 origin/main 的 merge base 一致', () => {
   const paths = [
     'src/lib/crawlers', 'src/lib/ics', 'src/app/api/ics', 'src/app/api/cron',
     'src/lib/reminderDispatch.ts', 'supabase/migrations', 'package.json', 'vercel.json',
+    // 函式區域改 syd1：只放行 vercel.json（crons 不變，由 check-vercel-region-syd1.mjs 鎖住）
+    ':(exclude)vercel.json',
     'src/lib/autoPublish/minimumContent.ts', 'src/lib/autoPublish/evaluateCandidate.ts', 'src/lib/autoPublish/runAutoPublish.ts',
     'src/lib/ai/generateChineseDisplay.ts', 'src/lib/ai/parseCandidate.ts',
     `:(exclude)${routePath}`, `:(exclude)${migrationPath}`,
