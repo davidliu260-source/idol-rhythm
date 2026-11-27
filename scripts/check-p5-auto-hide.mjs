@@ -33,7 +33,7 @@ test('公開列表以台北午夜判定結束，排除無效日期並保留原�
 
 test('行程頁的計數、搜尋、時間軸與月曆皆使用公開篩選後的資料', () => {
   const page = read('src/app/schedule/page.tsx')
-  assert.match(page, /const events = listCurrentEvents\(await getPublishedEvents\(\)\)/)
+  assert.match(page, /const events = listCurrentEvents\(await getPublishedEvents\(\{ throwOnQueryError: true \}\)\)/)
   assert.match(page, /共 \{events\.length\}/)
   assert.match(page, /<ScheduleClient events=\{events\}/)
 
@@ -61,7 +61,7 @@ test('偶像頁保留兩格統計，圖鑑和活動詳情保留已結束活動�
   assert.match(idol, /<StatTile label="即將到來"/)
   assert.match(idol, /<StatTile\s+label="成員"/)
   assert.doesNotMatch(idol, /已結束|最近 10 筆|\bpast\b/)
-  assert.match(read('src/app/atlas/page.tsx'), /const events = await getPublishedEvents\(\)/)
+  assert.match(read('src/app/atlas/page.tsx'), /const events = await getPublishedEvents\(\{ lookbackDays: null \}\)/)
   assert.match(read('src/app/atlas/AtlasClient.tsx'), /title="已結束"/)
   assert.match(read('src/app/events/[id]/page.tsx'), /await getEventDetail\(id\)/)
   const eventData = read('src/app/events/[id]/data.ts')

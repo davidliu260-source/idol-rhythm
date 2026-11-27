@@ -212,7 +212,7 @@ await check('Supabase store 以 token 查詢、對應啟用偶像 UUID 並更新
   const feedStore = createSupabaseFeedStore({
     client, now, token,
     async getPublishedEvents(options) {
-      assert.deepEqual(options, { throwOnError: true })
+      assert.deepEqual(options, { throwOnError: true, lookbackDays: 31 })
       return [event('active-event'), event('inactive-event', { idolId: 'inactive' })]
     },
   })
@@ -325,7 +325,7 @@ await check('單一偶像 ICS 篩選邏輯不變，只改 Must #12 快取標頭'
     .filter((line) => !/^\s*\/\//.test(line))
     .join('\n')
   assert.match(source, /getIdolBySlug/)
-  assert.match(source, /getPublishedEvents\(\{\s*throwOnError:\s*true\s*\}\)/)
+  assert.match(source, /getPublishedEvents\(\{\s*throwOnError:\s*true,\s*lookbackDays:\s*ICS_FEED_LOOKBACK_DAYS\s*\}\)/)
   assert.match(source, /event\.idolId === slug/)
   assert.match(source, /CALENDAR_NOTIFY_TRUST_LEVELS/)
   assert.match(source, /addDaysToKey\(taipeiToday\(\),\s*-30\)/)

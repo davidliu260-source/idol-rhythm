@@ -3,6 +3,7 @@ import { findOfficialNoticeUrl } from '../officialNotice'
 import type { Event, EventType, EventSubType, EventStatus, EventSource, TrustLevel, SourceType, Idol, GenderType, IdolCategory, GroupOrSolo } from '../types'
 import { getSupabaseClient } from './client'
 import { rowToTicketSale, sortTicketSales, type TicketSale, type TicketSaleRow } from '../ticketSales'
+import { addDaysToKey, taipeiToday } from '../taipeiDate'
 
 // ── Supabase row shapes (snake_case, mirrors the DB schema) ───────────────────
 
@@ -31,7 +32,7 @@ interface SupabaseEventRow {
   translation_status: string | null
   country: string
   country_flag: string
-  /** T35（migration 073）。用 select('*') 讀，073 未套用時欄位不存在 → undefined。 */
+  /** T35（migration 073）。getPublishedEvents 的欄位清單明列這兩欄，需要 073 已套用（正式庫已套用）。 */
   country_code?: string | null
   time_status?: string | null
   description: string | null
@@ -173,26 +174,92 @@ function rowToEventSource(row: SupabaseEventSourceRow): EventSource {
 // ── Public read functions ─────────────────────────────────────────────────────
 
 /**
+ * Must #12：getPublishedEvents 只選 rowToEvent 真的會用到的欄位（原本 select('*')）。
+ * 這份清單要和 SupabaseEventRow／rowToEvent 保持一致；新增前台要顯示的欄位時，
+ * 要同時加在這裡，scripts/check-must12-hot-pages-isr.mjs 會核對。
+ * 其中 country_code、time_status 來自 migration 073（正式庫已套用）。
+ */
+export const PUBLISHED_EVENT_COLUMNS = [
+  'id', 'idol_id', 'idol_name', 'title', 'type', 'sub_type', 'status', 'trust_level',
+  'date', 'start_date', 'end_date', 'date_label', 'time',
+  'location', 'location_name_zh', 'city', 'venue_name', 'address', 'map_url',
+  'display_title_zh', 'display_summary_zh', 'translation_status',
+  'country', 'country_flag', 'country_code', 'time_status',
+  'description', 'tags', 'ticket_url', 'stream_url', 'published_at', 'updated_at',
+] as const
+
+/**
+ * 預設日期下限：只讀「台北今天往前 1 天」之後還沒結束的活動，已結束很久的不再整批搬回來。
+ * 多留 1 天是給時區與 ISR 快取（最多 5 分鐘）的緩衝；前台頁面仍會用 listCurrentEvents 精確過濾。
+ */
+export const PUBLISHED_EVENTS_DEFAULT_LOOKBACK_DAYS = 1
+
+/**
+ * 日期下限條件（PostgREST or 語法）。結束日的判定和前台一致：end_date ?? start_date ?? date，
+ * 所以跨多天、早就開始但還沒結束的活動會留下來。三個欄位都是 date 型別，直接用 YYYY-MM-DD 比較。
+ */
+export function buildPublishedEventsDateFloorFilter(floorKey: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(floorKey)) throw new Error('Invalid date floor')
+  return [
+    `end_date.gte.${floorKey}`,
+    `and(end_date.is.null,start_date.gte.${floorKey})`,
+    `and(end_date.is.null,start_date.is.null,date.gte.${floorKey})`,
+  ].join(',')
+}
+
+export interface PublishedEventsOptions {
+  /** 查詢失敗或沒有 client 都丟錯（ICS、sitemap 用，要區分「沒活動」和「讀不到」）。 */
+  throwOnError?: boolean
+  /**
+   * 只有「查詢本身失敗」才丟錯；沒設定 Supabase（例如沒有環境變數的本機建置）仍回空陣列。
+   * ISR 頁面用：重新產生頁面時讀庫失敗就丟錯，Next 會繼續提供上一份舊頁面，
+   * 而不是把空清單快取 5 分鐘。
+   */
+  throwOnQueryError?: boolean
+  /**
+   * 往前看幾天（台北今天往前算）。預設 1 天。傳 null 代表不設下限、讀全部（如 /atlas 的已結束活動）。
+   * 需要較長歷史的呼叫端（ICS 要 30 天）要明確傳入。
+   */
+  lookbackDays?: number | null
+  /** 測試用。 */
+  now?: Date
+}
+
+/**
  * Returns published, non-cancelled events at the public trust levels.
  * An unavailable client or failed query returns an empty array by default.
  * Use throwOnError when a query failure must be distinguished from an empty result.
+ * By default only events that have not ended before (Taipei today - 1 day) are read;
+ * pass lookbackDays (or null for no floor) when past events are needed.
  */
-export async function getPublishedEvents({ throwOnError = false } = {}): Promise<Event[]> {
+export async function getPublishedEvents({
+  throwOnError = false,
+  throwOnQueryError = false,
+  lookbackDays = PUBLISHED_EVENTS_DEFAULT_LOOKBACK_DAYS,
+  now = new Date(),
+}: PublishedEventsOptions = {}): Promise<Event[]> {
+  if (lookbackDays !== null && (!Number.isInteger(lookbackDays) || lookbackDays < 0)) {
+    throw new RangeError('lookbackDays must be a non-negative integer or null')
+  }
   const supabase = getSupabaseClient()
   if (!supabase) {
     if (throwOnError) throw new Error('Published events client is unavailable')
     return []
   }
 
+  let query = supabase
+    .from('events')
+    .select(`${PUBLISHED_EVENT_COLUMNS.join(', ')}, idols!events_idol_id_fkey!inner(slug, avatar_url, color), event_sources(id, event_id, level, label, type, url)`)
+    .eq('is_published', true)
+    .in('trust_level', [...PUBLIC_TRUST_LEVELS])
+    .neq('status', 'cancelled')
+  if (lookbackDays !== null) {
+    query = query.or(buildPublishedEventsDateFloorFilter(addDaysToKey(taipeiToday(now), -lookbackDays)))
+  }
+
   const [{ data, error }, saleStarts] = await Promise.all([
-    supabase
-      .from('events')
-      .select('*, idols!events_idol_id_fkey!inner(slug, avatar_url, color), event_sources(id, event_id, level, label, type, url)')
-      .eq('is_published', true)
-      .in('trust_level', [...PUBLIC_TRUST_LEVELS])
-      .neq('status', 'cancelled')
-      .order('date', { ascending: true }),
-    getUpcomingTicketSaleStarts(),
+    query.order('date', { ascending: true }),
+    getUpcomingTicketSaleStarts(now),
   ])
 
   if (error || !data) {
@@ -204,11 +271,11 @@ export async function getPublishedEvents({ throwOnError = false } = {}): Promise
         hint: error.hint ?? null,
       })
     }
-    if (throwOnError) throw new Error('Published events query failed')
+    if (throwOnError || throwOnQueryError) throw new Error('Published events query failed')
     return []
   }
 
-  return (data as SupabaseEventRow[]).map((row) => {
+  return (data as unknown as SupabaseEventRow[]).map((row) => {
     const event = rowToEvent(row)
     const starts = saleStarts.get(row.id)
     return starts?.length ? { ...event, ticketSaleStartsAt: starts } : event
@@ -263,7 +330,7 @@ export async function getEventTicketSales(eventId: string): Promise<TicketSale[]
  * Returns all active idols.
  * Returns an empty array if Supabase is not configured or the query fails.
  */
-export async function getActiveIdols({ throwOnError = false } = {}): Promise<Idol[]> {
+export async function getActiveIdols({ throwOnError = false, throwOnQueryError = false } = {}): Promise<Idol[]> {
   const supabase = getSupabaseClient()
   if (!supabase) {
     if (throwOnError) throw new Error('Active idols client is unavailable')
@@ -277,7 +344,7 @@ export async function getActiveIdols({ throwOnError = false } = {}): Promise<Ido
     .order('name', { ascending: true })
 
   if (error || !data) {
-    if (throwOnError) throw new Error('Active idols query failed')
+    if (throwOnError || throwOnQueryError) throw new Error('Active idols query failed')
     return []
   }
 

@@ -12,7 +12,9 @@ import { getPublishedEvents } from '@/lib/supabase/events'
 
 export const dynamic = 'force-dynamic'
 
-const getEvents = cache(() => getPublishedEvents())
+// 城市是否存在要看全部活動（只剩已結束活動的海外城市仍回 200，並顯示空狀態），
+// 所以這頁不套預設日期下限，維持原行為。
+const getEvents = cache(() => getPublishedEvents({ lookbackDays: null }))
 
 type CityPageProps = { params: Promise<{ city: string }> }
 
