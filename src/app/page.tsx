@@ -8,6 +8,7 @@ import { getPublishedEvents, getActiveIdols } from '@/lib/supabase/events'
 import { EVENT_CATEGORY_ORDER, getEventCategory } from '@/lib/eventCategory'
 import { countTomorrowTickets, getDaysUntil, getHomeSubtitleClauses, selectNextEvent } from '@/lib/nextEventHero'
 import HomeNotificationBell from '@/components/HomeNotificationBell'
+import HomeAccountButton from '@/components/HomeAccountButton'
 import HomePersonalized from '@/components/HomePersonalized'
 import HomeFollowedIdols from '@/components/HomeFollowedIdols'
 import HomeUpcomingList from '@/components/HomeUpcomingList'
@@ -52,10 +53,13 @@ export default async function HomePage() {
         <HomeCategoryFilterProvider>
         <header>
           <div className="flex items-center justify-between gap-4">
-            <p className="text-[11px] font-extrabold uppercase tracking-[0.32em] text-white/60">
+            <p className="min-w-0 text-[11px] font-extrabold uppercase tracking-[0.32em] text-white/60">
               IDOL <span className="text-[#ff2d95]">·</span> RHYTHM
             </p>
-            <HomeNotificationBell />
+            <div className="flex flex-shrink-0 items-center gap-2">
+              <HomeNotificationBell />
+              <HomeAccountButton />
+            </div>
           </div>
           <div className="mt-6">
             <p className="text-[14px] leading-[1.5] text-[#a09db4]">{dateStr}</p>
