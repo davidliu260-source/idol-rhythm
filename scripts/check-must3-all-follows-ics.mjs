@@ -319,10 +319,23 @@ await check('空追蹤及 last_accessed_at 寫入失敗仍回 200', async () => 
   }
 })
 
-await check('單一偶像 route 檔案與 merge-base 相同', () => {
-  const route = 'src/app/api/ics/idols/[slug]/route.ts'
-  const base = git('merge-base', 'origin/main', 'HEAD').trim()
-  assert.equal(read(route), git('show', `${base}:${route}`))
+await check('單一偶像 ICS 篩選邏輯不變，只改 Must #12 快取標頭', () => {
+  const source = read('src/app/api/ics/idols/[slug]/route.ts')
+    .split('\n')
+    .filter((line) => !/^\s*\/\//.test(line))
+    .join('\n')
+  assert.match(source, /getIdolBySlug/)
+  assert.match(source, /getPublishedEvents\(\{\s*throwOnError:\s*true\s*\}\)/)
+  assert.match(source, /event\.idolId === slug/)
+  assert.match(source, /CALENDAR_NOTIFY_TRUST_LEVELS/)
+  assert.match(source, /addDaysToKey\(taipeiToday\(\),\s*-30\)/)
+  assert.match(source, /buildIcs\(idol\.name, events, SITE_URL\)/)
+  assert.match(source, /publicIdolIcsHeaders\(/)
+  assert.match(source, /status: 404, headers: PUBLIC_ICS_UNCACHEABLE_HEADERS/)
+  assert.match(source, /status: 503,\s*headers: PUBLIC_ICS_UNCACHEABLE_HEADERS/)
+  assert.match(source, /export const revalidate = 3600\b/)
+  assert.doesNotMatch(source, /force-dynamic/)
+  assert.doesNotMatch(source, /request\.url/)
 })
 
 await check('migration 068 只授權 service_role 且啟用 RLS', () => {

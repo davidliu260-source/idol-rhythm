@@ -64,15 +64,16 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   /**
-   * Run on every request except:
-   *   - Next.js internals (_next/static, _next/image)
-   *   - Common static files at the root
-   *   - API routes that have their own auth (admin guards, cron secret)
+   * Run on app pages (including /login, /me, /admin, /auth/*) so an
+   * expired session can be refreshed. Does NOT gate routes.
    *
-   * Keeping API routes out avoids double cookie writes when an admin
-   * action also calls supabase.auth on the server.
+   * Skip:
+   *   - Next.js internals (_next/static, _next/image)
+   *   - Static assets (images, fonts, favicon, manifest, robots, sitemap)
+   *     including /idol-marks/*.svg (Must #12: these were paying getUser())
+   *   - API routes (own auth / cron secret; also avoids double cookie writes)
    */
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|manifest.json|api/).*)',
+    '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|manifest.json|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|woff2?|ttf|otf|eot|txt|xml|json)$).*)',
   ],
 }

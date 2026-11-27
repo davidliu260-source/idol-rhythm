@@ -108,6 +108,8 @@ check('提醒、單一偶像 ICS 與既有 migrations 維持 merge-base 版本',
       ':(exclude)supabase/migrations/069_auto_publish_blocked_reason.sql',
       ':(exclude)supabase/migrations/070_event_translation_attempts.sql', ':(exclude)supabase/migrations/071_event_error_reports.sql', ':(exclude)supabase/migrations/072_crawler_source_alerts.sql', ':(exclude)src/app/api/cron/sync-candidates/route.ts',
       ':(exclude)supabase/migrations/073_t35_ticket_sales_country_time_status.sql',
+      // Must #12：公開 ICS 快取標頭
+      ':(exclude)src/app/api/ics/idols',
     ], { cwd: repoRoot }),
     'Protected paths differ from the merge-base with origin/main, or git diff failed',
   )
