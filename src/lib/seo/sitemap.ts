@@ -3,6 +3,7 @@ import { getEventOfficialNoticeUrl } from '../officialNotice'
 import { buildCityDirectory, cityHref } from '../cities'
 import type { Event, Idol } from '../types'
 import { listCurrentEvents } from '../upcomingEvents'
+import { LEGAL_PAGE_PATHS } from '../legal'
 import { SITE_URL } from './metadata'
 
 export function buildSitemapEntries({ idols, events, now }: {
@@ -17,7 +18,7 @@ export function buildSitemapEntries({ idols, events, now }: {
     entries.set(url, lastModified ? { url, lastModified } : { url })
   }
 
-  for (const path of ['/', '/schedule', '/idols', '/cities']) add(path)
+  for (const path of ['/', '/schedule', '/idols', '/cities', ...LEGAL_PAGE_PATHS]) add(path)
   for (const idol of idols) add(`/idols/${encodeURIComponent(idol.id)}`)
 
   const currentEvents = listCurrentEvents(events, now).filter(event => event.status !== 'cancelled')

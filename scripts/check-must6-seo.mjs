@@ -76,14 +76,15 @@ test('sitemap 收錄固定頁、偶像、有場次的城市及合格活動，網
     ],
   })
   const expectedPaths = [
-    '/', '/schedule', '/idols', '/cities', '/idols/test-group', cityHref('台北'), cityHref('首爾'),
+    '/', '/schedule', '/idols', '/cities', '/privacy', '/terms', '/disclaimer',
+    '/idols/test-group', cityHref('台北'), cityHref('首爾'),
     '/events/live', '/events/overseas', '/events/localized',
   ]
   const urls = entries.map(entry => entry.url)
   assert.deepEqual([...urls].sort(), expectedPaths.map(path => new URL(path, SITE_URL).href).sort())
   assert.equal(new Set(urls).size, urls.length)
   assert.equal(entries.find(entry => entry.url.endsWith('/events/live')).lastModified, event.publishedAt)
-  assert.equal(buildSitemapEntries({ idols: [], events: [], now }).length, 4)
+  assert.equal(buildSitemapEntries({ idols: [], events: [], now }).length, 7)
 })
 
 test('sitemap 使用公開查詢，查詢失敗時退回固定頁', () => {
