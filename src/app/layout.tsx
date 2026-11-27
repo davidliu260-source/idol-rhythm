@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import BottomNav from '@/components/BottomNav'
+import SiteFooter from '@/components/SiteFooter'
 import { AppStateProvider } from '@/lib/appState'
 import { DEFAULT_DESCRIPTION, DEFAULT_TITLE, SITE_NAME, SITE_URL } from '@/lib/seo/metadata'
 
@@ -31,7 +32,10 @@ export default function RootLayout({
     <html lang="zh-TW">
       <body className="bg-bg text-text-base min-h-screen">
         <AppStateProvider>
-          <main className="mx-auto max-w-md min-h-screen pb-28">{children}</main>
+          <main className="mx-auto max-w-md min-h-screen pb-28">
+            {children}
+            <SiteFooter />
+          </main>
           <BottomNav />
         </AppStateProvider>
         <Analytics />

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import clsx from 'clsx'
 import { Loader2, Mail, MailCheck, KeyRound, UserPlus } from 'lucide-react'
+import LegalLinks from '@/components/LegalLinks'
 import { getBrowserSupabaseClient } from '@/lib/supabase/browserClient'
 
 const PASSWORD_MIN = 8
@@ -177,24 +178,30 @@ export default function LoginForm({ nextPath }: { nextPath: string }) {
   // ── Magic link sent confirmation view ───────────────────────────────────
   if (magicLinkSent) {
     return (
-      <SentBanner
-        title="登入信已寄出"
-        body={<>請到 <span className="font-mono break-all">{email}</span> 收信，點擊信中的連結即可完成登入。</>}
-        hint="若沒收到，請檢查垃圾信件夾。連結通常 1 小時內有效。"
-        onReset={clearMessages}
-      />
+      <div className="flex flex-col gap-4">
+        <SentBanner
+          title="登入信已寄出"
+          body={<>請到 <span className="font-mono break-all">{email}</span> 收信，點擊信中的連結即可完成登入。</>}
+          hint="若沒收到，請檢查垃圾信件夾。連結通常 1 小時內有效。"
+          onReset={clearMessages}
+        />
+        <LegalLinks />
+      </div>
     )
   }
 
   // ── Signup confirmation view ────────────────────────────────────────────
   if (signupConfirmSent) {
     return (
-      <SentBanner
-        title="註冊確認信已寄出"
-        body={<>請到 <span className="font-mono break-all">{email}</span> 收信，點擊信中的確認連結後即可登入。</>}
-        hint="若 Supabase 後台關閉了「Confirm email」，會直接登入而不寄信。"
-        onReset={clearMessages}
-      />
+      <div className="flex flex-col gap-4">
+        <SentBanner
+          title="註冊確認信已寄出"
+          body={<>請到 <span className="font-mono break-all">{email}</span> 收信，點擊信中的確認連結後即可登入。</>}
+          hint="若 Supabase 後台關閉了「Confirm email」，會直接登入而不寄信。"
+          onReset={clearMessages}
+        />
+        <LegalLinks />
+      </div>
     )
   }
 
@@ -365,6 +372,7 @@ export default function LoginForm({ nextPath }: { nextPath: string }) {
           </form>
         )}
       </section>
+      <LegalLinks />
     </div>
   )
 }
