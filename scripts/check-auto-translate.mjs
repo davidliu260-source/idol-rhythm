@@ -466,6 +466,8 @@ test('受保護路徑維持與 origin/main 的 merge base 一致', () => {
     ':(exclude)src/lib/autoPublish/evaluateCandidate.ts',
     // T35（售票階段／國家代碼／時間狀態）只放行 migration 073 與林口→桃園
     ':(exclude)supabase/migrations/073_t35_ticket_sales_country_time_status.sql', ':(exclude)src/lib/crawlers/taiwanEventCleanup.ts',
+    // Must #12：公開 ICS 快取標頭（私人／token ICS 不放行）
+    ':(exclude)src/app/api/ics/idols', ':(exclude)src/lib/ics/publicIcsCache.ts',
     // MUST #10（爬蟲故障提醒）只放行：健康模組、狀態寫入、各 fetcher 傳入本輪筆數
     ':(exclude)src/lib/crawlers/crawlerSource.ts', ':(exclude)src/lib/crawlers/crawlerSourceAlerts.ts', ':(exclude)src/lib/crawlers/runBlackpinkFetcher.ts', ':(exclude)src/lib/crawlers/runGenericWebpageFetcher.ts', ':(exclude)src/lib/crawlers/runKpopofficialConcertsFetcher.ts', ':(exclude)src/lib/crawlers/runSmtownNoticeFetcher.ts', ':(exclude)src/lib/crawlers/runVenueCalendarFetcher.ts', ':(exclude)src/lib/crawlers/runWakeoneNoticeFetcher.ts', ':(exclude)src/lib/crawlers/runYgArtistScheduleFetcher.ts', ':(exclude)src/lib/crawlers/runYgNoticeFetcher.ts', ':(exclude)src/lib/crawlers/runYoutubeOfficialChannelFetcher.ts',
   ]
