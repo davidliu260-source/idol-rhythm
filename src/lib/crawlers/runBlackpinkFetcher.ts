@@ -10,13 +10,12 @@ import {
   type RunStatus,
   updateRunStatus,
 } from './crawlerSource'
+import { CRAWLER_USER_AGENT } from './userAgent'
 
 const SOURCE_KEY = 'blackpink-official-tour'
 const EXPECTED_PARSER_TYPE = 'blackpink_official_tour'
 const MAX_ENTRIES_PER_RUN = 30
 const FETCH_TIMEOUT_MS = 15_000
-const USER_AGENT =
-  'IdolRhythm-Bot/0.1 (+https://idol-rhythm.vercel.app)'
 
 export interface FetcherOptions {
   /**
@@ -158,7 +157,7 @@ export async function runBlackpinkFetcher(
       const res = await fetch(pageUrl, {
         method: 'GET',
         headers: {
-          'User-Agent': USER_AGENT,
+          'User-Agent': CRAWLER_USER_AGENT,
           Accept: 'text/html,application/xhtml+xml',
         },
         signal: controller.signal,

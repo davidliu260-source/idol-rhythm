@@ -12,11 +12,11 @@ import {
   type RunStatus,
   updateRunStatus,
 } from './crawlerSource'
+import { CRAWLER_USER_AGENT } from './userAgent'
 
 const EXPECTED_PARSER_TYPE = 'yg_artist_schedule'
 const MAX_ENTRIES_PER_RUN = 200
 const FETCH_TIMEOUT_MS = 15_000
-const USER_AGENT = 'IdolRhythm-Bot/0.1 (+https://idol-rhythm.vercel.app)'
 const MONTHS_AHEAD = 12
 
 export interface FetcherOptions {
@@ -51,7 +51,7 @@ function apiBaseOf(pageUrl: string): string {
 async function fetchJson<T>(url: string, signal: AbortSignal): Promise<T> {
   const res = await fetch(url, {
     method: 'GET',
-    headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' },
+    headers: { 'User-Agent': CRAWLER_USER_AGENT, Accept: 'application/json' },
     signal,
     cache: 'no-store',
   })

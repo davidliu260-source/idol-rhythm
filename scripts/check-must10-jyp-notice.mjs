@@ -150,7 +150,7 @@ function assertPoliteRequests(fetch, sleep) {
   for (const { url, init } of fetch.calls) {
     assert.ok(jyp.isAllowedJypRequestUrl(url), url)
     assert.doesNotMatch(url, /\/api\/|\/_next\//)
-    assert.equal(init.headers['User-Agent'], 'IdolRhythm-Bot/0.1 (+https://idol-rhythm.vercel.app)')
+    assert.equal(init.headers['User-Agent'], jyp.JYP_NOTICE_USER_AGENT)
     assert.equal(init.headers.Accept, 'text/html')
     assert.ok(!Object.keys(init.headers).some(k => /cookie|authorization/i.test(k)))
     assert.equal(init.credentials, 'omit')

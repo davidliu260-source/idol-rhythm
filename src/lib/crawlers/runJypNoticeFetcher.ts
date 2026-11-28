@@ -3,7 +3,7 @@ import { touchedFromPayload, type TouchedCandidate } from './touchedCandidate'
  * JYP 藝人官網公告（/notice）fetcher。MUST #10，取代 jyp_schedule 的 /api/schedules。
  *
  * 規則（需求單_JYP改用公告頁_2026-11-24.md 第 5 節）：
- *   - User-Agent 固定 IdolRhythm-Bot，Accept: text/html；不帶 cookie、不登入、不開無頭瀏覽器。
+ *   - User-Agent 固定 idolrhythm-bot（含正式網域），Accept: text/html；不帶 cookie、不登入、不開無頭瀏覽器。
  *   - 只請求 /robots.txt、/notice、/notice?PgIndex=N、/notice/{id}?NoticeNumber=N
  *     （isAllowedJypRequestUrl 擋住其他路徑，含 /api/、/_next/）。不跟隨轉址。
  *   - 每輪先抓 robots.txt；禁止 /notice 就停止並記 error。Crawl-delay 與 2 秒取大者。

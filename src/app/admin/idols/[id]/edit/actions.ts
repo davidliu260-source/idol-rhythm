@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
+import { CRAWLER_USER_AGENT } from '@/lib/crawlers/userAgent'
 
 // ── Avatar upload constants (I1b-A) ──────────────────────────────────────────
 const AVATAR_BUCKET = 'idol-avatars'
@@ -339,7 +340,7 @@ export async function uploadIdolAvatarFromUrl(
   try {
     const res = await fetch(sourceUrl, {
       headers: {
-        'User-Agent': 'IdolRhythm-Admin-Bot/0.1 (+https://idol-rhythm.vercel.app)',
+        'User-Agent': CRAWLER_USER_AGENT,
         Accept: 'image/*',
       },
       signal: controller.signal,

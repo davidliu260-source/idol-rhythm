@@ -39,13 +39,12 @@ import {
   type RunStatus,
   updateRunStatus,
 } from './crawlerSource'
+import { CRAWLER_USER_AGENT } from './userAgent'
 
 const EXPECTED_PARSER_TYPE = 'kpopofficial_concerts'
 /** Per-run cap; the listing page typically shows < 100 future events. */
 const MAX_ENTRIES_PER_RUN = 200
 const FETCH_TIMEOUT_MS = 15_000
-const USER_AGENT =
-  'IdolRhythm-Bot/0.1 (+https://idol-rhythm.vercel.app)'
 
 export interface FetcherOptions {
   sourceKey: string
@@ -151,7 +150,7 @@ export async function runKpopofficialConcertsFetcher(
   let html: string
   try {
     const res = await fetch(pageUrl, {
-      headers: { 'User-Agent': USER_AGENT, Accept: 'text/html' },
+      headers: { 'User-Agent': CRAWLER_USER_AGENT, Accept: 'text/html' },
       signal: controller.signal,
       cache: 'no-store',
     })
