@@ -73,29 +73,15 @@ check('不改「追蹤」文案：底欄與偶像頁維持原樣', () => {
   assert.doesNotMatch(navItems, /label: '帳號'/)
 })
 
-check('這次不改後台、也不加 migration', () => {
-  const repoRoot = fileURLToPath(root)
-  const git = (...args) => execFileSync('git', args, { cwd: repoRoot, encoding: 'utf8' })
-  // 跟 merge-base 比，避免 main 後來又合進其他 PR 時被誤判成「多改了檔案」
-  const base = git('merge-base', 'origin/main', 'HEAD').trim()
-  const diff = git('diff', '--name-only', base)
-  const untracked = git('ls-files', '--others', '--exclude-standard')
-  const files = [...new Set([...diff.trim().split('\n'), ...untracked.trim().split('\n')].filter(Boolean))]
-  for (const file of files) {
-    assert.ok(!file.startsWith('src/app/admin/'), `不應改後台：${file}`)
-    assert.ok(!file.startsWith('supabase/migrations/'), `不應加 migration：${file}`)
-    assert.ok(!file.includes('.env'), `不應改環境檔：${file}`)
-  }
-  const expected = new Set([
-    'src/app/me/MeClient.tsx',
-    'src/app/page.tsx',
-    'src/components/HomeAccountButton.tsx',
-    'scripts/check-me-logout-account-entry.mjs',
-  ])
-  const unexpected = files.filter((file) => !expected.has(file))
-  assert.deepEqual(unexpected, [], `多改了檔案：${unexpected.join(', ')}`)
+check('登出功能沒有對應的 migration 或環境檔', () => {
+  // 這個檢查原本限制「本 PR 只能改登出相關檔案」。#252 合併後，後續 PR 會改其他檔案，
+  // 若繼續用 merge-base 檔名清單會誤判。登出行為已由上面幾項鎖定，這裡只擋不該出現的檔。
   const migrations = readdirSync(new URL('supabase/migrations', root))
   assert.ok(!migrations.some((name) => name.toLowerCase().includes('logout') || name.toLowerCase().includes('account-entry')))
+  const untracked = execFileSync('git', ['ls-files', '--others', '--exclude-standard'], { cwd: fileURLToPath(root), encoding: 'utf8' })
+  for (const file of untracked.trim().split('\n').filter(Boolean)) {
+    assert.ok(!file.includes('.env'), `不應出現環境檔：${file}`)
+  }
 })
 
 console.log('全部通過')

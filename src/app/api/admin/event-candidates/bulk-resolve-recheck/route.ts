@@ -31,6 +31,7 @@
 
 import { NextResponse, type NextRequest } from 'next/server'
 import { revalidatePath } from 'next/cache'
+import { revalidatePublicPagesForEventIds } from '@/lib/revalidate-public'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
 import { isFactsOnlyNoticeCandidate } from '@/lib/officialNotice'
@@ -186,10 +187,15 @@ export async function POST(
   }
 
   // Revalidate admin candidate list + each affected event detail page.
-  revalidatePath('/admin/event-candidates')
-  affectedEventIds.forEach((eventId) => {
-    revalidatePath(`/admin/events/${eventId}`)
-  })
+  try {
+    revalidatePath('/admin/event-candidates')
+    affectedEventIds.forEach((eventId) => {
+      revalidatePath(`/admin/events/${eventId}`)
+    })
+  } catch (error) {
+    console.error('[revalidate-public] admin paths', error)
+  }
+  await revalidatePublicPagesForEventIds(supabase, [...affectedEventIds])
 
   return NextResponse.json({
     ok: errors.length === 0,

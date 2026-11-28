@@ -169,6 +169,22 @@ export async function GET(
     console.log('[auto-translate] summary', counts)
   }
 
+  // 自動上架／補地點／合併來源之後（翻譯也跑完），立刻刷新公開頁。
+  // 失敗只記 log，不影響這輪 cron 的成功／失敗判斷。
+  if (!dryRun) {
+    const publicEventIds = [
+      ...autoPublish.created,
+      ...autoPublish.publishedExisting,
+      ...autoPublish.locationFilled,
+      ...autoPublish.merged.filter((row) => row.sourceAdded),
+      ...(autoTranslate?.translatedIds ?? []).map((eventId) => ({ eventId })),
+    ].map((row) => row.eventId)
+    if (publicEventIds.length > 0) {
+      const { revalidatePublicPagesForEventIds } = await import('@/lib/revalidate-public')
+      await revalidatePublicPagesForEventIds(supabase, publicEventIds)
+    }
+  }
+
   // Surface as 502 only if EVERY source failed; otherwise return 200 with
   // partial errors so Vercel Cron logs distinguish "down" vs "noisy day".
   const { summary, results } = result

@@ -147,8 +147,10 @@ check('核對受保護路徑與分支起點，以及 migration 編號（067 之�
   const must12Allowed = [':(exclude)src/app/atlas/page.tsx', ':(exclude)src/app/api/ics/idols', ':(exclude)src/lib/ics/publicIcsCache.ts', ':(exclude)src/lib/ics/feedLookback.ts', ':(exclude)src/lib/ics/supabaseFeedStore.ts']
   // 函式區域改 syd1：只放行 vercel.json（crons 不變，由 check-vercel-region-syd1.mjs 鎖住）
   const syd1Allowed = ':(exclude)vercel.json'
-  execFileSync('git', ['diff', '--quiet', base, '--', ...protectedPaths, ...must3Allowed, b2v2Allowed, emptyShellAllowed, ...autoTranslateAllowed, ...t35Allowed, ...must12Allowed, syd1Allowed], { cwd })
-  const untracked = execFileSync('git', ['ls-files', '--others', '--exclude-standard', '--', ...protectedPaths, ...must3Allowed, emptyShellAllowed, ...autoTranslateAllowed, ...t35Allowed, ...must12Allowed, syd1Allowed], { cwd, encoding: 'utf8' })
+  // 編輯活動後立刻刷新公開頁：只放行批量發布／下架 route（單筆 actions 不在受保護路徑內）
+  const revalidateAllowed = ':(exclude)src/app/api/admin/events/bulk-publish/route.ts'
+  execFileSync('git', ['diff', '--quiet', base, '--', ...protectedPaths, ...must3Allowed, b2v2Allowed, emptyShellAllowed, ...autoTranslateAllowed, ...t35Allowed, ...must12Allowed, syd1Allowed, revalidateAllowed], { cwd })
+  const untracked = execFileSync('git', ['ls-files', '--others', '--exclude-standard', '--', ...protectedPaths, ...must3Allowed, emptyShellAllowed, ...autoTranslateAllowed, ...t35Allowed, ...must12Allowed, syd1Allowed, revalidateAllowed], { cwd, encoding: 'utf8' })
   assert.equal(untracked, '', '受保護路徑出現未追蹤檔案')
   for (const file of readdirSync(new URL('supabase/migrations/', root), { withFileTypes: true })) {
     const number = file.name.match(/^\d+/)?.[0]
