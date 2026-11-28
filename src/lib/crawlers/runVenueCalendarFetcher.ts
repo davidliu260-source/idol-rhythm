@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { taipeiToday } from '../taipeiDate'
 import { getCrawlerSourceByKey, updateRunStatus, type RunStatus } from './crawlerSource'
+import { CRAWLER_USER_AGENT_COMPAT } from './userAgent'
 import { touchedFromPayload, type TouchedCandidate } from './touchedCandidate'
 import {
   isKaoarenaLocation, KAOARENA_LIST_URL, parseVenueCalendarList, selectVenueEntries,
@@ -9,7 +10,7 @@ import {
 
 async function fetchHtml(url: string) {
   const response = await fetch(url, {
-    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; IdolRhythm/0.1)', Accept: 'text/html' },
+    headers: { 'User-Agent': CRAWLER_USER_AGENT_COMPAT, Accept: 'text/html' },
     cache: 'no-store',
     redirect: 'error',
     signal: AbortSignal.timeout(15_000),

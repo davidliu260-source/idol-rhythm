@@ -47,6 +47,7 @@ import {
   type RunStatus,
   updateRunStatus,
 } from './crawlerSource'
+import { CRAWLER_USER_AGENT } from './userAgent'
 
 const EXPECTED_PARSER_TYPE = 'smtown_notice'
 /** Safety cap per run. Each page has ~16 items; ~48 across 3 pages. */
@@ -54,7 +55,6 @@ const MAX_ENTRIES_PER_RUN = 60
 /** Pages to fetch (?page=0 + ?page=1 + ?page=2 = 3 pages, ~48 items). */
 const MAX_PAGES = 3
 const FETCH_TIMEOUT_MS = 15_000
-const USER_AGENT = 'IdolRhythm-Bot/0.1 (+https://idol-rhythm.vercel.app)'
 
 /**
  * Unit names that must NOT be mapped to the root `nct` idol in first pass.
@@ -107,7 +107,7 @@ async function fetchPageHtml(
 ): Promise<string | null> {
   try {
     const res = await fetch(url, {
-      headers: { 'User-Agent': USER_AGENT, Accept: 'text/html' },
+      headers: { 'User-Agent': CRAWLER_USER_AGENT, Accept: 'text/html' },
       signal,
       cache: 'no-store',
     })

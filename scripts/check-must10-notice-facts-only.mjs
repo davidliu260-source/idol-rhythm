@@ -631,10 +631,16 @@ const CRAWLER_ALERTS_FILES = [
 ]
 const CRAWLER_ALERTS_MIGRATION = 'supabase/migrations/072_crawler_source_alerts.sql'
 
+// 爬蟲 User-Agent 改為識別正式網域：只放行中央常數與 genericWebpage（各 fetcher 已在上方清單）
+const CRAWLER_UA_FILES = [
+  'src/lib/crawlers/userAgent.ts',
+  'src/lib/crawlers/genericWebpage.ts',
+]
+
 test('範圍守門：不改爬蟲存檔格式、不新增 migration（072 爬蟲故障提醒除外）', () => {
   const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' })
   const base = git('merge-base', 'origin/main', 'HEAD').trim()
-  const outside = text => text.split('\n').filter(Boolean).filter(path => ![...JYP_NOTICE_CRAWLER_FILES, ...T35_FILES, ...CRAWLER_ALERTS_FILES, CRAWLER_ALERTS_MIGRATION].includes(path)).join('\n')
+  const outside = text => text.split('\n').filter(Boolean).filter(path => ![...JYP_NOTICE_CRAWLER_FILES, ...T35_FILES, ...CRAWLER_ALERTS_FILES, CRAWLER_ALERTS_MIGRATION, ...CRAWLER_UA_FILES].includes(path)).join('\n')
   assert.equal(outside(git('diff', '--name-only', base, '--', 'src/lib/crawlers', 'supabase')), '')
   assert.equal(outside(git('ls-files', '--others', '--exclude-standard', '--', 'src/lib/crawlers', 'supabase')), '')
   assert.equal(outside(git('diff', '--name-only', base, '--', 'supabase')), '')
