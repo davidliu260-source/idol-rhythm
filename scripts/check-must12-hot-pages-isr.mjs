@@ -231,6 +231,7 @@ check('StaleDayGuard：首頁與行事曆都掛上，只在日期跨日時重新
   const code = withoutComments(raw)
   assert.match(code, /if \(today === generatedDayKey\) return/)
   assert.match(code, /sessionStorage\.getItem\(flag\)/)
+  assert.match(code, /stale-day-reloaded:\$\{today\}:\$\{window\.location\.pathname\}/)
   assert.match(code, /window\.location\.reload\(\)/)
   assert.doesNotMatch(code, /supabase|cookie|localStorage|useAppState/i)
 })
@@ -254,7 +255,10 @@ check('ICS（單一偶像、全部追蹤）往前讀 31 天，大於 30 天截�
 
 check('/atlas 與城市詳情頁需要已結束活動，明確傳 lookbackDays: null（維持原行為）', () => {
   assert.match(withoutComments(read('src/app/atlas/page.tsx')), /getPublishedEvents\(\{\s*lookbackDays:\s*null\s*\}\)/)
-  assert.match(withoutComments(read('src/app/cities/[city]/page.tsx')), /getPublishedEvents\(\{\s*lookbackDays:\s*null\s*\}\)/)
+  assert.match(
+    withoutComments(read('src/app/cities/[city]/page.tsx')),
+    /getPublishedEvents\(\{\s*lookbackDays:\s*null(?:,\s*throwOnQueryError:\s*true)?\s*\}\)/,
+  )
 })
 
 check('其餘呼叫端（sitemap、城市、偶像頁、/me）本來就只用未結束活動，使用預設下限', () => {
@@ -272,9 +276,9 @@ check('其餘呼叫端（sitemap、城市、偶像頁、/me）本來就只用未
   }
 })
 
-check('未動到的頁面：城市、圖鑑、/me、/atlas 仍是 force-dynamic（這次只改首頁與行事曆）', () => {
-  for (const file of ['src/app/cities/page.tsx', 'src/app/cities/[city]/page.tsx', 'src/app/idols/page.tsx', 'src/app/me/page.tsx', 'src/app/atlas/page.tsx']) {
-    assert.match(read(file), /export const dynamic = 'force-dynamic'/, `${file} 不該在這次被改`)
+check('未在熱門頁 ISR 改動的頁面：/me、/atlas 仍是 force-dynamic', () => {
+  for (const file of ['src/app/me/page.tsx', 'src/app/atlas/page.tsx']) {
+    assert.match(read(file), /export const dynamic = 'force-dynamic'/, `${file} 不該被改成 ISR`)
   }
 })
 

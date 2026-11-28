@@ -357,10 +357,18 @@ export async function getActiveIdols({ throwOnError = false, throwOnQueryError =
  *
  * Inactive idols deliberately 404 so we don't leak dormant rows publicly —
  * admin can re-activate them via /admin/idols if needed.
+ * throwOnQueryError：查詢失敗時丟錯（ISR 才不會把暫時失敗快取成 404）。
+ * 沒有 client 時只有 throwOnError 才會丟錯，讓沒有環境變數的本機建置仍可產出空結果。
  */
-export async function getIdolBySlug(slug: string): Promise<Idol | null> {
+export async function getIdolBySlug(
+  slug: string,
+  { throwOnError = false, throwOnQueryError = false } = {},
+): Promise<Idol | null> {
   const supabase = getSupabaseClient()
-  if (!supabase) return null
+  if (!supabase) {
+    if (throwOnError) throw new Error('Idol client is unavailable')
+    return null
+  }
 
   const { data, error } = await supabase
     .from('idols')
@@ -369,7 +377,11 @@ export async function getIdolBySlug(slug: string): Promise<Idol | null> {
     .eq('is_active', true)
     .maybeSingle()
 
-  if (error || !data) return null
+  if (error) {
+    if (throwOnError || throwOnQueryError) throw new Error('Idol query failed')
+    return null
+  }
+  if (!data) return null
   return rowToIdol(data as SupabaseIdolRow)
 }
 

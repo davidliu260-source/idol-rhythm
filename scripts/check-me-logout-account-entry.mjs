@@ -81,7 +81,8 @@ check('登出與帳號入口沒有對應的 migration，也不改環境檔', () 
   const base = git('merge-base', 'origin/main', 'HEAD').trim()
   const diff = git('diff', '--name-only', base)
   const untracked = git('ls-files', '--others', '--exclude-standard')
-  const files = [...new Set([...diff.trim().split('\n'), ...untracked.trim().split('\n')].filter(Boolean))]
+  // .claude-review* 是本機審查草稿，不會進 commit
+  const files = [...new Set([...diff.trim().split('\n'), ...untracked.trim().split('\n')].filter(Boolean))].filter((file) => !file.startsWith('.claude-review'))
   for (const file of files) {
     assert.ok(!file.includes('.env'), `不應改環境檔：${file}`)
   }

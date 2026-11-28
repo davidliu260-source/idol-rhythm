@@ -1,6 +1,5 @@
-export const dynamic = 'force-dynamic'
-
 import type { Metadata } from 'next'
+import { cache } from 'react'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -21,19 +20,34 @@ import { buildIdolMeta } from '@/lib/seo/metadata'
 import { getIdolDetail } from './data'
 import FollowIdolButton from './FollowIdolButton'
 import SubscribeCalendarButton from './SubscribeCalendarButton'
+import StaleDayGuard from '@/components/StaleDayGuard'
+import { getActiveIdols } from '@/lib/supabase/events'
+import { taipeiToday } from '@/lib/taipeiDate'
 import clsx from 'clsx'
+
+// 與 #253 相同：ISR 5 分鐘。追蹤與訂閱按鈕是 client 元件，伺服器不讀 cookies／登入資料。
+export const revalidate = 300
+// 建置時沒列到的新偶像，第一次訪問再產生，之後同樣快取 5 分鐘。
+export const dynamicParams = true
+
+export async function generateStaticParams() {
+  const idols = await getActiveIdols()
+  return idols.map(idol => ({ slug: idol.id }))
+}
+
+const loadIdolDetail = cache((slug: string) => getIdolDetail(slug, { throwOnQueryError: true }))
 
 type IdolPageProps = { params: Promise<{ slug: string }> }
 
 export async function generateMetadata({ params }: IdolPageProps): Promise<Metadata> {
   const { slug } = await params
-  const detail = await getIdolDetail(slug)
+  const detail = await loadIdolDetail(slug)
   return detail ? buildIdolMeta(detail.idol, detail.upcoming.length) : { title: '偶像' }
 }
 
 export default async function IdolDetailPage({ params }: IdolPageProps) {
   const { slug } = await params
-  const detail = await getIdolDetail(slug)
+  const detail = await loadIdolDetail(slug)
   if (!detail) return notFound()
   const { idol, upcoming } = detail
 
@@ -45,6 +59,7 @@ export default async function IdolDetailPage({ params }: IdolPageProps) {
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(180deg,rgba(255,255,255,0.018)_1px,transparent_1px)] bg-[size:34px_34px] opacity-24" />
 
       <div className="relative mx-auto flex w-full max-w-[520px] flex-col gap-4 px-4 pb-6 pt-8">
+        <StaleDayGuard generatedDayKey={taipeiToday()} />
         <Link
           href="/idols"
           className="inline-flex items-center gap-2 self-start rounded-full border border-white/8 bg-white/[0.04] px-3 py-2 text-sm font-medium text-white/72 transition-colors hover:text-white"
