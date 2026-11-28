@@ -7,6 +7,7 @@ import {
   isYgConcertNotice, matchYgNotice, parseYgNoticeDetail, parseYgNoticeList,
   YG_NOTICE_ROSTER, YG_NOTICE_URL, ygNoticeCandidates,
 } from './ygNotice'
+import { CRAWLER_USER_AGENT } from './userAgent'
 
 type RosterIdol = IdolForMatching & { slug: string }
 type Candidate = ReturnType<typeof ygNoticeCandidates>[number]
@@ -18,7 +19,7 @@ function fetchHtml(url: string) {
   const request = requestQueue.then(async () => {
     const response = await fetch(url, {
       method: 'GET',
-      headers: { 'User-Agent': 'IdolRhythm/0.1', Accept: 'text/html' },
+      headers: { 'User-Agent': CRAWLER_USER_AGENT, Accept: 'text/html' },
       cache: 'no-store',
       redirect: 'error',
       signal: AbortSignal.timeout(12_000),

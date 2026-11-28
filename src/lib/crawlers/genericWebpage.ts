@@ -29,6 +29,7 @@ import { load as cheerioLoad } from 'cheerio'
 import { lookup as dnsLookup } from 'node:dns/promises'
 import { isIP } from 'node:net'
 import { resolveAnthropicModel } from '@/lib/ai/parseCandidate'
+import { CRAWLER_USER_AGENT } from './userAgent'
 
 // ── Limits (kept as exported constants for visibility) ─────────────────────
 
@@ -36,7 +37,7 @@ export const FETCH_TIMEOUT_MS = 10_000
 export const MAX_HTML_BYTES = 500 * 1024 // 500 KB
 export const MAX_TEXT_LENGTH = 8_000 // chars sent to Claude
 export const MAX_EVENTS_PER_PAGE = 10
-export const USER_AGENT = 'IdolRhythm-Bot/0.1 (+https://idol-rhythm.vercel.app)'
+export const USER_AGENT = CRAWLER_USER_AGENT
 
 // ── Event type whitelist (P1-B1 preview only) ───────────────────────────────
 // Wider than EVENT_TYPES in parseCandidate.ts on purpose: this is the set of

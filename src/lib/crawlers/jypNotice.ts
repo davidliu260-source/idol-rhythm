@@ -23,10 +23,11 @@ import * as cheerio from 'cheerio'
 import { computeSourceHash } from './sourceHash'
 import { computeContentHash } from './contentHash'
 import type { SourceTypeEnum } from './crawlerSource'
+import { CRAWLER_USER_AGENT, CRAWLER_USER_AGENT_TOKEN } from './userAgent'
 
 export const JYP_NOTICE_PARSER_TYPE = 'jyp_notice'
 export const JYP_NOTICE_PARSER_VERSION = 1
-export const JYP_NOTICE_USER_AGENT = 'IdolRhythm-Bot/0.1 (+https://idol-rhythm.vercel.app)'
+export const JYP_NOTICE_USER_AGENT = CRAWLER_USER_AGENT
 
 // ── 允許的請求路徑 ───────────────────────────────────────────────────────────
 
@@ -82,9 +83,9 @@ export interface RobotsRules {
 }
 
 /**
- * 解析 robots.txt，回傳適用於本 bot 的規則（優先找 IdolRhythm-Bot 群組，否則 `*`）。
+ * 解析 robots.txt，回傳適用於本 bot 的規則（優先找 idolrhythm-bot 群組，否則 `*`）。
  */
-export function parseRobotsTxt(text: string, userAgent = 'IdolRhythm-Bot'): RobotsRules {
+export function parseRobotsTxt(text: string, userAgent = CRAWLER_USER_AGENT_TOKEN): RobotsRules {
   type Group = { agents: string[]; allow: string[]; disallow: string[]; crawlDelay: number | null }
   const groups: Group[] = []
   let current: Group | null = null
