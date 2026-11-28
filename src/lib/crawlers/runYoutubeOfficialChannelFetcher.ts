@@ -69,6 +69,7 @@ import {
   type RunStatus,
   updateRunStatus,
 } from './crawlerSource'
+import { CRAWLER_USER_AGENT } from './userAgent'
 
 const EXPECTED_PARSER_TYPE = YOUTUBE_OFFICIAL_CHANNEL_PARSER_TYPE
 const FETCH_TIMEOUT_MS = 15_000
@@ -115,7 +116,7 @@ async function fetchYoutubeJson<T extends { error?: YoutubeApiError }>(
   try {
     const res = await fetch(url, {
       method: 'GET',
-      headers: { Accept: 'application/json' },
+      headers: { 'User-Agent': CRAWLER_USER_AGENT, Accept: 'application/json' },
       signal,
       cache: 'no-store',
     })

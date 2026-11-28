@@ -44,6 +44,7 @@ import {
   type RunStatus,
   updateRunStatus,
 } from './crawlerSource'
+import { CRAWLER_USER_AGENT } from './userAgent'
 
 const EXPECTED_PARSER_TYPE = 'wakeone_notice'
 /** Safety cap per run. Notice board is small; 60 is generous. */
@@ -51,7 +52,6 @@ const MAX_ENTRIES_PER_RUN = 60
 /** WordPress page count to fetch. Each page returns ~12 items. */
 const MAX_PAGES = 3
 const FETCH_TIMEOUT_MS = 15_000
-const USER_AGENT = 'IdolRhythm-Bot/0.1 (+https://idol-rhythm.vercel.app)'
 
 export interface FetcherOptions {
   sourceKey: string
@@ -80,7 +80,7 @@ export interface FetcherResult {
 async function fetchPageHtml(url: string, signal: AbortSignal): Promise<string | null> {
   try {
     const res = await fetch(url, {
-      headers: { 'User-Agent': USER_AGENT, Accept: 'text/html' },
+      headers: { 'User-Agent': CRAWLER_USER_AGENT, Accept: 'text/html' },
       signal,
       cache: 'no-store',
     })

@@ -26,9 +26,11 @@
  *   source URL and let admin verify via the "請確認版權" warning).
  */
 
+import { CRAWLER_USER_AGENT } from '../crawlers/userAgent'
+
 const WIKI_API = 'https://en.wikipedia.org/w/api.php'
 const WIKI_KO_API = 'https://ko.wikipedia.org/w/api.php'
-const USER_AGENT = 'IdolRhythm-Admin-Bot/0.1 (+https://idol-rhythm.vercel.app)'
+const USER_AGENT = CRAWLER_USER_AGENT
 const FETCH_TIMEOUT_MS = 8_000
 const MAX_CANDIDATES = 10
 

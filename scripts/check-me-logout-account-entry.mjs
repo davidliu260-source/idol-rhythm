@@ -73,15 +73,20 @@ check('不改「追蹤」文案：底欄與偶像頁維持原樣', () => {
   assert.doesNotMatch(navItems, /label: '帳號'/)
 })
 
-check('登出功能沒有對應的 migration 或環境檔', () => {
-  // 這個檢查原本限制「本 PR 只能改登出相關檔案」。#252 合併後，後續 PR 會改其他檔案，
-  // 若繼續用 merge-base 檔名清單會誤判。登出行為已由上面幾項鎖定，這裡只擋不該出現的檔。
+check('登出與帳號入口沒有對應的 migration，也不改環境檔', () => {
+  // #252 合併後，後續分支對 origin/main 的其他改動不應被這支檢查擋下。
+  // 這支只鎖定：沒有為登出／帳號入口新增 migration，且這次不改 .env。
+  const repoRoot = fileURLToPath(root)
+  const git = (...args) => execFileSync('git', args, { cwd: repoRoot, encoding: 'utf8' })
+  const base = git('merge-base', 'origin/main', 'HEAD').trim()
+  const diff = git('diff', '--name-only', base)
+  const untracked = git('ls-files', '--others', '--exclude-standard')
+  const files = [...new Set([...diff.trim().split('\n'), ...untracked.trim().split('\n')].filter(Boolean))]
+  for (const file of files) {
+    assert.ok(!file.includes('.env'), `不應改環境檔：${file}`)
+  }
   const migrations = readdirSync(new URL('supabase/migrations', root))
   assert.ok(!migrations.some((name) => name.toLowerCase().includes('logout') || name.toLowerCase().includes('account-entry')))
-  const untracked = execFileSync('git', ['ls-files', '--others', '--exclude-standard'], { cwd: fileURLToPath(root), encoding: 'utf8' })
-  for (const file of untracked.trim().split('\n').filter(Boolean)) {
-    assert.ok(!file.includes('.env'), `不應出現環境檔：${file}`)
-  }
 })
 
 console.log('全部通過')
