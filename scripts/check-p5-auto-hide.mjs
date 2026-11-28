@@ -55,7 +55,7 @@ test('行程頁的計數、搜尋、時間軸與月曆皆使用公開篩選後�
 
 test('偶像頁保留兩格統計，圖鑑和活動詳情保留已結束活動入口', () => {
   const idol = read('src/app/idols/[slug]/page.tsx')
-  assert.match(idol, /await getIdolDetail\(slug\)/)
+  assert.match(idol, /await loadIdolDetail\(slug\)|await getIdolDetail\(slug/)
   assert.match(read('src/app/idols/[slug]/data.ts'), /listCurrentEvents\(idolEvents\)/)
   assert.match(idol, /grid-cols-2 gap-2/)
   assert.match(idol, /<StatTile label="即將到來"/)

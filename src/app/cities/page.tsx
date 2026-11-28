@@ -6,19 +6,23 @@ import { CalendarDays, ChevronRight, MapPin } from 'lucide-react'
 import { PAGE_HERO_SHELL } from '@/app/schedule/scheduleTheme'
 import FanWishForm from '@/components/FanWishForm'
 import { buildCityDirectory, cityHref, type CityDirectoryEntry } from '@/lib/cities'
+import StaleDayGuard from '@/components/StaleDayGuard'
 import { getPublishedEvents } from '@/lib/supabase/events'
+import { taipeiToday } from '@/lib/taipeiDate'
 
-export const dynamic = 'force-dynamic'
+// 與 #253 首頁、行事曆相同：ISR 5 分鐘。不可使用 cookies()／headers()／登入資料。
+export const revalidate = 300
 
 export const metadata = pageMetadata('/cities', '台灣各城市偶像活動', '依城市查看台北、高雄等地的偶像演唱會、見面會與官方活動，查看目前未結束的公開場次。資料整理自官方與可信媒體等公開來源，活動時間及地點以主辦公告為準。')
 
 export default async function CitiesPage() {
-  const events = await getPublishedEvents()
+  const events = await getPublishedEvents({ throwOnQueryError: true })
   const { taiwanCities, otherCities, unlabeledCount } = buildCityDirectory(events)
   const isEmpty = otherCities.length === 0 && taiwanCities.every(city => city.count === 0)
 
   return (
     <>
+      <StaleDayGuard generatedDayKey={taipeiToday()} />
       <header className={clsx(PAGE_HERO_SHELL, 'p-5')}>
         <div className="flex items-center gap-2">
           <MapPin aria-hidden="true" className="h-5 w-5 text-[#ff8bc8]" />

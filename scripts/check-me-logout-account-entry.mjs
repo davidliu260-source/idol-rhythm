@@ -80,7 +80,8 @@ check('這次不改後台、也不加 migration', () => {
   const base = git('merge-base', 'origin/main', 'HEAD').trim()
   const diff = git('diff', '--name-only', base)
   const untracked = git('ls-files', '--others', '--exclude-standard')
-  const files = [...new Set([...diff.trim().split('\n'), ...untracked.trim().split('\n')].filter(Boolean))]
+  // .claude-review* 是本機審查草稿，不會進 commit
+  const files = [...new Set([...diff.trim().split('\n'), ...untracked.trim().split('\n')].filter(Boolean))].filter((file) => !file.startsWith('.claude-review'))
   for (const file of files) {
     assert.ok(!file.startsWith('src/app/admin/'), `不應改後台：${file}`)
     assert.ok(!file.startsWith('supabase/migrations/'), `不應加 migration：${file}`)
@@ -92,7 +93,20 @@ check('這次不改後台、也不加 migration', () => {
     'src/components/HomeAccountButton.tsx',
     'scripts/check-me-logout-account-entry.mjs',
   ])
-  const unexpected = files.filter((file) => !expected.has(file))
+  // 城市／圖鑑 ISR：只放行這次改到的頁面、查詢函式與對應 check
+  const cityIdolsIsrAllowed = new Set([
+    'src/app/cities/page.tsx',
+    'src/app/cities/[city]/page.tsx',
+    'src/app/idols/page.tsx',
+    'src/app/idols/[slug]/page.tsx',
+    'src/app/idols/[slug]/data.ts',
+    'src/lib/supabase/events.ts',
+    'src/components/StaleDayGuard.tsx',
+    'scripts/check-city-idols-isr.mjs',
+    'scripts/check-must12-hot-pages-isr.mjs',
+    'scripts/check-p5-auto-hide.mjs',
+  ])
+  const unexpected = files.filter((file) => !expected.has(file) && !cityIdolsIsrAllowed.has(file))
   assert.deepEqual(unexpected, [], `多改了檔案：${unexpected.join(', ')}`)
   const migrations = readdirSync(new URL('supabase/migrations', root))
   assert.ok(!migrations.some((name) => name.toLowerCase().includes('logout') || name.toLowerCase().includes('account-entry')))

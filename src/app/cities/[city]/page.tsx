@@ -6,15 +6,30 @@ import clsx from 'clsx'
 import { ArrowLeft, MapPin } from 'lucide-react'
 import { PAGE_HERO_SHELL } from '@/app/schedule/scheduleTheme'
 import EventCard from '@/components/EventCard'
-import { cityHref, decodeCityParam, getCityEvents, resolveCityParam } from '@/lib/cities'
+import { TAIWAN_CITIES, cityHref, decodeCityParam, getCityEvents, normalizeCityName, resolveCityParam } from '@/lib/cities'
 import { buildCityMeta } from '@/lib/seo/metadata'
 import { getPublishedEvents } from '@/lib/supabase/events'
+import StaleDayGuard from '@/components/StaleDayGuard'
+import { taipeiToday } from '@/lib/taipeiDate'
 
-export const dynamic = 'force-dynamic'
+// 與 #253 相同：ISR 5 分鐘。不可使用 cookies()／headers()／登入資料。
+export const revalidate = 300
+// 建置時沒列到的城市（新海外城市等）第一次訪問再產生，之後同樣快取 5 分鐘。
+export const dynamicParams = true
+
+export async function generateStaticParams() {
+  const names = new Set<string>(TAIWAN_CITIES)
+  const events = await getPublishedEvents({ lookbackDays: null })
+  for (const event of events) {
+    const name = normalizeCityName(event.city)
+    if (name) names.add(name)
+  }
+  return [...names].map(city => ({ city }))
+}
 
 // 城市是否存在要看全部活動（只剩已結束活動的海外城市仍回 200，並顯示空狀態），
 // 所以這頁不套預設日期下限，維持原行為。
-const getEvents = cache(() => getPublishedEvents({ lookbackDays: null }))
+const getEvents = cache(() => getPublishedEvents({ lookbackDays: null, throwOnQueryError: true }))
 
 type CityPageProps = { params: Promise<{ city: string }> }
 
@@ -35,6 +50,7 @@ export default async function CityPage({ params }: CityPageProps) {
   const upcoming = getCityEvents(events, name)
   return (
     <>
+      <StaleDayGuard generatedDayKey={taipeiToday()} />
       <Link href="/cities" className="inline-flex min-h-[44px] items-center gap-2 self-start rounded-full border border-white/8 bg-white/[0.04] px-3 text-sm font-medium text-white/72 hover:text-white">
         <ArrowLeft aria-hidden="true" className="h-4 w-4" />
         返回城市列表
