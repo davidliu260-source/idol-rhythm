@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
+import { revalidatePublicEventPages, revalidatePublicPagesForEventIds } from '@/lib/revalidate-public'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
 import { inferTrustLevelFromSources } from '@/lib/admin/sourceReview'
 import { translateEvent } from '@/lib/ai/autoTranslate'
@@ -22,13 +23,19 @@ async function requireActiveAdmin(): Promise<void> {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function revalidateEventPaths(id: string): void {
-  revalidatePath('/admin/events')
-  revalidatePath(`/admin/events/${id}`)
-  // Public-facing pages that may cache this event
-  revalidatePath('/')
-  revalidatePath('/schedule')
-  revalidatePath(`/events/${id}`)
+async function revalidateEventPaths(id: string): Promise<void> {
+  try {
+    revalidatePath('/admin/events')
+    revalidatePath(`/admin/events/${id}`)
+    const supabase = getSupabaseServerClient()
+    if (supabase) {
+      await revalidatePublicPagesForEventIds(supabase, [id])
+      return
+    }
+  } catch (error) {
+    console.error('[revalidate-public] admin paths', error)
+  }
+  revalidatePublicEventPages({ eventId: id })
 }
 
 export interface GenerateChineseActionResult {
@@ -83,7 +90,7 @@ export async function publishEvent(id: string): Promise<void> {
     throw new Error(`發布失敗：${error.code ? `[${error.code}] ` : ''}${error.message}`)
   }
 
-  revalidateEventPaths(id)
+  await revalidateEventPaths(id)
   redirect(`/admin/events/${id}`)
 }
 
@@ -112,7 +119,7 @@ export async function unpublishEvent(id: string): Promise<void> {
     throw new Error(`下架失敗：${error.code ? `[${error.code}] ` : ''}${error.message}`)
   }
 
-  revalidateEventPaths(id)
+  await revalidateEventPaths(id)
   redirect(`/admin/events/${id}`)
 }
 
@@ -134,7 +141,7 @@ export async function generateEventChineseDisplay(
       return { ok: false, error: result.message ?? '活動已變更或正在翻譯，請重新整理後再試' }
     }
 
-    revalidateEventPaths(id)
+    await revalidateEventPaths(id)
     return { ok: true }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
@@ -187,7 +194,7 @@ export async function markEventChineseReviewed(
       )
     }
 
-    revalidateEventPaths(id)
+    await revalidateEventPaths(id)
     return { ok: true }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) }

@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { revalidatePublicPagesForEventIds } from '@/lib/revalidate-public'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import {
@@ -31,14 +32,17 @@ export async function runBackfill() {
   try {
     const store = await requireActiveAdmin()
     const { summary, eventIds } = await runPublishedBackfill({ store, translator: claudeTranslator, clock: Date.now })
-    revalidatePath('/admin/events')
-    if (summary.translated) {
-      revalidatePath('/')
-      revalidatePath('/schedule')
-      for (const id of eventIds) {
-        revalidatePath(`/admin/events/${id}`)
-        revalidatePath(`/events/${id}`)
+    try {
+      revalidatePath('/admin/events')
+      if (summary.translated) {
+        for (const id of eventIds) revalidatePath(`/admin/events/${id}`)
       }
+    } catch (error) {
+      console.error('[revalidate-public] admin paths', error)
+    }
+    if (summary.translated) {
+      const supabase = getSupabaseServerClient()
+      if (supabase) await revalidatePublicPagesForEventIds(supabase, eventIds)
     }
     return { ok: true as const, summary }
   } catch (error) {

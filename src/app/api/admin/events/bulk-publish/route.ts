@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { revalidatePath } from 'next/cache'
+import { revalidatePublicPagesForEventIds } from '@/lib/revalidate-public'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
 import { inferTrustLevelFromSources } from '@/lib/admin/sourceReview'
@@ -84,6 +85,7 @@ export async function POST(
     }
 
     let affected = 0
+    const publishedIds: string[] = []
     const now = new Date().toISOString()
 
     for (const row of rows ?? []) {
@@ -110,22 +112,32 @@ export async function POST(
         .select('id')
 
       if (error) {
+        try {
+          revalidatePath('/admin/events')
+          for (const id of publishedIds) revalidatePath(`/admin/events/${id}`)
+        } catch (revalidateError) {
+          console.error('[revalidate-public] admin paths', revalidateError)
+        }
+        await revalidatePublicPagesForEventIds(supabase, publishedIds)
         return NextResponse.json(
           { ok: false, error: `批量發布失敗：${error.code ? `[${error.code}] ` : ''}${error.message}` },
           { status: 500 },
         )
       }
 
-      affected += data?.length ?? 0
+      if (data?.length) {
+        affected += data.length
+        publishedIds.push(row.id as string)
+      }
     }
 
-    revalidatePath('/admin/events')
-    revalidatePath('/')
-    revalidatePath('/schedule')
-    for (const id of ids) {
-      revalidatePath(`/admin/events/${id}`)
-      revalidatePath(`/events/${id}`)
+    try {
+      revalidatePath('/admin/events')
+      for (const id of ids) revalidatePath(`/admin/events/${id}`)
+    } catch (error) {
+      console.error('[revalidate-public] admin paths', error)
     }
+    await revalidatePublicPagesForEventIds(supabase, publishedIds)
 
     return NextResponse.json({ ok: true, action, total: ids.length, affected })
   }
@@ -149,14 +161,13 @@ export async function POST(
 
   const affected = data?.length ?? 0
 
-  // Revalidate admin + public-facing pages
-  revalidatePath('/admin/events')
-  revalidatePath('/')
-  revalidatePath('/schedule')
-  for (const id of ids) {
-    revalidatePath(`/admin/events/${id}`)
-    revalidatePath(`/events/${id}`)
+  try {
+    revalidatePath('/admin/events')
+    for (const id of ids) revalidatePath(`/admin/events/${id}`)
+  } catch (error) {
+    console.error('[revalidate-public] admin paths', error)
   }
+  await revalidatePublicPagesForEventIds(supabase, (data ?? []).map((row) => row.id as string))
 
   return NextResponse.json({
     ok: true,

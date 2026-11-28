@@ -3,6 +3,7 @@
 import { cleanCrawledTitle, inferTaiwanCity } from '@/lib/crawlers/taiwanEventCleanup'
 import { taipeiToday } from '@/lib/taipeiDate'
 import { revalidatePath } from 'next/cache'
+import { revalidatePublicPagesForEventIds } from '@/lib/revalidate-public'
 import { redirect } from 'next/navigation'
 import { getSupabaseServerClient } from '@/lib/supabase/serverClient'
 import { getCurrentAdmin } from '@/lib/supabase/adminAuth'
@@ -468,6 +469,7 @@ export async function resolveRecheck(id: string): Promise<ResolveRecheckActionRe
         }
 
         revalidatePath(`/admin/events/${approvedEventId}`)
+        await revalidatePublicPagesForEventIds(supabase, [approvedEventId])
         synced = true
       }
     }

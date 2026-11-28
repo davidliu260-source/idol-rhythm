@@ -202,10 +202,12 @@ export type TranslationSummary = {
   failed: number
   stoppedBy: null | 'limit' | 'time' | 'config' | 'api'
   failures: Array<{ eventId: string; step: string; message: string }>
+  /** 本輪實際翻譯成功的活動，供公開頁立即刷新使用。 */
+  translatedIds: string[]
 }
 
 export function emptyTranslationSummary(): TranslationSummary {
-  return { attempted: 0, translated: 0, skipped: 0, failed: 0, stoppedBy: null, failures: [] }
+  return { attempted: 0, translated: 0, skipped: 0, failed: 0, stoppedBy: null, failures: [], translatedIds: [] }
 }
 
 export async function translateEvents(
@@ -228,6 +230,7 @@ export async function translateEvents(
     try {
       const result = await translateEvent(deps, eventId, { requirePublished })
       summary[result.outcome]++
+      if (result.outcome === 'translated') summary.translatedIds.push(eventId)
       if (result.outcome === 'failed') {
         summary.failures.push({ eventId, step: result.reason, message: result.message })
       }
